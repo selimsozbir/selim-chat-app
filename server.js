@@ -14,10 +14,6 @@ const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-this';
 
-if (!process.env.DATABASE_URL) {
-  console.log('DATABASE_URL bulunamadı.');
-}
-
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -45,7 +41,6 @@ function createToken(user) {
 function authMiddleware(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.replace('Bearer ', '');
-
   if (!token) return res.status(401).json({ error: 'Token yok.' });
 
   try {
@@ -73,26 +68,29 @@ function removeSocketForUser(userId, socketId) {
 function emitToUser(userId, event, payload) {
   const set = userSockets.get(String(userId));
   if (!set) return;
-
-  for (const socketId of set) {
-    io.to(socketId).emit(event, payload);
-  }
+  for (const socketId of set) io.to(socketId).emit(event, payload);
 }
 
-async function createNotification(userId, type, payload) {
-  const result = await pool.query(
-    `INSERT INTO notifications (user_id, type, payload)
-     VALUES ($1, $2, $3)
-     RETURNING id, type, payload, is_read, created_at`,
-    [userId, type, payload]
-  );
+function dmRoom(a, b) {
+  const x = Number(a);
+  const y = Number(b);
+  return `dm:${Math.min(x, y)}:${Math.max(x, y)}`;
+}
 
-  const notification = result.rows[0];
-  emitToUser(userId, 'notification', notification);
-  return notification;
+async function isBlockedBetween(userA, userB) {
+  const result = await pool.query(
+    `SELECT id FROM blocked_users
+     WHERE (blocker_id = $1 AND blocked_id = $2)
+     OR (blocker_id = $2 AND blocked_id = $1)
+     LIMIT 1`,
+    [userA, userB]
+  );
+  return result.rows.length > 0;
 }
 
 async function areFriends(userA, userB) {
+  if (await isBlockedBetween(userA, userB)) return false;
+
   const result = await pool.query(
     `SELECT id FROM friendships
      WHERE status = 'accepted'
@@ -106,6 +104,19 @@ async function areFriends(userA, userB) {
   );
 
   return result.rows.length > 0;
+}
+
+async function createNotification(userId, type, payload) {
+  const result = await pool.query(
+    `INSERT INTO notifications (user_id, type, payload)
+     VALUES ($1, $2, $3)
+     RETURNING id, type, payload, is_read, created_at`,
+    [userId, type, payload]
+  );
+
+  const notification = result.rows[0];
+  emitToUser(userId, 'notification', notification);
+  return notification;
 }
 
 async function initDatabase() {
@@ -164,8 +175,27 @@ async function initDatabase() {
     );
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS blocked_users (
+      id SERIAL PRIMARY KEY,
+      blocker_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      blocked_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (blocker_id, blocked_id),
+      CHECK (blocker_id <> blocked_id)
+    );
+  `);
+
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMP`);
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
+  await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMP`);
+  await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
+  await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMP`);
+
   console.log('Database tabloları hazır.');
 }
+
+/* AUTH */
 
 app.post('/api/register', async (req, res) => {
   try {
@@ -179,7 +209,6 @@ app.post('/api/register', async (req, res) => {
     if (existing.rows.length > 0) return res.status(400).json({ error: 'Bu kullanıcı adı zaten alınmış.' });
 
     const passwordHash = await bcrypt.hash(password, 10);
-
     const result = await pool.query(
       'INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, username, avatar_url',
       [username, passwordHash]
@@ -223,17 +252,13 @@ app.get('/api/me', authMiddleware, async (req, res) => {
   res.json({ user: result.rows[0] });
 });
 
+/* PROFILE */
+
 app.post('/api/avatar', authMiddleware, async (req, res) => {
   try {
     const avatarData = String(req.body.avatarData || '');
-
-    if (!avatarData.startsWith('data:image/')) {
-      return res.status(400).json({ error: 'Geçerli bir resim seç.' });
-    }
-
-    if (avatarData.length > 1500000) {
-      return res.status(400).json({ error: 'Profil fotoğrafı çok büyük. Daha küçük görsel seç.' });
-    }
+    if (!avatarData.startsWith('data:image/')) return res.status(400).json({ error: 'Geçerli bir resim seç.' });
+    if (avatarData.length > 1500000) return res.status(400).json({ error: 'Profil fotoğrafı çok büyük. Daha küçük görsel seç.' });
 
     const result = await pool.query(
       'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id, username, avatar_url',
@@ -261,11 +286,13 @@ app.delete('/api/avatar', authMiddleware, async (req, res) => {
   }
 });
 
+/* ROOM MESSAGES */
+
 app.get('/api/messages/:room', authMiddleware, async (req, res) => {
   const room = cleanText(req.params.room, 50).toLowerCase() || 'genel';
 
   const result = await pool.query(
-    `SELECT m.id, m.room, m.username, m.text, m.created_at, u.avatar_url
+    `SELECT m.id, m.room, m.username, m.text, m.created_at, m.edited_at, m.deleted_at, u.avatar_url
      FROM messages m
      LEFT JOIN users u ON u.id = m.user_id
      WHERE m.room = $1
@@ -277,16 +304,23 @@ app.get('/api/messages/:room', authMiddleware, async (req, res) => {
   res.json({ messages: result.rows.reverse() });
 });
 
+/* USERS, FRIENDS, BLOCKS */
+
 app.get('/api/users/search', authMiddleware, async (req, res) => {
   const q = cleanText(req.query.q, 30);
   if (q.length < 2) return res.json({ users: [] });
 
   const result = await pool.query(
-    `SELECT id, username, avatar_url
-     FROM users
-     WHERE LOWER(username) LIKE LOWER($1)
-     AND id <> $2
-     ORDER BY username ASC
+    `SELECT u.id, u.username, u.avatar_url
+     FROM users u
+     WHERE LOWER(u.username) LIKE LOWER($1)
+     AND u.id <> $2
+     AND NOT EXISTS (
+       SELECT 1 FROM blocked_users b
+       WHERE (b.blocker_id = $2 AND b.blocked_id = u.id)
+       OR (b.blocker_id = u.id AND b.blocked_id = $2)
+     )
+     ORDER BY u.username ASC
      LIMIT 10`,
     [`%${q}%`, req.user.id]
   );
@@ -304,11 +338,31 @@ app.get('/api/friends', authMiddleware, async (req, res) => {
      END
      WHERE (f.requester_id = $1 OR f.addressee_id = $1)
      AND f.status = 'accepted'
+     AND NOT EXISTS (
+       SELECT 1 FROM blocked_users b
+       WHERE (b.blocker_id = $1 AND b.blocked_id = u.id)
+       OR (b.blocker_id = u.id AND b.blocked_id = $1)
+     )
      ORDER BY u.username ASC`,
     [req.user.id]
   );
 
   res.json({ friends: result.rows });
+});
+
+app.delete('/api/friends/:friendId', authMiddleware, async (req, res) => {
+  const friendId = Number(req.params.friendId);
+  if (!Number.isInteger(friendId)) return res.status(400).json({ error: 'Geçersiz kullanıcı.' });
+
+  await pool.query(
+    `DELETE FROM friendships
+     WHERE status = 'accepted'
+     AND ((requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1))`,
+    [req.user.id, friendId]
+  );
+
+  emitToUser(friendId, 'friend_removed', { byId: req.user.id, byUsername: req.user.username });
+  res.json({ ok: true, message: 'Arkadaş silindi.' });
 });
 
 app.get('/api/friends/requests', authMiddleware, async (req, res) => {
@@ -328,16 +382,12 @@ app.get('/api/friends/requests', authMiddleware, async (req, res) => {
 app.post('/api/friends/request', authMiddleware, async (req, res) => {
   try {
     const username = cleanText(req.body.username, 30);
-
-    const targetResult = await pool.query(
-      'SELECT id, username FROM users WHERE LOWER(username) = LOWER($1)',
-      [username]
-    );
-
+    const targetResult = await pool.query('SELECT id, username FROM users WHERE LOWER(username) = LOWER($1)', [username]);
     if (targetResult.rows.length === 0) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
 
     const target = targetResult.rows[0];
     if (target.id === req.user.id) return res.status(400).json({ error: 'Kendine arkadaş isteği gönderemezsin.' });
+    if (await isBlockedBetween(req.user.id, target.id)) return res.status(403).json({ error: 'Bu kullanıcıyla etkileşim engellenmiş.' });
 
     const existing = await pool.query(
       `SELECT id, status FROM friendships
@@ -376,10 +426,7 @@ app.post('/api/friends/respond', authMiddleware, async (req, res) => {
   try {
     const requestId = Number(req.body.requestId);
     const action = String(req.body.action || '');
-
-    if (!['accept', 'reject'].includes(action)) {
-      return res.status(400).json({ error: 'Geçersiz işlem.' });
-    }
+    if (!['accept', 'reject'].includes(action)) return res.status(400).json({ error: 'Geçersiz işlem.' });
 
     const request = await pool.query(
       `SELECT f.id, f.requester_id, f.addressee_id
@@ -393,14 +440,10 @@ app.post('/api/friends/respond', authMiddleware, async (req, res) => {
     if (request.rows.length === 0) return res.status(404).json({ error: 'İstek bulunamadı.' });
 
     const row = request.rows[0];
+    if (await isBlockedBetween(row.requester_id, row.addressee_id)) return res.status(403).json({ error: 'Bu kullanıcıyla etkileşim engellenmiş.' });
 
     if (action === 'accept') {
-      await pool.query(
-        `UPDATE friendships
-         SET status = 'accepted', updated_at = CURRENT_TIMESTAMP
-         WHERE id = $1`,
-        [requestId]
-      );
+      await pool.query('UPDATE friendships SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', ['accepted', requestId]);
 
       await createNotification(row.requester_id, 'friend_accept', {
         fromId: req.user.id,
@@ -418,15 +461,66 @@ app.post('/api/friends/respond', authMiddleware, async (req, res) => {
   }
 });
 
+app.get('/api/blocked', authMiddleware, async (req, res) => {
+  const result = await pool.query(
+    `SELECT b.id, u.id AS user_id, u.username, u.avatar_url, b.created_at
+     FROM blocked_users b
+     JOIN users u ON u.id = b.blocked_id
+     WHERE b.blocker_id = $1
+     ORDER BY b.created_at DESC`,
+    [req.user.id]
+  );
+
+  res.json({ blocked: result.rows });
+});
+
+app.post('/api/block', authMiddleware, async (req, res) => {
+  try {
+    const userId = Number(req.body.userId);
+    if (!Number.isInteger(userId)) return res.status(400).json({ error: 'Geçersiz kullanıcı.' });
+    if (userId === req.user.id) return res.status(400).json({ error: 'Kendini engelleyemezsin.' });
+
+    await pool.query(
+      `INSERT INTO blocked_users (blocker_id, blocked_id)
+       VALUES ($1, $2)
+       ON CONFLICT (blocker_id, blocked_id) DO NOTHING`,
+      [req.user.id, userId]
+    );
+
+    await pool.query(
+      `DELETE FROM friendships
+       WHERE (requester_id = $1 AND addressee_id = $2)
+       OR (requester_id = $2 AND addressee_id = $1)`,
+      [req.user.id, userId]
+    );
+
+    emitToUser(userId, 'blocked_by_user', { byId: req.user.id });
+    res.json({ ok: true, message: 'Kullanıcı engellendi.' });
+  } catch (error) {
+    console.error('Engelleme hatası:', error);
+    res.status(500).json({ error: 'Kullanıcı engellenemedi.' });
+  }
+});
+
+app.delete('/api/block/:userId', authMiddleware, async (req, res) => {
+  const userId = Number(req.params.userId);
+  if (!Number.isInteger(userId)) return res.status(400).json({ error: 'Geçersiz kullanıcı.' });
+
+  await pool.query('DELETE FROM blocked_users WHERE blocker_id = $1 AND blocked_id = $2', [req.user.id, userId]);
+  res.json({ ok: true, message: 'Engel kaldırıldı.' });
+});
+
+/* DM */
+
 app.get('/api/dm/:friendId', authMiddleware, async (req, res) => {
   const friendId = Number(req.params.friendId);
   if (!Number.isInteger(friendId)) return res.status(400).json({ error: 'Geçersiz kullanıcı.' });
 
   const ok = await areFriends(req.user.id, friendId);
-  if (!ok) return res.status(403).json({ error: 'Bu kullanıcıyla arkadaş değilsin.' });
+  if (!ok) return res.status(403).json({ error: 'Bu kullanıcıyla arkadaş değilsin veya engel var.' });
 
   const result = await pool.query(
-    `SELECT dm.id, dm.sender_id, dm.receiver_id, dm.text, dm.created_at,
+    `SELECT dm.id, dm.sender_id, dm.receiver_id, dm.text, dm.created_at, dm.edited_at, dm.deleted_at, dm.read_at,
             sender.username AS sender_username,
             sender.avatar_url AS sender_avatar_url
      FROM dm_messages dm
@@ -440,6 +534,23 @@ app.get('/api/dm/:friendId', authMiddleware, async (req, res) => {
 
   res.json({ messages: result.rows.reverse() });
 });
+
+app.post('/api/dm/:friendId/read', authMiddleware, async (req, res) => {
+  const friendId = Number(req.params.friendId);
+  if (!Number.isInteger(friendId)) return res.status(400).json({ error: 'Geçersiz kullanıcı.' });
+
+  await pool.query(
+    `UPDATE dm_messages
+     SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
+     WHERE sender_id = $1 AND receiver_id = $2 AND read_at IS NULL`,
+    [friendId, req.user.id]
+  );
+
+  emitToUser(friendId, 'dm_read', { byId: req.user.id });
+  res.json({ ok: true });
+});
+
+/* NOTIFICATIONS */
 
 app.get('/api/notifications', authMiddleware, async (req, res) => {
   const result = await pool.query(
@@ -461,10 +572,7 @@ app.post('/api/notifications/read', authMiddleware, async (req, res) => {
 
 app.delete('/api/notifications/:id', authMiddleware, async (req, res) => {
   const id = Number(req.params.id);
-
-  if (!Number.isInteger(id)) {
-    return res.status(400).json({ error: 'Geçersiz bildirim.' });
-  }
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Geçersiz bildirim.' });
 
   await pool.query('DELETE FROM notifications WHERE id = $1 AND user_id = $2', [id, req.user.id]);
   res.json({ ok: true });
@@ -474,6 +582,8 @@ app.delete('/api/notifications', authMiddleware, async (req, res) => {
   await pool.query('DELETE FROM notifications WHERE user_id = $1', [req.user.id]);
   res.json({ ok: true });
 });
+
+/* SOCKET */
 
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token;
@@ -494,15 +604,12 @@ io.on('connection', (socket) => {
     const cleanRoom = cleanText(room, 50).toLowerCase() || 'genel';
 
     if (socket.data.room) socket.leave(socket.data.room);
-
     socket.data.room = cleanRoom;
     socket.join(cleanRoom);
 
     onlineUsers.set(socket.id, { id: socket.user.id, username: socket.user.username, room: cleanRoom });
-
     socket.emit('system_message', `Hoş geldin ${socket.user.username}. Oda: ${cleanRoom}`);
     socket.to(cleanRoom).emit('system_message', `${socket.user.username} odaya katıldı.`);
-
     updateRoomUsers(cleanRoom);
   });
 
@@ -512,29 +619,84 @@ io.on('connection', (socket) => {
       if (!text || !socket.data.room) return;
 
       const room = socket.data.room;
-
       const saved = await pool.query(
         `INSERT INTO messages (room, user_id, username, text)
          VALUES ($1, $2, $3, $4)
-         RETURNING id, room, username, text, created_at`,
+         RETURNING id, room, username, text, created_at, edited_at, deleted_at`,
         [room, socket.user.id, socket.user.username, text]
       );
 
-      const msg = saved.rows[0];
       const avatarResult = await pool.query('SELECT avatar_url FROM users WHERE id = $1', [socket.user.id]);
-      const avatarUrl = avatarResult.rows[0]?.avatar_url || null;
+      const msg = saved.rows[0];
 
       io.to(room).emit('chat_message', {
         id: msg.id,
         username: msg.username,
-        avatar_url: avatarUrl,
+        avatar_url: avatarResult.rows[0]?.avatar_url || null,
         text: msg.text,
+        edited_at: msg.edited_at,
+        deleted_at: msg.deleted_at,
         time: nowTime()
       });
     } catch (error) {
       console.error('Mesaj kayıt hatası:', error);
       socket.emit('system_message', 'Mesaj gönderilemedi.');
     }
+  });
+
+  socket.on('room_message_edit', async ({ messageId, text }) => {
+    try {
+      const id = Number(messageId);
+      const newText = cleanText(text, 1000);
+      if (!Number.isInteger(id) || !newText) return;
+
+      const result = await pool.query(
+        `UPDATE messages
+         SET text = $1, edited_at = CURRENT_TIMESTAMP
+         WHERE id = $2 AND user_id = $3 AND deleted_at IS NULL
+         RETURNING id, room, text, edited_at`,
+        [newText, id, socket.user.id]
+      );
+
+      if (result.rows.length === 0) return;
+      const msg = result.rows[0];
+      io.to(msg.room).emit('room_message_updated', msg);
+    } catch (error) {
+      console.error('Oda mesaj düzenleme hatası:', error);
+    }
+  });
+
+  socket.on('room_message_delete', async ({ messageId }) => {
+    try {
+      const id = Number(messageId);
+      if (!Number.isInteger(id)) return;
+
+      const result = await pool.query(
+        `UPDATE messages
+         SET text = 'Bu mesaj silindi.', deleted_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+         RETURNING id, room, text, deleted_at`,
+        [id, socket.user.id]
+      );
+
+      if (result.rows.length === 0) return;
+      const msg = result.rows[0];
+      io.to(msg.room).emit('room_message_deleted', msg);
+    } catch (error) {
+      console.error('Oda mesaj silme hatası:', error);
+    }
+  });
+
+  socket.on('dm_join', ({ friendId }) => {
+    const targetId = Number(friendId);
+    if (!Number.isInteger(targetId)) return;
+    socket.join(dmRoom(socket.user.id, targetId));
+  });
+
+  socket.on('dm_typing', ({ receiverId }) => {
+    const targetId = Number(receiverId);
+    if (!Number.isInteger(targetId)) return;
+    emitToUser(targetId, 'dm_typing', { fromId: socket.user.id, fromUsername: socket.user.username });
   });
 
   socket.on('dm_message', async ({ receiverId, text }) => {
@@ -546,27 +708,29 @@ io.on('connection', (socket) => {
 
       const ok = await areFriends(socket.user.id, targetId);
       if (!ok) {
-        socket.emit('notification', {
-          type: 'error',
-          payload: { message: 'DM göndermek için arkadaş olmanız gerekiyor.' }
-        });
+        socket.emit('notification', { type: 'error', payload: { message: 'DM göndermek için arkadaş olmanız ve engel olmaması gerekiyor.' } });
         return;
       }
 
       const saved = await pool.query(
         `INSERT INTO dm_messages (sender_id, receiver_id, text)
          VALUES ($1, $2, $3)
-         RETURNING id, sender_id, receiver_id, text, created_at`,
+         RETURNING id, sender_id, receiver_id, text, created_at, edited_at, deleted_at, read_at`,
         [socket.user.id, targetId, cleanMessage]
       );
+
+      const avatarResult = await pool.query('SELECT avatar_url FROM users WHERE id = $1', [socket.user.id]);
 
       const msg = {
         id: saved.rows[0].id,
         sender_id: saved.rows[0].sender_id,
         receiver_id: saved.rows[0].receiver_id,
         sender_username: socket.user.username,
-        sender_avatar_url: (await pool.query('SELECT avatar_url FROM users WHERE id = $1', [socket.user.id])).rows[0]?.avatar_url || null,
+        sender_avatar_url: avatarResult.rows[0]?.avatar_url || null,
         text: saved.rows[0].text,
+        edited_at: saved.rows[0].edited_at,
+        deleted_at: saved.rows[0].deleted_at,
+        read_at: saved.rows[0].read_at,
         time: nowTime(),
         created_at: saved.rows[0].created_at
       };
@@ -581,10 +745,52 @@ io.on('connection', (socket) => {
       });
     } catch (error) {
       console.error('DM hatası:', error);
-      socket.emit('notification', {
-        type: 'error',
-        payload: { message: 'DM gönderilemedi.' }
-      });
+      socket.emit('notification', { type: 'error', payload: { message: 'DM gönderilemedi.' } });
+    }
+  });
+
+  socket.on('dm_message_edit', async ({ messageId, text }) => {
+    try {
+      const id = Number(messageId);
+      const newText = cleanText(text, 1000);
+      if (!Number.isInteger(id) || !newText) return;
+
+      const result = await pool.query(
+        `UPDATE dm_messages
+         SET text = $1, edited_at = CURRENT_TIMESTAMP
+         WHERE id = $2 AND sender_id = $3 AND deleted_at IS NULL
+         RETURNING id, sender_id, receiver_id, text, edited_at`,
+        [newText, id, socket.user.id]
+      );
+
+      if (result.rows.length === 0) return;
+      const msg = result.rows[0];
+      emitToUser(msg.sender_id, 'dm_message_updated', msg);
+      emitToUser(msg.receiver_id, 'dm_message_updated', msg);
+    } catch (error) {
+      console.error('DM düzenleme hatası:', error);
+    }
+  });
+
+  socket.on('dm_message_delete', async ({ messageId }) => {
+    try {
+      const id = Number(messageId);
+      if (!Number.isInteger(id)) return;
+
+      const result = await pool.query(
+        `UPDATE dm_messages
+         SET text = 'Bu mesaj silindi.', deleted_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND sender_id = $2 AND deleted_at IS NULL
+         RETURNING id, sender_id, receiver_id, text, deleted_at`,
+        [id, socket.user.id]
+      );
+
+      if (result.rows.length === 0) return;
+      const msg = result.rows[0];
+      emitToUser(msg.sender_id, 'dm_message_deleted', msg);
+      emitToUser(msg.receiver_id, 'dm_message_deleted', msg);
+    } catch (error) {
+      console.error('DM silme hatası:', error);
     }
   });
 
