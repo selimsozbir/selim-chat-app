@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.7.5",
-  "description": "Selim Chat v7.7.5 with more 5ECROPOLIS character easter eggs",
+  "version": "7.8.0",
+  "description": "Selim Chat v7.8.0 settings panel with username, nickname and password controls",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
