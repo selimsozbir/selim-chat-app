@@ -1,13 +1,14 @@
 {
   "name": "selim-chat-app",
-  "version": "7.2.0",
-  "description": "Selim Chat v7.2.0 with Supabase Storage upload support for images, audio and files",
+  "version": "7.2.1",
+  "description": "Selim Chat v7.2.1 with stable Supabase SDK storage upload and upload timeout fixes",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.45.4",
     "bcrypt": "5.1.1",
     "cors": "2.8.5",
     "express": "4.18.2",
