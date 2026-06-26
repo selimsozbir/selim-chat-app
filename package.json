@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.5.1",
-  "description": "Selim Chat v7.5.1 message visibility fix for cyber UI",
+  "version": "7.6.0",
+  "description": "Selim Chat v7.6.0 Groq AI bot with @bot support in rooms, groups and bot DM",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
