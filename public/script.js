@@ -50,6 +50,12 @@ const addGroupFriendList = document.getElementById('addGroupFriendList');
 const roomInput = document.getElementById('roomInput');
 const joinRoomButton = document.getElementById('joinRoomButton');
 const chatTitle = document.getElementById('chatTitle');
+const chatHeaderAvatar = document.getElementById('chatHeaderAvatar');
+const focusComposerButton = document.getElementById('focusComposerButton');
+const jumpBottomHeaderButton = document.getElementById('jumpBottomHeaderButton');
+const scrollBottomButton = document.getElementById('scrollBottomButton');
+const composerHint = document.getElementById('composerHint');
+const sendButton = document.getElementById('sendButton');
 const statusText = document.getElementById('statusText');
 
 const messagesEl = document.getElementById('messages');
@@ -206,6 +212,8 @@ let myRoomRole = null;
 let roomMutedUsers = [];
 let canOpenGlobalAdmin = false;
 let isUploadingFile = false;
+let lastRenderedSenderKey = '';
+let lastRenderedMessageType = '';
 let badgeCheckCooldown = 0;
 let activeProfileUser = null;
 let activeProfileAllBadges = [];
@@ -773,6 +781,11 @@ enableNotificationsButton.addEventListener('click', async () => {
   addSystemMessage(permission === 'granted' ? 'Bildirimler açıldı.' : 'Bildirim izni verilmedi.');
 });
 
+if (focusComposerButton) focusComposerButton.addEventListener('click', () => messageInput.focus());
+if (jumpBottomHeaderButton) jumpBottomHeaderButton.addEventListener('click', scrollToBottom);
+if (scrollBottomButton) scrollBottomButton.addEventListener('click', scrollToBottom);
+messagesEl.addEventListener('scroll', updateScrollBottomButton);
+
 async function api(url, options = {}, withAuth = true) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   if (withAuth && token) headers.Authorization = `Bearer ${token}`;
@@ -915,6 +928,7 @@ async function startApp() {
 
   await Promise.allSettled([refreshMe(), loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration(), loadGlobalAdminStatus(), loadGroups()]);
   checkForUnlockedBadges(true);
+  updateMessengerUi();
 }
 
 function renderProfile() {
@@ -1135,6 +1149,83 @@ function connectSocket() {
   });
 }
 
+
+function isNearBottom() {
+  return messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 160;
+}
+
+function updateScrollBottomButton() {
+  if (!scrollBottomButton) return;
+  scrollBottomButton.classList.toggle('hidden', isNearBottom());
+}
+
+function resetMessageGrouping() {
+  lastRenderedSenderKey = '';
+  lastRenderedMessageType = '';
+}
+
+function updateChatHeaderAvatar() {
+  if (!chatHeaderAvatar) return;
+
+  let label = '#';
+  let title = chatTitle?.textContent || '# genel';
+
+  if (chatMode === 'dm' && activeFriend) {
+    label = (activeFriend.display_name || activeFriend.username || '?').charAt(0).toUpperCase();
+  } else if (chatMode === 'group' && activeGroup) {
+    label = (activeGroup.name || 'G').charAt(0).toUpperCase();
+  } else if (chatMode === 'room') {
+    label = '#';
+  }
+
+  chatHeaderAvatar.textContent = label;
+  chatHeaderAvatar.title = title;
+}
+
+function updateComposerState() {
+  if (!messageInput || !messageForm) return;
+
+  let placeholder = `#${currentRoom} odasına mesaj yaz...`;
+  let disabled = false;
+  let hint = getLocalSettings().enterSend ? 'Enter gönderir · Shift+Enter satır açmaz' : 'Ctrl+Enter gönderir';
+
+  if (chatMode === 'dm') {
+    disabled = !activeFriend;
+    placeholder = activeFriend ? `@${activeFriend.username} kişisine mesaj yaz...` : 'Mesajlaşmak için soldan bir arkadaş seç...';
+    hint = activeFriend ? 'DM açık' : 'DM seçilmedi';
+  } else if (chatMode === 'group') {
+    disabled = !activeGroup;
+    placeholder = activeGroup ? `${activeGroup.name} grubuna mesaj yaz...` : 'Mesajlaşmak için soldan bir grup seç...';
+    hint = activeGroup ? `${activeGroup.name} aktif` : 'Grup seçilmedi';
+  }
+
+  messageInput.placeholder = placeholder;
+  messageInput.disabled = disabled;
+  if (sendButton) sendButton.disabled = disabled;
+  messageForm.classList.toggle('composer-disabled', disabled);
+  if (composerHint) composerHint.textContent = hint;
+}
+
+function updateMessengerUi() {
+  updateChatHeaderAvatar();
+  updateComposerState();
+  updateMessengerUi();
+  markActiveConversation();
+}
+
+function markActiveConversation() {
+  document.querySelectorAll('.conversation-item.active').forEach((el) => el.classList.remove('active'));
+
+  if (chatMode === 'dm' && activeFriend) {
+    document.querySelectorAll(`[data-conversation-type="dm"][data-user-id="${activeFriend.id}"]`).forEach((el) => el.classList.add('active'));
+  }
+
+  if (chatMode === 'group' && activeGroup) {
+    document.querySelectorAll(`[data-conversation-type="group"][data-group-id="${activeGroup.id}"]`).forEach((el) => el.classList.add('active'));
+  }
+}
+
+
 function setChatMode(nextMode) {
   clearReply();
   chatMode = nextMode;
@@ -1149,6 +1240,7 @@ function setChatMode(nextMode) {
   if (groupsPanel) groupsPanel.classList.toggle('hidden', chatMode !== 'group');
 
   messagesEl.innerHTML = '';
+  resetMessageGrouping();
   typingText.textContent = '';
 
   if (chatMode === 'room') {
@@ -1185,16 +1277,23 @@ async function joinRoom(room) {
   roomInput.value = currentRoom;
   chatTitle.textContent = `# ${currentRoom}`;
   messagesEl.innerHTML = '';
+  resetMessageGrouping();
   typingText.textContent = '';
 
   await loadOldRoomMessages(currentRoom);
   await Promise.allSettled([loadRoomMembers(), loadModeration()]);
   if (socket && socket.connected) socket.emit('join', { room: currentRoom });
+  updateMessengerUi();
+  markActiveConversation();
 }
 
 async function loadOldRoomMessages(room) {
   try {
     const data = await api(`/api/messages/${encodeURIComponent(room)}`);
+    if (!data.messages.length) {
+      addSystemMessage(`Burası #${room}. İlk mesajı sen gönder.`);
+      return;
+    }
     data.messages.forEach((message) => {
       addRoomMessage({
         id: message.id,
@@ -1372,8 +1471,10 @@ async function loadFriends() {
 
     friends.forEach((friend) => {
       const item = document.createElement('div');
-      item.className = 'mini-item';
-      item.innerHTML = `<div class="mini-left" data-profile-id="${friend.id}">${avatarHtml(friend.username, friend.avatar_url)}<div><strong>${escapeHtml(friend.username)}</strong><span>${formatPresence(friend)}</span></div></div>`;
+      item.className = 'mini-item conversation-item';
+      item.dataset.conversationType = 'dm';
+      item.dataset.userId = friend.id;
+      item.innerHTML = `<div class="mini-left" data-profile-id="${friend.id}">${avatarHtml(friend.display_name || friend.username, friend.avatar_url)}<div><strong>${escapeHtml(friend.display_name || friend.username)}</strong><span>${formatPresence(friend)}</span></div></div>`;
       item.querySelector('.mini-left').onclick = () => openProfile(friend.id);
 
       const actions = document.createElement('div');
@@ -1400,6 +1501,7 @@ async function loadFriends() {
       item.appendChild(actions);
       friendsList.appendChild(item);
     });
+    markActiveConversation();
   } catch (error) {
     friendsList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
   }
@@ -1492,15 +1594,19 @@ async function openDm(friend) {
   syncMobileHeader();
   syncMobileHeader();
   messagesEl.innerHTML = '';
+  resetMessageGrouping();
   typingText.textContent = '';
 
   if (socket) socket.emit('dm_join', { friendId: friend.id });
 
   try {
     const data = await api(`/api/dm/${friend.id}`);
+    if (!data.messages.length) addSystemMessage(`${friend.username} ile DM başladı. Selam yaz.`);
     data.messages.forEach(addDmMessage);
     await markDmRead(friend.id);
     scrollToBottom();
+    updateMessengerUi();
+    markActiveConversation();
   } catch (error) {
     addSystemMessage(error.message);
   }
@@ -1629,10 +1735,17 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
 
   if (isBotMessage && localSettings.botHide) return;
 
+  const wasNearBottom = isNearBottom();
+  const senderKey = `${type}:${mine ? 'me' : normalizedUsername}`;
+  const sameSender = senderKey === lastRenderedSenderKey && type === lastRenderedMessageType;
+
   const div = document.createElement('div');
-  div.className = `message ${mine ? 'mine' : ''} ${isBotMessage ? 'bot-message' : ''}`;
+  div.className = `message ${mine ? 'mine' : ''} ${isBotMessage ? 'bot-message' : ''} ${sameSender ? 'same-sender' : ''}`;
   div.dataset.type = type;
   div.dataset.id = id;
+
+  lastRenderedSenderKey = senderKey;
+  lastRenderedMessageType = type;
 
   const avatar = document.createElement(avatar_url ? 'img' : 'div');
   avatar.className = 'msg-avatar';
@@ -3067,11 +3180,14 @@ function renderGroups() {
 
   groups.forEach((group) => {
     const item = document.createElement('div');
-    item.className = 'mini-item';
+    item.className = 'mini-item conversation-item';
+    item.dataset.conversationType = 'group';
+    item.dataset.groupId = group.id;
     item.innerHTML = `<div class="mini-left">${avatarHtml(group.name, group.avatar_url)}<div><strong>${escapeHtml(group.name)}</strong><span>${group.member_count} üye • ${group.my_role}</span></div></div>`;
     item.onclick = () => openGroup(group);
     groupsList.appendChild(item);
   });
+  markActiveConversation();
 }
 
 function renderNewGroupFriends() {
@@ -3137,6 +3253,7 @@ async function openGroup(group) {
   syncMobileHeader();
   syncMobileHeader();
   messagesEl.innerHTML = '';
+  resetMessageGrouping();
   typingText.textContent = '';
 
   if (socket && socket.connected) socket.emit('group_join', { groupId: group.id });
@@ -3151,8 +3268,12 @@ async function loadGroupMessages(groupId) {
   try {
     const data = await api(`/api/groups/${groupId}/messages`);
     messagesEl.innerHTML = '';
+    resetMessageGrouping();
+    if (!(data.messages || []).length) addSystemMessage('Bu grupta henüz mesaj yok. İlk mesajı sen gönder.');
     (data.messages || []).forEach(addGroupMessage);
     scrollToBottom();
+    updateMessengerUi();
+    markActiveConversation();
   } catch (error) {
     addSystemMessage(error.message);
   }
@@ -3685,7 +3806,8 @@ function addFiveSystemMessage(kind, message) {
   div.className = `message system five-system five-system-${kind}`;
   div.textContent = message;
   messagesEl.appendChild(div);
-  scrollToBottom();
+  if (wasNearBottom || mine) scrollToBottom();
+  else updateScrollBottomButton();
 }
 
 
@@ -3694,7 +3816,8 @@ function addSystemMessage(message) {
   div.className = 'message system';
   div.textContent = message;
   messagesEl.appendChild(div);
-  scrollToBottom();
+  if (wasNearBottom || mine) scrollToBottom();
+  else updateScrollBottomButton();
 }
 
 function avatarHtml(username, avatarUrl, className = 'mini-avatar') {
@@ -3704,6 +3827,7 @@ function avatarHtml(username, avatarUrl, className = 'mini-avatar') {
 
 function scrollToBottom() {
   messagesEl.scrollTop = messagesEl.scrollHeight;
+  updateScrollBottomButton();
 }
 
 function formatTime(dateString) {
