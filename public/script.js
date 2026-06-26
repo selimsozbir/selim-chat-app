@@ -35,6 +35,10 @@ const messageInput = document.getElementById('messageInput');
 const attachButton = document.getElementById('attachButton');
 const voiceButton = document.getElementById('voiceButton');
 const fileInput = document.getElementById('fileInput');
+const replyBar = document.getElementById('replyBar');
+const replyUsername = document.getElementById('replyUsername');
+const replyText = document.getElementById('replyText');
+const cancelReplyButton = document.getElementById('cancelReplyButton');
 
 const searchInput = document.getElementById('searchInput');
 const searchButton = document.getElementById('searchButton');
@@ -64,6 +68,7 @@ let recordedChunks = [];
 let isRecording = false;
 let contextTarget = null;
 let longPressTimer = null;
+let replyingTo = null;
 
 const contextMenu = document.createElement('div');
 contextMenu.className = 'message-context-menu hidden';
@@ -73,6 +78,7 @@ contextMenu.innerHTML = `
   <button data-emoji="😂">😂</button>
   <button data-emoji="🔥">🔥</button>
   <button data-emoji="😘">😘</button>
+  <button data-action="reply">Yanıtla</button>
   <button data-action="edit">Düzenle</button>
   <button data-action="delete" class="danger">Sil</button>
 `;
@@ -85,6 +91,12 @@ contextMenu.addEventListener('click', (event) => {
 
   if (button.dataset.emoji) {
     sendReaction(contextTarget.type, contextTarget.id, button.dataset.emoji);
+    hideContextMenu();
+    return;
+  }
+
+  if (button.dataset.action === 'reply') {
+    startReply(contextTarget);
     hideContextMenu();
     return;
   }
@@ -171,8 +183,14 @@ logoutButton.addEventListener('click', () => {
   authScreen.classList.remove('hidden');
 });
 
-roomModeButton.addEventListener('click', () => setChatMode('room'));
+cancelReplyButton.addEventListener('click', clearReply);
+
+roomModeButton.addEventListener('click', () => {
+  clearReply();
+  setChatMode('room');
+});
 dmModeButton.addEventListener('click', () => {
+  clearReply();
   setChatMode('dm');
   loadFriends();
   loadRequests();
@@ -196,9 +214,11 @@ messageForm.addEventListener('submit', (event) => {
       addSystemMessage('Önce bir arkadaş seç.');
       return;
     }
-    socket.emit('dm_message', { receiverId: activeFriend.id, text, type: 'text' });
+    socket.emit('dm_message', { receiverId: activeFriend.id, text, type: 'text', replyToId: replyingTo?.id || null });
+    clearReply();
   } else {
-    socket.emit('chat_message', { text, type: 'text' });
+    socket.emit('chat_message', { text, type: 'text', replyToId: replyingTo?.id || null });
+    clearReply();
   }
 
   messageInput.value = '';
@@ -261,9 +281,11 @@ async function sendFileMessage(file) {
       addSystemMessage('Önce bir arkadaş seç.');
       return;
     }
-    socket.emit('dm_message', { receiverId: activeFriend.id, ...payload });
+    socket.emit('dm_message', { receiverId: activeFriend.id, ...payload, replyToId: replyingTo?.id || null });
+    clearReply();
   } else {
-    socket.emit('chat_message', payload);
+    socket.emit('chat_message', { ...payload, replyToId: replyingTo?.id || null });
+    clearReply();
   }
 }
 
@@ -461,6 +483,8 @@ function connectSocket() {
   });
 
   socket.on('typing', (username) => {
+    if (chatMode !== 'room') return;
+
     typingText.textContent = `${username} yazıyor...`;
     clearTimeout(typingTimer);
     typingTimer = setTimeout(() => typingText.textContent = '', 1200);
@@ -511,6 +535,10 @@ function connectSocket() {
     if (notification.type === 'dm') {
       showBrowserNotification('Yeni DM', `${notification.payload.fromUsername}: ${notification.payload.text}`);
     }
+
+    if (notification.type === 'mention' || notification.type === 'mention_everyone') {
+      showBrowserNotification('Etiketlendin', `${notification.payload.fromUsername}: ${notification.payload.text}`);
+    }
   });
 
   socket.on('reaction_state', ({ scope, messageId, reactions }) => {
@@ -533,6 +561,7 @@ function connectSocket() {
 }
 
 function setChatMode(nextMode) {
+  clearReply();
   chatMode = nextMode;
   roomModeButton.classList.toggle('active', chatMode === 'room');
   dmModeButton.classList.toggle('active', chatMode === 'dm');
@@ -553,6 +582,7 @@ function setChatMode(nextMode) {
 }
 
 async function joinRoom(room) {
+  clearReply();
   currentRoom = room.toLowerCase();
   localStorage.setItem('chat_room', currentRoom);
 
@@ -584,6 +614,9 @@ async function loadOldRoomMessages(room) {
         file_name: message.file_name,
         file_mime: message.file_mime,
         file_data: message.file_data,
+        reply_to_id: message.reply_to_id,
+        reply_username: message.reply_username,
+        reply_text: message.reply_text,
         edited_at: message.edited_at,
         deleted_at: message.deleted_at,
         time: formatTime(message.created_at)
@@ -606,6 +639,9 @@ function addRoomMessage(message) {
     file_name: message.file_name,
     file_mime: message.file_mime,
     file_data: message.file_data,
+    reply_to_id: message.reply_to_id,
+    reply_username: message.reply_username,
+    reply_text: message.reply_text,
     time: message.time,
     mine: user && message.username === user.username,
     edited: Boolean(message.edited_at),
@@ -839,6 +875,7 @@ async function unblockUser(userId) {
 }
 
 async function openDm(friend) {
+  clearReply();
   activeFriend = friend;
   chatMode = 'dm';
 
@@ -880,6 +917,9 @@ function addDmMessage(message) {
     file_name: message.file_name,
     file_mime: message.file_mime,
     file_data: message.file_data,
+    reply_to_id: message.reply_to_id,
+    reply_username: message.reply_username,
+    reply_text: message.reply_text,
     time: message.time || formatTime(message.created_at),
     mine: message.sender_id === user.id,
     edited: Boolean(message.edited_at),
@@ -942,6 +982,8 @@ function notificationTitle(n) {
   if (n.type === 'friend_request') return 'Arkadaş isteği';
   if (n.type === 'friend_accept') return 'İstek kabul edildi';
   if (n.type === 'dm') return 'Yeni DM';
+  if (n.type === 'mention') return 'Etiket';
+  if (n.type === 'mention_everyone') return '@everyone';
   return 'Bildirim';
 }
 
@@ -950,6 +992,7 @@ function notificationText(n) {
   if (n.type === 'friend_request') return `${p.fromUsername} arkadaş isteği gönderdi.`;
   if (n.type === 'friend_accept') return `${p.fromUsername} arkadaş oldu.`;
   if (n.type === 'dm') return `${p.fromUsername}: ${p.text || ''}`;
+  if (n.type === 'mention' || n.type === 'mention_everyone') return `${p.fromUsername} seni ${p.room} odasında etiketledi.`;
   return p.message || '';
 }
 
@@ -966,7 +1009,7 @@ function renderUsers(users) {
   });
 }
 
-function addMessage({ type, id, username, avatar_url, text, message_type, file_name, file_mime, file_data, time, mine, edited, deleted, read }) {
+function addMessage({ type, id, username, avatar_url, text, message_type, file_name, file_mime, file_data, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read }) {
   const div = document.createElement('div');
   div.className = `message ${mine ? 'mine' : ''}`;
   div.dataset.type = type;
@@ -993,6 +1036,14 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
   body.textContent = text;
 
   bubble.appendChild(meta);
+
+  if (reply_to_id) {
+    const reply = document.createElement('div');
+    reply.className = 'reply-preview';
+    reply.innerHTML = `<strong>${escapeHtml(reply_username || 'Mesaj')}</strong><span>${escapeHtml(reply_text || 'Yanıtlanan mesaj')}</span>`;
+    bubble.appendChild(reply);
+  }
+
   bubble.appendChild(body);
 
   if (file_data && !deleted) {
@@ -1039,6 +1090,7 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
       type,
       id,
       text: body.textContent,
+      username,
       mine,
       deleted
     });
@@ -1136,6 +1188,29 @@ function showContextMenu(x, y, target) {
 function hideContextMenu() {
   contextMenu.classList.add('hidden');
   contextTarget = null;
+}
+
+function startReply(target) {
+  if (!target || !target.id) return;
+
+  replyingTo = {
+    type: target.type,
+    id: target.id,
+    username: target.username || 'Mesaj',
+    text: target.text || ''
+  };
+
+  replyUsername.textContent = `Yanıtlanıyor: ${replyingTo.username}`;
+  replyText.textContent = replyingTo.text.slice(0, 80);
+  replyBar.classList.remove('hidden');
+  messageInput.focus();
+}
+
+function clearReply() {
+  replyingTo = null;
+  replyBar.classList.add('hidden');
+  replyUsername.textContent = '';
+  replyText.textContent = '';
 }
 
 function renderMedia({ message_type, file_name, file_mime, file_data }) {
