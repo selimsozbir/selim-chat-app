@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.8.2",
-  "description": "Selim Chat v7.8.2 fixes settings panel logout reference and login persistence",
+  "version": "7.9.0",
+  "description": "Selim Chat v7.9.0 dedicated mobile interface",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
