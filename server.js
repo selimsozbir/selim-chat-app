@@ -10,9 +10,15 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+let openai = null;
+
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  });
+} else {
+  console.log('OPENAI_API_KEY bulunamadı. ChatGPT bot devre dışı.');
+}
 
 app.use(express.static(path.join(__dirname, 'public')));
 
