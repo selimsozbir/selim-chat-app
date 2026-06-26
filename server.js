@@ -576,6 +576,38 @@ app.post('/api/dm/:friendId/read', authMiddleware, async (req, res) => {
 
 /* REACTIONS */
 
+async function getReactionState(scope, messageId) {
+  const result = await pool.query(
+    `SELECT r.emoji,
+            COUNT(*)::int AS count,
+            COALESCE(json_agg(json_build_object('id', u.id, 'username', u.username) ORDER BY u.username), '[]') AS users
+     FROM message_reactions r
+     JOIN users u ON u.id = r.user_id
+     WHERE r.message_scope = $1 AND r.message_id = $2
+     GROUP BY r.emoji
+     ORDER BY r.emoji ASC`,
+    [scope, messageId]
+  );
+
+  return result.rows;
+}
+
+async function emitReactionState(scope, messageId, state) {
+  if (scope === 'room') {
+    const msg = await pool.query('SELECT room FROM messages WHERE id = $1', [messageId]);
+    if (msg.rows.length > 0) {
+      io.to(msg.rows[0].room).emit('reaction_state', { scope, messageId, reactions: state });
+    }
+    return;
+  }
+
+  const msg = await pool.query('SELECT sender_id, receiver_id FROM dm_messages WHERE id = $1', [messageId]);
+  if (msg.rows.length > 0) {
+    emitToUser(msg.rows[0].sender_id, 'reaction_state', { scope, messageId, reactions: state });
+    emitToUser(msg.rows[0].receiver_id, 'reaction_state', { scope, messageId, reactions: state });
+  }
+}
+
 app.post('/api/reactions', authMiddleware, async (req, res) => {
   try {
     const scope = String(req.body.scope || '');
@@ -584,27 +616,24 @@ app.post('/api/reactions', authMiddleware, async (req, res) => {
 
     if (!['room', 'dm'].includes(scope)) return res.status(400).json({ error: 'Geçersiz mesaj tipi.' });
     if (!Number.isInteger(messageId)) return res.status(400).json({ error: 'Geçersiz mesaj.' });
-    if (!emoji) return res.status(400).json({ error: 'Emoji yok.' });
+    if (!['👍', '😂', '❤️', '🔥', '😘'].includes(emoji)) return res.status(400).json({ error: 'Geçersiz emoji.' });
 
     if (scope === 'room') {
       const msg = await pool.query('SELECT id, room FROM messages WHERE id = $1 AND deleted_at IS NULL', [messageId]);
       if (msg.rows.length === 0) return res.status(404).json({ error: 'Mesaj bulunamadı.' });
 
+      await pool.query('DELETE FROM message_reactions WHERE message_scope = $1 AND message_id = $2 AND user_id = $3', [scope, messageId, req.user.id]);
+
       await pool.query(
         `INSERT INTO message_reactions (message_scope, message_id, user_id, emoji)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (message_scope, message_id, user_id, emoji) DO NOTHING`,
+         VALUES ($1, $2, $3, $4)`,
         [scope, messageId, req.user.id, emoji]
       );
 
-      io.to(msg.rows[0].room).emit('reaction_added', {
-        scope,
-        messageId,
-        emoji,
-        username: req.user.username
-      });
+      const state = await getReactionState(scope, messageId);
+      await emitReactionState(scope, messageId, state);
 
-      return res.json({ ok: true });
+      return res.json({ ok: true, reactions: state });
     }
 
     const msg = await pool.query(
@@ -617,28 +646,18 @@ app.post('/api/reactions', authMiddleware, async (req, res) => {
 
     if (msg.rows.length === 0) return res.status(404).json({ error: 'Mesaj bulunamadı.' });
 
+    await pool.query('DELETE FROM message_reactions WHERE message_scope = $1 AND message_id = $2 AND user_id = $3', [scope, messageId, req.user.id]);
+
     await pool.query(
       `INSERT INTO message_reactions (message_scope, message_id, user_id, emoji)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (message_scope, message_id, user_id, emoji) DO NOTHING`,
+       VALUES ($1, $2, $3, $4)`,
       [scope, messageId, req.user.id, emoji]
     );
 
-    emitToUser(msg.rows[0].sender_id, 'reaction_added', {
-      scope,
-      messageId,
-      emoji,
-      username: req.user.username
-    });
+    const state = await getReactionState(scope, messageId);
+    await emitReactionState(scope, messageId, state);
 
-    emitToUser(msg.rows[0].receiver_id, 'reaction_added', {
-      scope,
-      messageId,
-      emoji,
-      username: req.user.username
-    });
-
-    res.json({ ok: true });
+    res.json({ ok: true, reactions: state });
   } catch (error) {
     console.error('Reaksiyon hatası:', error);
     res.status(500).json({ error: 'Reaksiyon eklenemedi.' });
@@ -653,16 +672,8 @@ app.get('/api/reactions/:scope/:messageId', authMiddleware, async (req, res) => 
     return res.status(400).json({ error: 'Geçersiz istek.' });
   }
 
-  const result = await pool.query(
-    `SELECT emoji, COUNT(*)::int AS count
-     FROM message_reactions
-     WHERE message_scope = $1 AND message_id = $2
-     GROUP BY emoji
-     ORDER BY emoji ASC`,
-    [scope, messageId]
-  );
-
-  res.json({ reactions: result.rows });
+  const reactions = await getReactionState(scope, messageId);
+  res.json({ reactions });
 });
 
 /* NOTIFICATIONS */
@@ -828,9 +839,13 @@ io.on('connection', (socket) => {
     socket.join(dmRoom(socket.user.id, targetId));
   });
 
-  socket.on('dm_typing', ({ receiverId }) => {
+  socket.on('dm_typing', async ({ receiverId }) => {
     const targetId = Number(receiverId);
     if (!Number.isInteger(targetId)) return;
+
+    const ok = await areFriends(socket.user.id, targetId);
+    if (!ok) return;
+
     emitToUser(targetId, 'dm_typing', { fromId: socket.user.id, fromUsername: socket.user.username });
   });
 
