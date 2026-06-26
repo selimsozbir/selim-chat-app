@@ -546,6 +546,8 @@ async function sendAiBotMessage({ scope, text, targetUserId, room, groupId }) {
     io.to(room).emit('chat_message', {
       id: msg.id,
       room: msg.room,
+      user_id: bot.id,
+      sender_id: bot.id,
       username: botDisplayName,
       avatar_url: bot.avatar_url || null,
       text: msg.text,
@@ -1237,7 +1239,7 @@ app.get('/api/messages/:room', authMiddleware, async (req, res) => {
   const room = cleanText(req.params.room, 50).toLowerCase() || 'genel';
 
   const result = await pool.query(
-    `SELECT m.id, m.room, m.username, m.text, m.created_at, m.edited_at, m.deleted_at,
+    `SELECT m.id, m.room, m.user_id, m.username, m.text, m.created_at, m.edited_at, m.deleted_at,
             m.message_type, m.file_name, m.file_mime, m.file_data, m.file_path, m.file_size, m.reply_to_id,
             u.avatar_url,
             rm.username AS reply_username,
@@ -2188,6 +2190,8 @@ io.on('connection', (socket) => {
       io.to(room).emit('chat_message', {
         id: msg.id,
         room: msg.room,
+        user_id: socket.user.id,
+        sender_id: socket.user.id,
         username: avatarResult.rows[0]?.display_name || msg.username,
         avatar_url: avatarResult.rows[0]?.avatar_url || null,
         text: msg.text,
