@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "2.0.0",
-  "description": "Real-time chat app with auth and database",
+  "version": "3.0.0",
+  "description": "Real-time chat app with auth, friends, DM, avatars, notifications and database",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
