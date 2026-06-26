@@ -315,7 +315,7 @@ fileInput.addEventListener('change', async () => {
   try {
     await sendFileMessage(file);
   } catch (error) {
-    addSystemMessage(error.message);
+    addSystemMessage(error.name === 'AbortError' ? 'Yükleme zaman aşımına uğradı. Storage ayarlarını kontrol et.' : error.message);
   } finally {
     fileInput.value = '';
   }
@@ -350,13 +350,19 @@ async function sendFileMessage(file) {
     const formData = new FormData();
     formData.append('file', file);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 70000);
+
     const response = await fetch('/api/upload', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`
       },
-      body: formData
+      body: formData,
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     const data = await response.json().catch(() => ({}));
 
@@ -365,6 +371,7 @@ async function sendFileMessage(file) {
     }
 
     const uploaded = data.file;
+    addSystemMessage('Dosya yüklendi, mesaj gönderiliyor...');
     const payload = {
       text: uploaded.type === 'image' ? 'Fotoğraf' : uploaded.type === 'audio' ? 'Ses dosyası' : uploaded.fileName,
       type: uploaded.type,
