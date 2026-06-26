@@ -7,6 +7,7 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const multer = require('multer');
 const crypto = require('crypto');
+const { createClient } = require('@supabase/supabase-js');
 const { Server } = require('socket.io');
 
 const app = express();
@@ -20,6 +21,11 @@ const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '');
 const SUPABASE_BUCKET = String(process.env.SUPABASE_BUCKET || 'chat-uploads');
 const PUBLIC_STORAGE = String(process.env.PUBLIC_STORAGE || 'true').toLowerCase() !== 'false';
+const supabaseAdmin = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    })
+  : null;
 
 app.set('trust proxy', true);
 
@@ -40,7 +46,7 @@ const upload = multer({
 });
 
 function storageEnabled() {
-  return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY && SUPABASE_BUCKET);
+  return Boolean(supabaseAdmin && SUPABASE_BUCKET);
 }
 
 function safeFileName(name) {
@@ -58,7 +64,7 @@ function storagePublicUrl(objectPath) {
 
 async function uploadToSupabaseStorage(file, userId) {
   if (!storageEnabled()) {
-    const error = new Error('Storage ayarlı değil. Render Environment kısmına SUPABASE_URL ve SUPABASE_SERVICE_ROLE_KEY ekle.');
+    const error = new Error('Storage ayarlı değil. SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / SUPABASE_BUCKET kontrol et.');
     error.status = 500;
     throw error;
   }
@@ -88,48 +94,41 @@ async function uploadToSupabaseStorage(file, userId) {
   if (mime.startsWith('image/')) folder = 'images';
   if (mime.startsWith('audio/')) folder = 'audio';
 
-  const extFromName = safeFileName(file.originalname).split('.').pop();
+  const cleanOriginal = safeFileName(file.originalname);
+  const extFromName = cleanOriginal.includes('.') ? cleanOriginal.split('.').pop() : '';
   const ext = extFromName && extFromName.length <= 8 ? extFromName : 'bin';
   const objectPath = `${folder}/${userId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
-  const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${objectPath.split('/').map(encodeURIComponent).join('/')}`;
+  const uploadPromise = supabaseAdmin.storage
+    .from(SUPABASE_BUCKET)
+    .upload(objectPath, file.buffer, {
+      contentType: mime,
+      upsert: false
+    });
 
-  const response = await fetch(uploadUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      'Content-Type': mime,
-      'x-upsert': 'false'
-    },
-    body: file.buffer
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Storage upload zaman aşımına uğradı. Bucket/key ayarlarını kontrol et.')), 60000);
   });
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    const error = new Error(`Storage upload başarısız: ${response.status} ${text.slice(0, 120)}`);
-    error.status = 500;
-    throw error;
+  const { data, error } = await Promise.race([uploadPromise, timeoutPromise]);
+
+  if (error) {
+    const err = new Error(`Storage upload başarısız: ${error.message}`);
+    err.status = 500;
+    throw err;
   }
 
+  const { data: publicData } = supabaseAdmin.storage
+    .from(SUPABASE_BUCKET)
+    .getPublicUrl(data.path);
+
   return {
-    url: storagePublicUrl(objectPath),
-    path: objectPath,
+    url: publicData.publicUrl,
+    path: data.path,
     mime,
-    name: safeFileName(file.originalname),
+    name: cleanOriginal,
     size: file.size
   };
-}
-
-const onlineUsers = new Map();
-const userSockets = new Map();
-
-function nowTime() {
-  return new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-}
-
-function cleanText(value, maxLength) {
-  return String(value || '').trim().slice(0, maxLength);
 }
 
 function getClientIp(req) {
