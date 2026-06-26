@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v8.3.2</title>
-  <link rel="stylesheet" href="style.css?v=832" />
+  <title>Selim Chat v8.4.0</title>
+  <link rel="stylesheet" href="style.css?v=840" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -141,6 +141,41 @@
           <div class="blocked-box">
             <h3>Engellenenler</h3>
             <div id="blockedList" class="mini-list"></div>
+          </div>
+        </div>
+
+
+        <div class="gamify-box">
+          <div class="gamify-header">
+            <div>
+              <h3>5ECROPOLIS Hub</h3>
+              <span id="gamifyStats">Level - · Shards -</span>
+            </div>
+            <button id="refreshGamifyButton" class="small-button" type="button">Yenile</button>
+          </div>
+
+          <div class="gamify-tabs">
+            <button id="questsTabButton" class="gamify-tab active" type="button">Görev</button>
+            <button id="marketTabButton" class="gamify-tab" type="button">Market</button>
+            <button id="leaderboardTabButton" class="gamify-tab" type="button">Liderlik</button>
+          </div>
+
+          <div id="questsPanel" class="gamify-panel">
+            <div id="questsList" class="gamify-list"></div>
+          </div>
+
+          <div id="marketPanel" class="gamify-panel hidden">
+            <div id="marketList" class="gamify-list"></div>
+          </div>
+
+          <div id="leaderboardPanel" class="gamify-panel hidden">
+            <div class="leaderboard-filters">
+              <button class="leaderboard-filter active" data-leaderboard="level" type="button">Level</button>
+              <button class="leaderboard-filter" data-leaderboard="shards" type="button">Shards</button>
+              <button class="leaderboard-filter" data-leaderboard="messages" type="button">Mesaj</button>
+              <button class="leaderboard-filter" data-leaderboard="friends" type="button">Arkadaş</button>
+            </div>
+            <div id="leaderboardList" class="gamify-list"></div>
           </div>
         </div>
 
@@ -541,7 +576,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=832"></script>
+  <script src="script.js?v=840"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
