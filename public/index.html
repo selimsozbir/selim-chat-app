@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v7.9.3</title>
-  <link rel="stylesheet" href="style.css?v=793" />
+  <title>Selim Chat v8.0.0</title>
+  <link rel="stylesheet" href="style.css?v=800" />
 </head>
 <body>
   <div class="app">
@@ -202,14 +202,92 @@
   </div>
 
   <div id="profileModal" class="profile-modal hidden">
-    <div class="profile-card">
+    <div class="profile-card profile-card-v2">
       <button id="profileCloseButton" class="profile-close" type="button">×</button>
-      <div id="profileAvatar" class="profile-avatar"></div>
-      <h2 id="profileUsername"></h2>
-      <p id="profileStatus"></p>
-      <p id="profileBio"></p>
-      <textarea id="profileBioInput" class="hidden" maxlength="160" placeholder="Bio yaz..."></textarea>
-      <button id="profileSaveBioButton" class="small-button hidden" type="button">Bio Kaydet</button>
+
+      <div id="profileCover" class="profile-cover-v2">
+        <div class="profile-cover-shine"></div>
+      </div>
+
+      <div class="profile-main-v2">
+        <div id="profileAvatar" class="profile-avatar profile-avatar-v2"></div>
+        <div class="profile-identity-v2">
+          <h2 id="profileUsername"></h2>
+          <p id="profileStatus"></p>
+          <p id="profileBio"></p>
+        </div>
+      </div>
+
+      <div class="profile-stats-v2">
+        <div><strong id="profileLevel">1</strong><span>Level</span></div>
+        <div><strong id="profileShards">0</strong><span>Shards</span></div>
+        <div><strong id="profileTotalMessages">0</strong><span>Mesaj</span></div>
+      </div>
+
+      <div class="profile-level-box">
+        <div class="profile-level-top">
+          <span id="profileXpText">0 XP</span>
+          <span id="profileNextXpText">Next 100 XP</span>
+        </div>
+        <div class="profile-level-track">
+          <div id="profileLevelFill" class="profile-level-fill"></div>
+        </div>
+      </div>
+
+      <div class="profile-meta-v2">
+        <div><span>Katılma</span><strong id="profileJoinDate">-</strong></div>
+        <div><span>Son aktiflik</span><strong id="profileLastActive">-</strong></div>
+        <div><span>Favori Egg</span><strong id="profileFavoriteEgg">/serbia</strong></div>
+      </div>
+
+      <div class="profile-badges-v2">
+        <h3>Rozetler</h3>
+        <div id="profileBadges" class="profile-badges-list"></div>
+      </div>
+
+      <div id="profileEditPanel" class="profile-edit-panel hidden">
+        <h3>Profil Kartı Düzenle</h3>
+
+        <textarea id="profileBioInput" maxlength="160" placeholder="Bio yaz..."></textarea>
+
+        <label for="profileCoverInput">Profil kapağı</label>
+        <input id="profileCoverInput" type="file" accept="image/*" />
+
+        <div class="profile-edit-row">
+          <label for="profileColorInput">Tema rengi</label>
+          <input id="profileColorInput" type="color" value="#8b5cf6" />
+        </div>
+
+        <label for="profileFavoriteEggSelect">Favori easter egg</label>
+        <select id="profileFavoriteEggSelect">
+          <option value="/serbia">/serbia</option>
+          <option value="/limbo">/limbo</option>
+          <option value="/vertex">/vertex</option>
+          <option value="/rome">/rome</option>
+          <option value="/egypt">/egypt</option>
+          <option value="/anitkabir">/anitkabir</option>
+          <option value="/cat">/cat</option>
+          <option value="/reset">/reset</option>
+          <option value="/rift">/rift</option>
+          <option value="/5ecropolis">/5ecropolis</option>
+          <option value="/selim">/selim</option>
+          <option value="/xara">/xara</option>
+          <option value="/nico">/nico</option>
+          <option value="/yasin">/yasin</option>
+          <option value="/jung">/jung</option>
+          <option value="/fetullah">/fetullah</option>
+          <option value="/blake">/blake</option>
+          <option value="/feiz">/feiz</option>
+          <option value="/pnico">/pnico</option>
+          <option value="/pyasin">/pyasin</option>
+          <option value="/ataturk">/ataturk</option>
+        </select>
+
+        <div class="profile-edit-actions">
+          <button id="profileSaveBioButton" class="small-button" type="button">Kartı Kaydet</button>
+          <button id="profileRemoveCoverButton" class="small-button danger" type="button">Kapağı Kaldır</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -414,6 +492,6 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=793"></script>
+  <script src="script.js?v=800"></script>
 </body>
 </html>
