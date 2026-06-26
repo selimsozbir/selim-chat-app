@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.5.0",
-  "description": "Selim Chat v7.5.0 cyber UI update with modern panels, bubbles and mobile polish",
+  "version": "7.5.1",
+  "description": "Selim Chat v7.5.1 message visibility fix for cyber UI",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
