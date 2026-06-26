@@ -19,7 +19,6 @@ const OWNER_USERNAME = String(process.env.OWNER_USERNAME || 'selim').toLowerCase
 const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '');
 const SUPABASE_BUCKET = String(process.env.SUPABASE_BUCKET || 'chat-uploads');
-const PUBLIC_STORAGE = String(process.env.PUBLIC_STORAGE || 'true').toLowerCase() !== 'false';
 
 app.set('trust proxy', true);
 
@@ -34,9 +33,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 25 * 1024 * 1024
-  }
+  limits: { fileSize: 25 * 1024 * 1024 }
 });
 
 function storageEnabled() {
@@ -92,7 +89,6 @@ async function uploadToSupabaseStorage(file, userId) {
   const extFromName = cleanOriginal.includes('.') ? cleanOriginal.split('.').pop() : '';
   const ext = extFromName && extFromName.length <= 8 ? extFromName : 'bin';
   const objectPath = `${folder}/${userId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-
   const encodedPath = objectPath.split('/').map(encodeURIComponent).join('/');
   const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${encodedPath}`;
 
@@ -115,7 +111,7 @@ async function uploadToSupabaseStorage(file, userId) {
   } catch (error) {
     clearTimeout(timeout);
     const err = new Error(error.name === 'AbortError'
-      ? 'Storage upload zaman aşımına uğradı. Bucket public mi ve key doğru mu kontrol et.'
+      ? 'Storage upload zaman aşımına uğradı. Bucket/key ayarlarını kontrol et.'
       : `Storage bağlantı hatası: ${error.message}`);
     err.status = 500;
     throw err;
@@ -137,6 +133,17 @@ async function uploadToSupabaseStorage(file, userId) {
     name: cleanOriginal,
     size: file.size
   };
+}
+
+const onlineUsers = new Map();
+const userSockets = new Map();
+
+function nowTime() {
+  return new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function cleanText(value, maxLength) {
+  return String(value || '').trim().slice(0, maxLength);
 }
 
 function getClientIp(req) {
@@ -806,7 +813,7 @@ app.post('/api/upload', authMiddleware, upload.single('file'), async (req, res) 
       }
     });
   } catch (error) {
-    console.error('Upload hatası:', error);
+    console.error('Upload hatası:', error.message);
     res.status(error.status || 500).json({ error: error.message || 'Dosya yüklenemedi.' });
   }
 });
@@ -1451,9 +1458,9 @@ io.on('connection', (socket) => {
 
       if (!socket.data.room) return;
       if (messageType === 'text' && !text) return;
-      if (messageType !== 'text' && !fileData) return;
-      if (fileData.startsWith('data:') && fileData.length > 7200000) {
-        socket.emit('system_message', 'Dosya çok büyük. Storage kullanarak gönder.');
+      if (messageType !== 'text' && !fileData.startsWith('data:')) return;
+      if (fileData.length > 7200000) {
+        socket.emit('system_message', 'Dosya çok büyük. 5 MB altı dosya gönder.');
         return;
       }
 
@@ -1611,9 +1618,9 @@ io.on('connection', (socket) => {
 
       if (!Number.isInteger(targetId)) return;
       if (messageType === 'text' && !cleanMessage) return;
-      if (messageType !== 'text' && !fileData) return;
-      if (fileData.startsWith('data:') && fileData.length > 7200000) {
-        socket.emit('notification', { type: 'error', payload: { message: 'Dosya çok büyük. Storage kullanarak gönder.' } });
+      if (messageType !== 'text' && !fileData.startsWith('data:')) return;
+      if (fileData.length > 7200000) {
+        socket.emit('notification', { type: 'error', payload: { message: 'Dosya çok büyük. 5 MB altı dosya gönder.' } });
         return;
       }
 
