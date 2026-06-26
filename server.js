@@ -1214,7 +1214,7 @@ async function emitGroupToMembers(groupId, eventName, payload) {
 async function getGroupSummary(groupId, userId) {
   const result = await pool.query(
     `SELECT gc.id, gc.name, gc.avatar_url, gc.owner_id, gm.role,
-            COUNT(gm2.user_id)::int AS member_count
+            COUNT(DISTINCT gm2.user_id)::int AS member_count
      FROM group_chats gc
      JOIN group_members gm ON gm.group_id = gc.id AND gm.user_id = $2
      JOIN group_members gm2 ON gm2.group_id = gc.id
@@ -1237,7 +1237,7 @@ async function getGroupSummary(groupId, userId) {
 app.get('/api/groups', authMiddleware, async (req, res) => {
   const result = await pool.query(
     `SELECT gc.id, gc.name, gc.avatar_url, gc.owner_id, gm.role,
-            COUNT(gm2.user_id)::int AS member_count,
+            COUNT(DISTINCT gm2.user_id)::int AS member_count,
             MAX(gmsg.created_at) AS last_message_at
      FROM group_chats gc
      JOIN group_members gm ON gm.group_id = gc.id AND gm.user_id = $1
