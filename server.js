@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const OpenAI = require('openai');
+const { GoogleGenAI } = require('@google/genai');
 
 const app = express();
 const server = http.createServer(app);
@@ -10,16 +10,16 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
-let openai = null;
+let gemini = null;
 
-if (process.env.OPENAI_API_KEY) {
-  openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
+if (process.env.GEMINI_API_KEY) {
+  gemini = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY
   });
-  console.log('API KEY VAR MI: EVET');
+  console.log('GEMINI_API_KEY VAR MI: EVET');
 } else {
-  console.log('API KEY VAR MI: HAYIR');
-  console.log('OPENAI_API_KEY bulunamadı. ChatGPT bot devre dışı.');
+  console.log('GEMINI_API_KEY VAR MI: HAYIR');
+  console.log('Gemini bot devre dışı. Render Environment kısmına GEMINI_API_KEY ekle.');
 }
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -47,52 +47,57 @@ function updateRoomUsers(room) {
 
 function sendBotMessage(room, text) {
   io.to(room).emit('chat_message', {
-    username: 'ChatGPT Bot',
+    username: 'Gemini Bot',
     text,
     time: nowTime()
   });
 }
 
-async function answerWithBot(room, userQuestion) {
-  if (!openai) {
+async function answerWithGemini(room, userQuestion) {
+  if (!gemini) {
     sendBotMessage(
       room,
-      'Bot API key ayarlı değil. Render > Environment kısmına OPENAI_API_KEY eklemen lazım.'
+      'Gemini API key ayarlı değil. Render > Environment kısmına GEMINI_API_KEY eklemen lazım.'
     );
     return;
   }
 
   try {
-    io.to(room).emit('typing', 'ChatGPT Bot');
+    io.to(room).emit('typing', 'Gemini Bot');
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'Sen bir mesajlaşma uygulamasındaki Türkçe konuşan yardımcı botsun. Cevapların kısa, net ve samimi olsun.'
-        },
-        {
-          role: 'user',
-          content: userQuestion
-        }
-      ],
-      max_tokens: 350
+    const prompt = `
+Sen bir mesajlaşma uygulamasındaki Türkçe konuşan yardımcı botsun.
+Kısa, net ve samimi cevap ver.
+Tehlikeli, yasa dışı veya zararlı şeylerde yardımcı olma.
+
+Kullanıcının mesajı:
+${userQuestion}
+`;
+
+    const response = await gemini.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt
     });
 
     const botText =
-      response.choices?.[0]?.message?.content?.trim() ||
+      response.text?.trim() ||
       'Cevap oluşturamadım.';
 
     sendBotMessage(room, botText);
   } catch (error) {
-    console.error('OpenAI bot hatası:', error);
+    console.error('Gemini bot hatası:', error);
 
-    sendBotMessage(
-      room,
-      'Bot şu an cevap veremedi. API key, bakiye veya Render loglarını kontrol et.'
-    );
+    let errorMessage = 'Bot şu an cevap veremedi. Gemini API key, limit veya Render loglarını kontrol et.';
+
+    if (error?.message?.includes('API key')) {
+      errorMessage = 'Gemini API key yanlış veya eksik görünüyor.';
+    }
+
+    if (error?.message?.includes('quota') || error?.message?.includes('429')) {
+      errorMessage = 'Gemini ücretsiz limitine takılmış olabilir. Biraz bekleyip tekrar dene.';
+    }
+
+    sendBotMessage(room, errorMessage);
   }
 }
 
@@ -139,7 +144,7 @@ io.on('connection', (socket) => {
         return;
       }
 
-      await answerWithBot(room, userQuestion);
+      await answerWithGemini(room, userQuestion);
     }
   });
 
