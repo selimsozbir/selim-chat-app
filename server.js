@@ -13,6 +13,9 @@ const io = new Server(server, { maxHttpBufferSize: 12 * 1024 * 1024 });
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-this';
+const OWNER_USERNAME = String(process.env.OWNER_USERNAME || 'selim').toLowerCase();
+
+app.set('trust proxy', true);
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -34,17 +37,78 @@ function cleanText(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength);
 }
 
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) return String(forwarded).split(',')[0].trim();
+  return req.ip || req.socket?.remoteAddress || '';
+}
+
+function getClientUserAgent(req) {
+  return String(req.headers['user-agent'] || '').slice(0, 300);
+}
+
+async function isIpBanned(ip) {
+  if (!ip) return false;
+  const result = await pool.query('SELECT id FROM ip_bans WHERE ip = $1 LIMIT 1', [ip]);
+  return result.rows.length > 0;
+}
+
+function isGlobalStaff(role) {
+  return ['owner', 'admin', 'mod'].includes(role);
+}
+
+function canOpenAdmin(role) {
+  return role === 'owner' || role === 'admin';
+}
+
+function canControlUser(actorRole, targetRole) {
+  if (actorRole === 'owner') return true;
+  if (actorRole === 'admin') return !['owner', 'admin'].includes(targetRole);
+  return false;
+}
+
+async function requireGlobalAdmin(req, res, next) {
+  const result = await pool.query('SELECT id, username, global_role, is_banned FROM users WHERE id = $1', [req.user.id]);
+  const actor = result.rows[0];
+
+  if (!actor || actor.is_banned) return res.status(403).json({ error: 'Yetkin yok.' });
+  if (!canOpenAdmin(actor.global_role)) return res.status(403).json({ error: 'Admin panel yetkin yok.' });
+
+  req.adminUser = actor;
+  next();
+}
+
 function createToken(user) {
   return jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
 }
 
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Token yok.' });
 
   try {
     req.user = jwt.verify(token, JWT_SECRET);
+
+    const ip = getClientIp(req);
+    const userAgent = getClientUserAgent(req);
+
+    if (await isIpBanned(ip)) {
+      return res.status(403).json({ error: 'Bu IP adresi banlı.' });
+    }
+
+    const userResult = await pool.query('SELECT is_banned, ban_reason FROM users WHERE id = $1', [req.user.id]);
+    if (userResult.rows[0]?.is_banned) {
+      return res.status(403).json({ error: userResult.rows[0].ban_reason || 'Bu hesap banlı.' });
+    }
+
+    await pool.query(
+      `UPDATE users
+       SET last_ip = $1, last_user_agent = $2, last_active = CURRENT_TIMESTAMP
+       WHERE id = $3`,
+      [ip, userAgent, req.user.id]
+    );
+
     next();
   } catch {
     return res.status(401).json({ error: 'Geçersiz token.' });
@@ -247,7 +311,24 @@ async function initDatabase() {
   `);
 
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(40)`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS global_role VARCHAR(20) DEFAULT 'user'`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ban_reason TEXT`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_ip TEXT`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_user_agent TEXT`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ip_bans (
+      id SERIAL PRIMARY KEY,
+      ip TEXT UNIQUE NOT NULL,
+      reason TEXT,
+      banned_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS blocked_users (
@@ -324,6 +405,19 @@ async function initDatabase() {
     );
   `);
 
+  const ownerCount = await pool.query(`SELECT id FROM users WHERE global_role = 'owner' LIMIT 1`);
+  if (ownerCount.rows.length === 0) {
+    const preferred = await pool.query('SELECT id FROM users WHERE LOWER(username) = $1 LIMIT 1', [OWNER_USERNAME]);
+    if (preferred.rows.length > 0) {
+      await pool.query(`UPDATE users SET global_role = 'owner' WHERE id = $1`, [preferred.rows[0].id]);
+    } else {
+      await pool.query(
+        `UPDATE users SET global_role = 'owner'
+         WHERE id = (SELECT id FROM users ORDER BY created_at ASC LIMIT 1)`
+      );
+    }
+  }
+
   console.log('Database tabloları hazır.');
 }
 
@@ -331,6 +425,9 @@ async function initDatabase() {
 
 app.post('/api/register', async (req, res) => {
   try {
+    const ip = getClientIp(req);
+    if (await isIpBanned(ip)) return res.status(403).json({ error: 'Bu IP adresi banlı.' });
+
     const username = cleanText(req.body.username, 30);
     const password = String(req.body.password || '');
 
@@ -342,8 +439,10 @@ app.post('/api/register', async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      'INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, username, avatar_url',
-      [username, passwordHash]
+      `INSERT INTO users (username, password_hash, display_name, last_ip, last_user_agent, last_active)
+       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen`,
+      [username, passwordHash, username, ip, getClientUserAgent(req)]
     );
 
     const user = result.rows[0];
@@ -356,11 +455,14 @@ app.post('/api/register', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
   try {
+    const ip = getClientIp(req);
+    if (await isIpBanned(ip)) return res.status(403).json({ error: 'Bu IP adresi banlı.' });
+
     const username = cleanText(req.body.username, 30);
     const password = String(req.body.password || '');
 
     const result = await pool.query(
-      'SELECT id, username, password_hash, avatar_url FROM users WHERE LOWER(username) = LOWER($1)',
+      'SELECT id, username, display_name, password_hash, avatar_url, bio, global_role, is_banned, ban_reason, last_seen FROM users WHERE LOWER(username) = LOWER($1)',
       [username]
     );
 
@@ -370,7 +472,24 @@ app.post('/api/login', async (req, res) => {
     const isCorrect = await bcrypt.compare(password, dbUser.password_hash);
     if (!isCorrect) return res.status(400).json({ error: 'Kullanıcı adı veya şifre yanlış.' });
 
-    const user = { id: dbUser.id, username: dbUser.username, avatar_url: dbUser.avatar_url };
+    if (dbUser.is_banned) return res.status(403).json({ error: dbUser.ban_reason || 'Bu hesap banlı.' });
+
+    await pool.query(
+      `UPDATE users
+       SET last_ip = $1, last_user_agent = $2, last_active = CURRENT_TIMESTAMP
+       WHERE id = $3`,
+      [ip, getClientUserAgent(req), dbUser.id]
+    );
+
+    const user = {
+      id: dbUser.id,
+      username: dbUser.username,
+      display_name: dbUser.display_name || dbUser.username,
+      avatar_url: dbUser.avatar_url,
+      bio: dbUser.bio,
+      global_role: dbUser.global_role,
+      last_seen: dbUser.last_seen
+    };
     res.json({ token: createToken(user), user });
   } catch (error) {
     console.error('Login hatası:', error);
@@ -379,7 +498,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.get('/api/me', authMiddleware, async (req, res) => {
-  const result = await pool.query('SELECT id, username, avatar_url, bio, last_seen FROM users WHERE id = $1', [req.user.id]);
+  const result = await pool.query('SELECT id, username, display_name, avatar_url, bio, global_role, last_seen, last_active FROM users WHERE id = $1', [req.user.id]);
   if (result.rows.length === 0) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
   res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
 });
@@ -389,7 +508,7 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Geçersiz kullanıcı.' });
 
   const result = await pool.query(
-    `SELECT id, username, avatar_url, bio, created_at, last_seen
+    `SELECT id, username, display_name, avatar_url, bio, global_role, created_at, last_seen, last_active
      FROM users WHERE id = $1`,
     [id]
   );
@@ -408,11 +527,115 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
 app.post('/api/profile/bio', authMiddleware, async (req, res) => {
   const bio = cleanText(req.body.bio, 160);
   const result = await pool.query(
-    'UPDATE users SET bio = $1 WHERE id = $2 RETURNING id, username, avatar_url, bio, last_seen',
+    'UPDATE users SET bio = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen',
     [bio, req.user.id]
   );
 
   res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
+});
+
+/* GLOBAL ADMIN */
+
+app.get('/api/admin/me', authMiddleware, async (req, res) => {
+  const result = await pool.query(
+    'SELECT id, username, display_name, avatar_url, global_role FROM users WHERE id = $1',
+    [req.user.id]
+  );
+
+  const me = result.rows[0];
+  res.json({ me, canOpenAdmin: canOpenAdmin(me?.global_role) });
+});
+
+app.get('/api/admin/users', authMiddleware, requireGlobalAdmin, async (req, res) => {
+  const result = await pool.query(
+    `SELECT id, username, display_name, avatar_url, global_role, is_banned, ban_reason,
+            last_ip, last_user_agent, last_active, last_seen, created_at
+     FROM users
+     ORDER BY last_active DESC NULLS LAST, created_at DESC
+     LIMIT 100`
+  );
+
+  res.json({
+    users: result.rows.map((u) => ({
+      ...u,
+      online: userSockets.has(String(u.id))
+    }))
+  });
+});
+
+app.patch('/api/admin/users/:id', authMiddleware, requireGlobalAdmin, async (req, res) => {
+  const targetId = Number(req.params.id);
+  if (!Number.isInteger(targetId)) return res.status(400).json({ error: 'Geçersiz kullanıcı.' });
+
+  const targetResult = await pool.query('SELECT id, username, global_role FROM users WHERE id = $1', [targetId]);
+  if (targetResult.rows.length === 0) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+
+  const target = targetResult.rows[0];
+  if (!canControlUser(req.adminUser.global_role, target.global_role)) {
+    return res.status(403).json({ error: 'Bu kullanıcı üzerinde yetkin yok.' });
+  }
+
+  const displayName = req.body.displayName !== undefined ? cleanText(req.body.displayName, 40) : undefined;
+  const globalRole = req.body.globalRole !== undefined ? String(req.body.globalRole || '') : undefined;
+  const isBanned = req.body.isBanned !== undefined ? Boolean(req.body.isBanned) : undefined;
+  const banReason = req.body.banReason !== undefined ? cleanText(req.body.banReason, 200) : undefined;
+
+  if (globalRole !== undefined) {
+    if (req.adminUser.global_role !== 'owner') return res.status(403).json({ error: 'Rol değiştirmeyi sadece owner yapabilir.' });
+    if (!['owner', 'admin', 'mod', 'user'].includes(globalRole)) return res.status(400).json({ error: 'Geçersiz rol.' });
+    await pool.query('UPDATE users SET global_role = $1 WHERE id = $2', [globalRole, targetId]);
+  }
+
+  if (displayName !== undefined) {
+    await pool.query('UPDATE users SET display_name = $1 WHERE id = $2', [displayName || target.username, targetId]);
+  }
+
+  if (isBanned !== undefined) {
+    await pool.query('UPDATE users SET is_banned = $1, ban_reason = $2 WHERE id = $3', [isBanned, isBanned ? (banReason || 'Banlandı.') : null, targetId]);
+
+    if (isBanned) {
+      emitToUser(targetId, 'global_banned', { reason: banReason || 'Banlandı.' });
+    }
+  } else if (banReason !== undefined) {
+    await pool.query('UPDATE users SET ban_reason = $1 WHERE id = $2', [banReason, targetId]);
+  }
+
+  res.json({ ok: true, message: 'Kullanıcı güncellendi.' });
+});
+
+app.get('/api/admin/ip-bans', authMiddleware, requireGlobalAdmin, async (req, res) => {
+  const result = await pool.query(
+    `SELECT ib.id, ib.ip, ib.reason, ib.created_at, u.username AS banned_by_username
+     FROM ip_bans ib
+     LEFT JOIN users u ON u.id = ib.banned_by
+     ORDER BY ib.created_at DESC`
+  );
+
+  res.json({ bans: result.rows });
+});
+
+app.post('/api/admin/ip-bans', authMiddleware, requireGlobalAdmin, async (req, res) => {
+  const ip = cleanText(req.body.ip, 100);
+  const reason = cleanText(req.body.reason, 200);
+
+  if (!ip) return res.status(400).json({ error: 'IP yok.' });
+
+  await pool.query(
+    `INSERT INTO ip_bans (ip, reason, banned_by)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (ip) DO UPDATE SET reason = EXCLUDED.reason, banned_by = EXCLUDED.banned_by`,
+    [ip, reason || 'IP banlandı.', req.user.id]
+  );
+
+  res.json({ ok: true, message: 'IP banlandı.' });
+});
+
+app.delete('/api/admin/ip-bans/:id', authMiddleware, requireGlobalAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Geçersiz IP ban.' });
+
+  await pool.query('DELETE FROM ip_bans WHERE id = $1', [id]);
+  res.json({ ok: true, message: 'IP ban kaldırıldı.' });
 });
 
 /* PROFILE */
@@ -424,7 +647,7 @@ app.post('/api/avatar', authMiddleware, async (req, res) => {
     if (avatarData.length > 1500000) return res.status(400).json({ error: 'Profil fotoğrafı çok büyük. Daha küçük görsel seç.' });
 
     const result = await pool.query(
-      'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id, username, avatar_url',
+      'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen',
       [avatarData, req.user.id]
     );
 
@@ -438,7 +661,7 @@ app.post('/api/avatar', authMiddleware, async (req, res) => {
 app.delete('/api/avatar', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'UPDATE users SET avatar_url = NULL WHERE id = $1 RETURNING id, username, avatar_url',
+      'UPDATE users SET avatar_url = NULL WHERE id = $1 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen',
       [req.user.id]
     );
 
@@ -1015,15 +1238,37 @@ app.delete('/api/notifications', authMiddleware, async (req, res) => {
 
 /* SOCKET */
 
-io.use((socket, next) => {
+io.use(async (socket, next) => {
   const token = socket.handshake.auth?.token;
   if (!token) return next(new Error('Token yok.'));
 
   try {
     socket.user = jwt.verify(token, JWT_SECRET);
+
+    const ip = String(socket.handshake.headers['x-forwarded-for'] || socket.handshake.address || '').split(',')[0].trim();
+    const userAgent = String(socket.handshake.headers['user-agent'] || '').slice(0, 300);
+
+    if (await isIpBanned(ip)) return next(new Error('Bu IP adresi banlı.'));
+
+    const userResult = await pool.query(
+      'SELECT is_banned, ban_reason FROM users WHERE id = $1',
+      [socket.user.id]
+    );
+
+    if (userResult.rows[0]?.is_banned) {
+      return next(new Error(userResult.rows[0].ban_reason || 'Bu hesap banlı.'));
+    }
+
+    await pool.query(
+      `UPDATE users
+       SET last_ip = $1, last_user_agent = $2, last_active = CURRENT_TIMESTAMP
+       WHERE id = $3`,
+      [ip, userAgent, socket.user.id]
+    );
+
     next();
-  } catch {
-    next(new Error('Geçersiz token.'));
+  } catch (error) {
+    next(new Error(error.message || 'Geçersiz token.'));
   }
 });
 
@@ -1107,13 +1352,13 @@ io.on('connection', (socket) => {
         [room, socket.user.id, socket.user.username, text, messageType, fileName, fileMime, fileData || null, replyToId]
       );
 
-      const avatarResult = await pool.query('SELECT avatar_url FROM users WHERE id = $1', [socket.user.id]);
+      const avatarResult = await pool.query('SELECT avatar_url, display_name, username FROM users WHERE id = $1', [socket.user.id]);
       const msg = saved.rows[0];
 
       io.to(room).emit('chat_message', {
         id: msg.id,
         room: msg.room,
-        username: msg.username,
+        username: avatarResult.rows[0]?.display_name || msg.username,
         avatar_url: avatarResult.rows[0]?.avatar_url || null,
         text: msg.text,
         message_type: msg.message_type,
@@ -1261,13 +1506,13 @@ io.on('connection', (socket) => {
         [socket.user.id, targetId, cleanMessage, messageType, fileName, fileMime, fileData || null, replyToId]
       );
 
-      const avatarResult = await pool.query('SELECT avatar_url FROM users WHERE id = $1', [socket.user.id]);
+      const avatarResult = await pool.query('SELECT avatar_url, display_name, username FROM users WHERE id = $1', [socket.user.id]);
 
       const msg = {
         id: saved.rows[0].id,
         sender_id: saved.rows[0].sender_id,
         receiver_id: saved.rows[0].receiver_id,
-        sender_username: socket.user.username,
+        sender_username: avatarResult.rows[0]?.display_name || socket.user.username,
         sender_avatar_url: avatarResult.rows[0]?.avatar_url || null,
         text: saved.rows[0].text,
         message_type: saved.rows[0].message_type,
