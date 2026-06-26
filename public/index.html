@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v8.1.0</title>
-  <link rel="stylesheet" href="style.css?v=810" />
+  <title>Selim Chat v8.2.0</title>
+  <link rel="stylesheet" href="style.css?v=820" />
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
   <div class="app">
@@ -243,9 +244,13 @@
       <div class="profile-about-box">
         <div class="profile-about-head">
           <h3>Hakkında</h3>
+          <div class="profile-self-actions">
+            <button id="profileSelfExportButton" class="small-button secondary" type="button">Profil PNG</button>
+          </div>
           <div id="profileActionButtons" class="profile-action-buttons hidden">
             <button id="profileMessageButton" class="small-button" type="button">Mesaj gönder</button>
             <button id="profileFriendButton" class="small-button secondary" type="button">Arkadaş ekle</button>
+            <button id="profileExportButton" class="small-button secondary" type="button">PNG indir</button>
           </div>
         </div>
         <p id="profileAboutText">Bu kullanıcı henüz kendini tanıtmadı.</p>
@@ -253,8 +258,21 @@
       </div>
 
       <div class="profile-badges-v2">
-        <h3>Rozetler</h3>
+        <div class="profile-badges-head">
+          <h3>Rozetler</h3>
+          <button id="profileToggleAllBadgesButton" class="small-button secondary" type="button">Tüm rozetler</button>
+        </div>
         <div id="profileBadges" class="profile-badges-list"></div>
+
+        <div id="profileAllBadgesPanel" class="profile-all-badges-panel hidden">
+          <div class="profile-all-badges-title">
+            <strong>Rozet Vitrini</strong>
+            <span id="profileBadgeCounter">0 / 0 açık</span>
+          </div>
+          <p id="profileBadgeHint" class="profile-badge-hint">Kendi profilinde gözükecek rozetleri seçebilirsin. En fazla 8 rozet.</p>
+          <div id="profileAllBadgesList" class="profile-all-badges-list"></div>
+          <button id="profileSaveBadgesButton" class="small-button" type="button">Vitrini Kaydet</button>
+        </div>
       </div>
 
       <div id="profileEditPanel" class="profile-edit-panel hidden">
@@ -508,7 +526,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=810"></script>
+  <script src="script.js?v=820"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
