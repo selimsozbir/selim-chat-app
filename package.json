@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.9.3",
-  "description": "Selim Chat v7.9.3 fixes iOS input zoom on mobile",
+  "version": "8.0.0",
+  "description": "Selim Chat v8.0.0 Profile Card V2 with cover, level, badges and shards",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
