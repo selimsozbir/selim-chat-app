@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.2.0",
-  "description": "Selim Chat v8.2.0 profile showcase, export, animated counters and badge selection",
+  "version": "8.3.0",
+  "description": "Selim Chat v8.3.0 modern messenger usability UI",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
