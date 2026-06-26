@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.3.0",
-  "description": "Selim Chat v8.3.0 modern messenger usability UI",
+  "version": "8.3.1",
+  "description": "Selim Chat v8.3.1 aesthetic polish",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
