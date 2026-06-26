@@ -1,9 +1,6 @@
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-html,
-body {
+html, body {
   width: 100%;
   height: 100%;
   margin: 0;
@@ -13,25 +10,11 @@ body {
   color: #f4f4f5;
 }
 
-button,
-input {
-  font: inherit;
-}
+button, input { font: inherit; }
+button { cursor: pointer; border: 0; }
+.hidden { display: none !important; }
 
-button {
-  cursor: pointer;
-  border: 0;
-}
-
-.app {
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
-}
-
-.hidden {
-  display: none !important;
-}
+.app { width: 100%; height: 100vh; overflow: hidden; }
 
 .auth-screen {
   width: 100%;
@@ -48,46 +31,34 @@ button {
   border: 1px solid #27272a;
   border-radius: 18px;
   background: #111118;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
 }
 
-.auth-card h1 {
-  margin: 0 0 8px;
-  font-size: 34px;
-}
+.auth-card h1 { margin: 0 0 8px; font-size: 34px; }
+.auth-card p { margin: 0 0 18px; color: #a1a1aa; }
 
-.auth-card p {
-  margin: 0 0 18px;
-  color: #a1a1aa;
-}
-
-.tabs {
+.tabs, .nav-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-bottom: 14px;
 }
 
-.tab {
+.tab, .nav {
   padding: 12px;
   border-radius: 12px;
   background: #18181f;
   color: #a1a1aa;
 }
 
-.tab.active {
+.tab.active, .nav.active {
   background: #7c3aed;
   color: white;
 }
 
-#authForm {
-  display: grid;
-  gap: 12px;
-}
+#authForm { display: grid; gap: 12px; }
 
-#authForm input,
-.room-row input,
-.message-form input {
+input {
   width: 100%;
   border: 1px solid #27272a;
   outline: none;
@@ -96,28 +67,17 @@ button {
   color: white;
 }
 
-#authForm input {
-  padding: 14px;
-}
+#authForm input { padding: 14px; }
 
-#authButton,
-#joinRoomButton,
-.message-form button {
+#authButton, #joinRoomButton, #searchButton, .message-form button, .action-button {
   border-radius: 12px;
   background: #7c3aed;
   color: white;
   font-weight: 700;
 }
 
-#authButton {
-  padding: 14px;
-}
-
-.error {
-  min-height: 20px;
-  margin-top: 12px !important;
-  color: #fb7185 !important;
-}
+#authButton { padding: 14px; }
+.error { min-height: 20px; margin-top: 12px !important; color: #fb7185 !important; }
 
 .chat-screen {
   width: 100%;
@@ -127,32 +87,35 @@ button {
 }
 
 .sidebar {
-  width: 310px;
+  width: 330px;
   flex-shrink: 0;
   height: 100vh;
   overflow-y: auto;
   border-right: 1px solid #27272a;
   background: #111118;
-  padding: 18px;
+  padding: 16px;
 }
 
 .profile-box {
   display: flex;
   gap: 12px;
   align-items: center;
-  padding-bottom: 18px;
+  padding-bottom: 16px;
   border-bottom: 1px solid #27272a;
 }
 
-.avatar {
-  width: 48px;
-  height: 48px;
+.avatar-wrap { cursor: pointer; flex-shrink: 0; }
+
+.avatar, .avatar-img {
+  width: 52px;
+  height: 52px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: linear-gradient(135deg, #7c3aed, #db2777);
   font-weight: 900;
   font-size: 22px;
+  object-fit: cover;
 }
 
 .small-button {
@@ -164,11 +127,13 @@ button {
   font-size: 13px;
 }
 
-.room-box {
+.room-box, .users-box, .search-box, .requests-box, .friends-box, .notifications-box {
   margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #27272a;
 }
 
-.room-box label {
+label, #statusText {
   display: block;
   margin-bottom: 8px;
   color: #a1a1aa;
@@ -180,28 +145,12 @@ button {
   gap: 8px;
 }
 
-.room-row input {
-  padding: 11px;
-}
+.room-row input { padding: 11px; }
+#joinRoomButton, #searchButton { padding: 0 14px; }
 
-#joinRoomButton {
-  padding: 0 14px;
-}
+h3 { margin: 0 0 12px; font-size: 16px; }
 
-.users-box,
-.coming-soon {
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid #27272a;
-}
-
-.users-box h3,
-.coming-soon h3 {
-  margin: 0 0 12px;
-  font-size: 16px;
-}
-
-#usersList {
+#usersList, .mini-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -209,16 +158,40 @@ button {
   gap: 8px;
 }
 
-#usersList li {
+#usersList li, .mini-item {
   padding: 10px;
   border-radius: 10px;
   background: #18181f;
 }
 
-.coming-soon p {
-  color: #a1a1aa;
-  line-height: 1.4;
-  font-size: 14px;
+.mini-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  word-break: break-word;
+}
+
+.mini-item strong { display: block; }
+.mini-item span { color: #a1a1aa; font-size: 13px; }
+
+.action-button {
+  padding: 8px 10px;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.action-button.red { background: #be123c; }
+
+#notificationBadge {
+  display: inline-block;
+  min-width: 20px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #db2777;
+  color: white;
+  font-size: 12px;
+  text-align: center;
 }
 
 .chat-main {
@@ -233,22 +206,17 @@ button {
 
 .chat-header {
   flex-shrink: 0;
-  padding: 18px 20px;
+  padding: 14px 20px;
   border-bottom: 1px solid #27272a;
   background: #111118;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 
-.chat-header h2 {
-  margin: 0;
-  font-size: 22px;
-}
-
-#statusText {
-  display: block;
-  margin-top: 4px;
-  color: #a1a1aa;
-  font-size: 14px;
-}
+.chat-header h2 { margin: 0; font-size: 22px; }
+#statusText { margin-top: 4px; margin-bottom: 0; }
 
 .messages {
   flex: 1;
@@ -289,7 +257,7 @@ button {
   margin-bottom: 5px;
   font-size: 12px;
   color: #d4d4d8;
-  opacity: 0.9;
+  opacity: .9;
 }
 
 .message .text {
@@ -325,32 +293,17 @@ button {
   padding: 0 18px;
 }
 
-@media (max-width: 760px) {
-  .chat-screen {
-    flex-direction: column;
-  }
-
+@media (max-width: 820px) {
+  .chat-screen { flex-direction: column; }
   .sidebar {
     width: 100%;
     height: auto;
-    max-height: 230px;
+    max-height: 310px;
     border-right: 0;
     border-bottom: 1px solid #27272a;
   }
-
-  .chat-main {
-    height: calc(100vh - 230px);
-  }
-
-  .message {
-    max-width: 92%;
-  }
-
-  .message-form {
-    padding: 10px;
-  }
-
-  .message-form button {
-    padding: 0 12px;
-  }
+  .chat-main { height: calc(100vh - 310px); }
+  .message { max-width: 92%; }
+  .message-form { padding: 10px; }
+  .message-form button { padding: 0 12px; }
 }
