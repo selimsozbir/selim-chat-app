@@ -247,14 +247,29 @@ app.post('/api/avatar', authMiddleware, async (req, res) => {
   }
 });
 
+app.delete('/api/avatar', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'UPDATE users SET avatar_url = NULL WHERE id = $1 RETURNING id, username, avatar_url',
+      [req.user.id]
+    );
+
+    res.json({ user: result.rows[0] });
+  } catch (error) {
+    console.error('Avatar kaldırma hatası:', error);
+    res.status(500).json({ error: 'Profil fotoğrafı kaldırılamadı.' });
+  }
+});
+
 app.get('/api/messages/:room', authMiddleware, async (req, res) => {
   const room = cleanText(req.params.room, 50).toLowerCase() || 'genel';
 
   const result = await pool.query(
-    `SELECT id, room, username, text, created_at
-     FROM messages
-     WHERE room = $1
-     ORDER BY created_at DESC
+    `SELECT m.id, m.room, m.username, m.text, m.created_at, u.avatar_url
+     FROM messages m
+     LEFT JOIN users u ON u.id = m.user_id
+     WHERE m.room = $1
+     ORDER BY m.created_at DESC
      LIMIT 50`,
     [room]
   );
@@ -412,7 +427,8 @@ app.get('/api/dm/:friendId', authMiddleware, async (req, res) => {
 
   const result = await pool.query(
     `SELECT dm.id, dm.sender_id, dm.receiver_id, dm.text, dm.created_at,
-            sender.username AS sender_username
+            sender.username AS sender_username,
+            sender.avatar_url AS sender_avatar_url
      FROM dm_messages dm
      JOIN users sender ON sender.id = dm.sender_id
      WHERE (dm.sender_id = $1 AND dm.receiver_id = $2)
@@ -440,6 +456,22 @@ app.get('/api/notifications', authMiddleware, async (req, res) => {
 
 app.post('/api/notifications/read', authMiddleware, async (req, res) => {
   await pool.query('UPDATE notifications SET is_read = TRUE WHERE user_id = $1', [req.user.id]);
+  res.json({ ok: true });
+});
+
+app.delete('/api/notifications/:id', authMiddleware, async (req, res) => {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: 'Geçersiz bildirim.' });
+  }
+
+  await pool.query('DELETE FROM notifications WHERE id = $1 AND user_id = $2', [id, req.user.id]);
+  res.json({ ok: true });
+});
+
+app.delete('/api/notifications', authMiddleware, async (req, res) => {
+  await pool.query('DELETE FROM notifications WHERE user_id = $1', [req.user.id]);
   res.json({ ok: true });
 });
 
@@ -489,10 +521,13 @@ io.on('connection', (socket) => {
       );
 
       const msg = saved.rows[0];
+      const avatarResult = await pool.query('SELECT avatar_url FROM users WHERE id = $1', [socket.user.id]);
+      const avatarUrl = avatarResult.rows[0]?.avatar_url || null;
 
       io.to(room).emit('chat_message', {
         id: msg.id,
         username: msg.username,
+        avatar_url: avatarUrl,
         text: msg.text,
         time: nowTime()
       });
@@ -530,6 +565,7 @@ io.on('connection', (socket) => {
         sender_id: saved.rows[0].sender_id,
         receiver_id: saved.rows[0].receiver_id,
         sender_username: socket.user.username,
+        sender_avatar_url: (await pool.query('SELECT avatar_url FROM users WHERE id = $1', [socket.user.id])).rows[0]?.avatar_url || null,
         text: saved.rows[0].text,
         time: nowTime(),
         created_at: saved.rows[0].created_at
