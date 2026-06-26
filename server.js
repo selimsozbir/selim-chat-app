@@ -5,6 +5,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const { Pool } = require('pg');
+const multer = require('multer');
+const crypto = require('crypto');
 const { Server } = require('socket.io');
 
 const app = express();
@@ -14,6 +16,10 @@ const io = new Server(server, { maxHttpBufferSize: 12 * 1024 * 1024 });
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-this';
 const OWNER_USERNAME = String(process.env.OWNER_USERNAME || 'selim').toLowerCase();
+const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '');
+const SUPABASE_BUCKET = String(process.env.SUPABASE_BUCKET || 'chat-uploads');
+const PUBLIC_STORAGE = String(process.env.PUBLIC_STORAGE || 'true').toLowerCase() !== 'false';
 
 app.set('trust proxy', true);
 
@@ -25,6 +31,95 @@ const pool = new Pool({
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024
+  }
+});
+
+function storageEnabled() {
+  return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY && SUPABASE_BUCKET);
+}
+
+function safeFileName(name) {
+  return String(name || 'file')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 120) || 'file';
+}
+
+function storagePublicUrl(objectPath) {
+  return `${SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(SUPABASE_BUCKET)}/${objectPath.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+async function uploadToSupabaseStorage(file, userId) {
+  if (!storageEnabled()) {
+    const error = new Error('Storage ayarlı değil. Render Environment kısmına SUPABASE_URL ve SUPABASE_SERVICE_ROLE_KEY ekle.');
+    error.status = 500;
+    throw error;
+  }
+
+  if (!file) {
+    const error = new Error('Dosya yok.');
+    error.status = 400;
+    throw error;
+  }
+
+  const mime = file.mimetype || 'application/octet-stream';
+  const allowed = [
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+    'audio/webm', 'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/mp4',
+    'application/pdf', 'text/plain', 'application/zip', 'application/x-zip-compressed',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword'
+  ];
+
+  if (!allowed.includes(mime) && !mime.startsWith('image/') && !mime.startsWith('audio/')) {
+    const error = new Error('Bu dosya tipi desteklenmiyor.');
+    error.status = 400;
+    throw error;
+  }
+
+  let folder = 'files';
+  if (mime.startsWith('image/')) folder = 'images';
+  if (mime.startsWith('audio/')) folder = 'audio';
+
+  const extFromName = safeFileName(file.originalname).split('.').pop();
+  const ext = extFromName && extFromName.length <= 8 ? extFromName : 'bin';
+  const objectPath = `${folder}/${userId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+
+  const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${objectPath.split('/').map(encodeURIComponent).join('/')}`;
+
+  const response = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      'Content-Type': mime,
+      'x-upsert': 'false'
+    },
+    body: file.buffer
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    const error = new Error(`Storage upload başarısız: ${response.status} ${text.slice(0, 120)}`);
+    error.status = 500;
+    throw error;
+  }
+
+  return {
+    url: storagePublicUrl(objectPath),
+    path: objectPath,
+    mime,
+    name: safeFileName(file.originalname),
+    size: file.size
+  };
+}
 
 const onlineUsers = new Map();
 const userSockets = new Map();
@@ -351,11 +446,15 @@ async function initDatabase() {
   await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_name TEXT`);
   await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_mime TEXT`);
   await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_data TEXT`);
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_path TEXT`);
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_size INTEGER`);
 
   await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS message_type VARCHAR(20) DEFAULT 'text'`);
   await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS file_name TEXT`);
   await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS file_mime TEXT`);
   await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS file_data TEXT`);
+  await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS file_path TEXT`);
+  await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS file_size INTEGER`);
 
   await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to_id INTEGER`);
   await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS reply_to_id INTEGER`);
@@ -678,6 +777,33 @@ app.delete('/api/avatar', authMiddleware, async (req, res) => {
   }
 });
 
+/* STORAGE UPLOAD */
+
+app.post('/api/upload', authMiddleware, upload.single('file'), async (req, res) => {
+  try {
+    const uploaded = await uploadToSupabaseStorage(req.file, req.user.id);
+
+    let type = 'file';
+    if (uploaded.mime.startsWith('image/')) type = 'image';
+    if (uploaded.mime.startsWith('audio/')) type = 'audio';
+
+    res.json({
+      ok: true,
+      file: {
+        type,
+        fileName: uploaded.name,
+        fileMime: uploaded.mime,
+        fileUrl: uploaded.url,
+        filePath: uploaded.path,
+        fileSize: uploaded.size
+      }
+    });
+  } catch (error) {
+    console.error('Upload hatası:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Dosya yüklenemedi.' });
+  }
+});
+
 /* ROOM MESSAGES */
 
 app.get('/api/messages/:room', authMiddleware, async (req, res) => {
@@ -685,7 +811,7 @@ app.get('/api/messages/:room', authMiddleware, async (req, res) => {
 
   const result = await pool.query(
     `SELECT m.id, m.room, m.username, m.text, m.created_at, m.edited_at, m.deleted_at,
-            m.message_type, m.file_name, m.file_mime, m.file_data, m.reply_to_id,
+            m.message_type, m.file_name, m.file_mime, m.file_data, m.file_path, m.file_size, m.reply_to_id,
             u.avatar_url,
             rm.username AS reply_username,
             rm.text AS reply_text
@@ -1073,7 +1199,7 @@ app.get('/api/dm/:friendId', authMiddleware, async (req, res) => {
 
   const result = await pool.query(
     `SELECT dm.id, dm.sender_id, dm.receiver_id, dm.text, dm.created_at, dm.edited_at, dm.deleted_at, dm.read_at,
-            dm.message_type, dm.file_name, dm.file_mime, dm.file_data, dm.reply_to_id,
+            dm.message_type, dm.file_name, dm.file_mime, dm.file_data, dm.file_path, dm.file_size, dm.reply_to_id,
             sender.username AS sender_username,
             sender.avatar_url AS sender_avatar_url,
             rdm.text AS reply_text,
@@ -1313,12 +1439,14 @@ io.on('connection', (socket) => {
       const fileName = cleanText(payload.fileName || '', 200) || null;
       const fileMime = cleanText(payload.fileMime || '', 100) || null;
       const fileData = String(payload.fileData || '');
+      const filePath = cleanText(payload.filePath || '', 500) || null;
+      const fileSize = Number(payload.fileSize) || null;
 
       if (!socket.data.room) return;
       if (messageType === 'text' && !text) return;
-      if (messageType !== 'text' && !fileData.startsWith('data:')) return;
-      if (fileData.length > 7200000) {
-        socket.emit('system_message', 'Dosya çok büyük. 5 MB altı dosya gönder.');
+      if (messageType !== 'text' && !fileData) return;
+      if (fileData.startsWith('data:') && fileData.length > 7200000) {
+        socket.emit('system_message', 'Dosya çok büyük. Storage kullanarak gönder.');
         return;
       }
 
@@ -1352,10 +1480,10 @@ io.on('connection', (socket) => {
       }
 
       const saved = await pool.query(
-        `INSERT INTO messages (room, user_id, username, text, message_type, file_name, file_mime, file_data, reply_to_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         RETURNING id, room, username, text, created_at, edited_at, deleted_at, message_type, file_name, file_mime, file_data, reply_to_id`,
-        [room, socket.user.id, socket.user.username, text, messageType, fileName, fileMime, fileData || null, replyToId]
+        `INSERT INTO messages (room, user_id, username, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING id, room, username, text, created_at, edited_at, deleted_at, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id`,
+        [room, socket.user.id, socket.user.username, text, messageType, fileName, fileMime, fileData || null, filePath, fileSize, replyToId]
       );
 
       const avatarResult = await pool.query('SELECT avatar_url, display_name, username FROM users WHERE id = $1', [socket.user.id]);
@@ -1371,6 +1499,8 @@ io.on('connection', (socket) => {
         file_name: msg.file_name,
         file_mime: msg.file_mime,
         file_data: msg.file_data,
+        file_path: msg.file_path,
+        file_size: msg.file_size,
         reply_to_id: msg.reply_to_id,
         reply_username: replyInfo?.username || null,
         reply_text: replyInfo?.text || null,
@@ -1468,13 +1598,15 @@ io.on('connection', (socket) => {
       const fileName = cleanText(payload?.fileName || '', 200) || null;
       const fileMime = cleanText(payload?.fileMime || '', 100) || null;
       const fileData = String(payload?.fileData || '');
+      const filePath = cleanText(payload?.filePath || '', 500) || null;
+      const fileSize = Number(payload?.fileSize) || null;
       const targetId = Number(receiverId);
 
       if (!Number.isInteger(targetId)) return;
       if (messageType === 'text' && !cleanMessage) return;
-      if (messageType !== 'text' && !fileData.startsWith('data:')) return;
-      if (fileData.length > 7200000) {
-        socket.emit('notification', { type: 'error', payload: { message: 'Dosya çok büyük. 5 MB altı dosya gönder.' } });
+      if (messageType !== 'text' && !fileData) return;
+      if (fileData.startsWith('data:') && fileData.length > 7200000) {
+        socket.emit('notification', { type: 'error', payload: { message: 'Dosya çok büyük. Storage kullanarak gönder.' } });
         return;
       }
 
@@ -1506,10 +1638,10 @@ io.on('connection', (socket) => {
       }
 
       const saved = await pool.query(
-        `INSERT INTO dm_messages (sender_id, receiver_id, text, message_type, file_name, file_mime, file_data, reply_to_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING id, sender_id, receiver_id, text, created_at, edited_at, deleted_at, read_at, message_type, file_name, file_mime, file_data, reply_to_id`,
-        [socket.user.id, targetId, cleanMessage, messageType, fileName, fileMime, fileData || null, replyToId]
+        `INSERT INTO dm_messages (sender_id, receiver_id, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING id, sender_id, receiver_id, text, created_at, edited_at, deleted_at, read_at, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id`,
+        [socket.user.id, targetId, cleanMessage, messageType, fileName, fileMime, fileData || null, filePath, fileSize, replyToId]
       );
 
       const avatarResult = await pool.query('SELECT avatar_url, display_name, username FROM users WHERE id = $1', [socket.user.id]);
@@ -1525,6 +1657,8 @@ io.on('connection', (socket) => {
         file_name: saved.rows[0].file_name,
         file_mime: saved.rows[0].file_mime,
         file_data: saved.rows[0].file_data,
+        file_path: saved.rows[0].file_path,
+        file_size: saved.rows[0].file_size,
         reply_to_id: saved.rows[0].reply_to_id,
         reply_username: replyInfo?.username || null,
         reply_text: replyInfo?.text || null,
