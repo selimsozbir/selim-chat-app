@@ -315,7 +315,8 @@ fileInput.addEventListener('change', async () => {
   try {
     await sendFileMessage(file);
   } catch (error) {
-    addSystemMessage(error.message);
+    addSystemMessage(error.name === 'AbortError' ? 'Yükleme zaman aşımına uğradı.' : error.message);
+    console.error('Upload client error:', error);
   } finally {
     fileInput.value = '';
   }
@@ -329,6 +330,20 @@ voiceButton.addEventListener('click', async () => {
 
   await startVoiceRecording();
 });
+
+async function checkStorageStatusBeforeUpload() {
+  try {
+    const status = await api('/api/storage-status');
+
+    if (!status.storageEnabled) {
+      throw new Error(`Storage kapalı görünüyor. SUPABASE_URL=${status.hasSupabaseUrl}, SERVICE_KEY=${status.hasServiceKey}, BUCKET=${status.bucket || 'yok'}`);
+    }
+
+    return status;
+  } catch (error) {
+    throw new Error(`Storage status alınamadı: ${error.message}`);
+  }
+}
 
 async function sendFileMessage(file) {
   if (isUploadingFile) {
@@ -345,6 +360,9 @@ async function sendFileMessage(file) {
   voiceButton.disabled = true;
 
   try {
+    addSystemMessage('Storage ayarları kontrol ediliyor...');
+    await checkStorageStatusBeforeUpload();
+
     addSystemMessage('Dosya storage’a yükleniyor...');
 
     const formData = new FormData();
@@ -364,8 +382,15 @@ async function sendFileMessage(file) {
 
     clearTimeout(timeoutId);
 
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || 'Dosya yüklenemedi.');
+    const rawText = await response.text();
+    let data = {};
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      throw new Error(`Upload JSON cevabı okunamadı. HTTP ${response.status}: ${rawText.slice(0, 120)}`);
+    }
+
+    if (!response.ok) throw new Error(data.error || `Dosya yüklenemedi. HTTP ${response.status}`);
 
     const uploaded = data.file;
     addSystemMessage('Dosya yüklendi, mesaj gönderiliyor...');
