@@ -2246,3 +2246,263 @@ input::placeholder {
   .egg-portal-core { width: 48vw; height: 48vw; }
   .egg-rome-emblem { width: 110px; height: 110px; font-size: 62px; }
 }
+
+
+/* =========================================================
+   v7.7.3 — More 5ECROPOLIS Easter Eggs
+   /egypt /anitkabir /cat /reset /rift /5ecropolis
+   ========================================================= */
+
+.egg-egypt #fiveEggLayer {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(251, 191, 36, 0.22), transparent 26%),
+    linear-gradient(180deg, rgba(92, 54, 20, 0.12), rgba(146, 64, 14, 0.26));
+}
+
+.egg-sand {
+  position: absolute;
+  inset: auto -10% 0 -10%;
+  height: 34%;
+  background:
+    repeating-linear-gradient(7deg, rgba(251,191,36,0.12) 0 10px, rgba(180,83,9,0.12) 10px 20px),
+    linear-gradient(180deg, rgba(251,191,36,0.12), rgba(120,53,15,0.38));
+  filter: blur(0.5px);
+  animation: sandMove 1.8s linear infinite;
+}
+
+.egg-egypt-sun {
+  position: absolute;
+  top: 14%;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff7ad, #f59e0b 55%, transparent 70%);
+  box-shadow: 0 0 70px rgba(251, 191, 36, 0.5);
+}
+
+.egg-pyramid {
+  position: absolute;
+  bottom: 18%;
+  width: 0;
+  height: 0;
+  border-left: 160px solid transparent;
+  border-right: 160px solid transparent;
+  border-bottom: 230px solid rgba(217, 119, 6, 0.46);
+  filter: drop-shadow(0 0 22px rgba(251,191,36,0.24));
+}
+
+.egg-pyramid-left { transform: translateX(-140px) scale(0.9); }
+.egg-pyramid-right { transform: translateX(140px) scale(0.7); opacity: 0.78; }
+
+.egg-egypt-text,
+.egg-anitkabir-text,
+.egg-cat-text,
+.egg-reset-text,
+.egg-rift-text,
+.egg-five-text {
+  position: absolute;
+  top: 16%;
+  width: 100%;
+  text-align: center;
+  font-weight: 1000;
+  letter-spacing: 0.14em;
+  font-size: clamp(28px, 6vw, 76px);
+  color: #fff;
+  text-shadow: 0 0 22px rgba(255,255,255,0.34);
+}
+
+.egg-egypt-sub,
+.egg-anitkabir-sub,
+.egg-cat-sub,
+.egg-reset-sub,
+.egg-rift-sub,
+.egg-five-sub {
+  position: absolute;
+  top: calc(16% + clamp(50px, 8vw, 92px));
+  width: 100%;
+  text-align: center;
+  color: rgba(255,255,255,0.72);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  font-size: clamp(11px, 2vw, 17px);
+}
+
+.egg-egypt-text { color: #fde68a; text-shadow: 0 0 26px rgba(251, 191, 36, 0.65); }
+
+.egg-anitkabir #fiveEggLayer {
+  background:
+    radial-gradient(circle at center, rgba(239, 68, 68, 0.16), transparent 30%),
+    linear-gradient(180deg, rgba(127, 29, 29, 0.26), rgba(15, 23, 42, 0.35));
+}
+
+.egg-anitkabir-horizon {
+  position: absolute;
+  bottom: 23%;
+  width: min(760px, 86vw);
+  height: 170px;
+  border-bottom: 8px solid rgba(248, 250, 252, 0.72);
+  box-shadow: 0 0 35px rgba(239, 68, 68, 0.32);
+}
+
+.egg-anitkabir-pillars {
+  position: absolute;
+  bottom: 23%;
+  width: min(650px, 78vw);
+  height: 180px;
+  background: repeating-linear-gradient(90deg, rgba(248,250,252,0.86) 0 22px, transparent 22px 48px);
+  mask-image: linear-gradient(to top, black, transparent 96%);
+  animation: monumentRise 2.6s ease-out;
+}
+
+.egg-anitkabir-text {
+  top: 18%;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(239,68,68,0.78), 0 0 44px rgba(255,255,255,0.28);
+}
+
+.egg-cat #fiveEggLayer {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.egg-cat-pack {
+  position: absolute;
+  bottom: 18%;
+  display: flex;
+  gap: clamp(10px, 3vw, 34px);
+  font-size: clamp(42px, 9vw, 96px);
+  animation: catsMarch 2.2s ease-in-out infinite;
+}
+
+.egg-cat-pack span {
+  filter: drop-shadow(0 0 16px rgba(255,255,255,0.38));
+  animation: catBounce 0.7s ease-in-out infinite alternate;
+}
+
+.egg-cat-pack span:nth-child(2n) {
+  animation-delay: 0.18s;
+}
+
+.egg-cat-text {
+  top: 24%;
+  color: #e5e7eb;
+  text-shadow: 0 0 20px rgba(255,255,255,0.5);
+}
+
+.egg-reset #fiveEggLayer {
+  background: rgba(2, 6, 23, 0.36);
+  animation: resetFlash 0.24s linear infinite;
+}
+
+.egg-reset-button {
+  position: absolute;
+  top: 34%;
+  width: 190px;
+  height: 190px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ef4444, #7f1d1d 72%);
+  color: #fff;
+  font-weight: 1000;
+  letter-spacing: 0.08em;
+  box-shadow: 0 0 34px rgba(239, 68, 68, 0.8), inset 0 0 22px rgba(255,255,255,0.22);
+  animation: resetPress 1.2s ease-in-out infinite;
+}
+
+.egg-reset-text {
+  top: calc(34% + 215px);
+  color: #fecaca;
+  text-shadow: 0 0 22px rgba(239, 68, 68, 0.8);
+}
+
+.egg-reset-sub {
+  top: calc(34% + 295px);
+}
+
+.egg-rift #fiveEggLayer {
+  background: linear-gradient(90deg, rgba(127,29,29,0.18), transparent 45%, rgba(127,29,29,0.18));
+}
+
+.egg-rift-line {
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  width: 12px;
+  background: linear-gradient(180deg, transparent, #ef4444, #fb7185, #ef4444, transparent);
+  box-shadow: 0 0 30px rgba(239,68,68,0.95), 0 0 90px rgba(239,68,68,0.5);
+  transform: rotate(9deg);
+  animation: riftTear 0.18s linear infinite;
+}
+
+.egg-rift-line::before,
+.egg-rift-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 4px;
+  background: rgba(255,255,255,0.72);
+  transform: translateX(-22px) skewX(-18deg);
+  filter: blur(1px);
+}
+
+.egg-rift-line::after {
+  transform: translateX(24px) skewX(18deg);
+  background: rgba(239,68,68,0.5);
+}
+
+.egg-rift-text {
+  top: 31%;
+  color: #fecaca;
+  text-shadow: 0 0 25px rgba(239,68,68,0.95);
+}
+
+.egg-5ecropolis #fiveEggLayer {
+  background:
+    radial-gradient(circle at center, rgba(139,92,246,0.25), transparent 32%),
+    radial-gradient(circle at 20% 20%, rgba(236,72,153,0.18), transparent 24%),
+    rgba(0,0,0,0.2);
+}
+
+.egg-five-logo {
+  position: absolute;
+  top: 23%;
+  width: 160px;
+  height: 160px;
+  display: grid;
+  place-items: center;
+  border-radius: 36px;
+  font-size: 112px;
+  font-weight: 1000;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(139,92,246,0.82), rgba(236,72,153,0.78));
+  box-shadow: 0 0 40px rgba(139,92,246,0.7), 0 0 90px rgba(236,72,153,0.38);
+  animation: fiveFloat 2s ease-in-out infinite;
+}
+
+.egg-five-text {
+  top: calc(23% + 185px);
+  background: linear-gradient(90deg, #fff, #c4b5fd, #f9a8d4, #67e8f9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+}
+
+.egg-five-sub {
+  top: calc(23% + 270px);
+}
+
+@keyframes sandMove { to { transform: translateX(40px); } }
+@keyframes monumentRise { from { transform: translateY(160px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes catsMarch { 0%,100% { transform: translateX(-8px); } 50% { transform: translateX(8px); } }
+@keyframes catBounce { from { transform: translateY(0); } to { transform: translateY(-14px); } }
+@keyframes resetFlash { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.8); } }
+@keyframes resetPress { 0%,100% { transform: scale(1); } 50% { transform: scale(0.9); } }
+@keyframes riftTear { 0%,100% { transform: rotate(9deg) translateX(0); } 50% { transform: rotate(10deg) translateX(5px); } }
+@keyframes fiveFloat { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-12px) rotate(2deg); } }
+
+@media (max-width: 640px) {
+  .egg-reset-button { width: 145px; height: 145px; }
+  .egg-pyramid { border-left-width: 110px; border-right-width: 110px; border-bottom-width: 160px; }
+  .egg-five-logo { width: 125px; height: 125px; font-size: 86px; }
+}
