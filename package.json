@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.2.6",
-  "description": "Selim Chat v7.2.6 type variable fix for storage uploads",
+  "version": "7.2.8",
+  "description": "Selim Chat v7.2.8 final upload fix with system message crash removed",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
