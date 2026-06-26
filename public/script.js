@@ -331,20 +331,6 @@ voiceButton.addEventListener('click', async () => {
   await startVoiceRecording();
 });
 
-async function checkStorageStatusBeforeUpload() {
-  try {
-    const status = await api('/api/storage-status');
-
-    if (!status.storageEnabled) {
-      throw new Error(`Storage kapalı görünüyor. SUPABASE_URL=${status.hasSupabaseUrl}, SERVICE_KEY=${status.hasServiceKey}, BUCKET=${status.bucket || 'yok'}`);
-    }
-
-    return status;
-  } catch (error) {
-    throw new Error(`Storage status alınamadı: ${error.message}`);
-  }
-}
-
 async function sendFileMessage(file) {
   if (isUploadingFile) {
     addSystemMessage('Zaten bir dosya yükleniyor.');
@@ -360,9 +346,6 @@ async function sendFileMessage(file) {
   voiceButton.disabled = true;
 
   try {
-    addSystemMessage('Storage ayarları kontrol ediliyor...');
-    await checkStorageStatusBeforeUpload();
-
     addSystemMessage('Dosya storage’a yükleniyor...');
 
     const formData = new FormData();
@@ -378,9 +361,14 @@ async function sendFileMessage(file) {
       },
       body: formData,
       signal: controller.signal
+    }).catch((error) => {
+      clearTimeout(timeoutId);
+      throw error;
     });
 
     clearTimeout(timeoutId);
+
+    addSystemMessage(`Upload cevabı geldi: HTTP ${response.status}`);
 
     const rawText = await response.text();
     let data = {};
