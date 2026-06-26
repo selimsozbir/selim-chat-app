@@ -761,6 +761,7 @@ io.on('connection', (socket) => {
 
       io.to(room).emit('chat_message', {
         id: msg.id,
+        room: msg.room,
         username: msg.username,
         avatar_url: avatarResult.rows[0]?.avatar_url || null,
         text: msg.text,
