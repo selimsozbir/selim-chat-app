@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "6.3.0",
-  "description": "Selim Chat v6.3.0 with Android upload fix, mentions, replies and typing filters",
+  "version": "7.0.0",
+  "description": "Selim Chat v7.0.0 with profiles, presence, moderation, search and mention autocomplete",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
