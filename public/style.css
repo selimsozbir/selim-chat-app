@@ -307,3 +307,72 @@ h3 { margin: 0 0 12px; font-size: 16px; }
   .message-form { padding: 10px; }
   .message-form button { padding: 0 12px; }
 }
+
+
+.encryption-label {
+  display: block;
+  margin-top: 4px;
+  color: #22c55e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.message {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  column-gap: 9px;
+}
+
+.message.mine {
+  grid-template-columns: minmax(0, 1fr) 34px;
+}
+
+.message.system {
+  display: block;
+}
+
+.msg-avatar,
+.mini-avatar {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #db2777);
+  object-fit: cover;
+  font-weight: 900;
+  font-size: 14px;
+  color: white;
+  overflow: hidden;
+}
+
+.message.mine .msg-avatar {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.message.mine .msg-bubble {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.msg-bubble {
+  min-width: 0;
+}
+
+.mini-left {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.mini-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.notification-delete {
+  background: #3f3f46;
+}
