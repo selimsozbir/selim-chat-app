@@ -314,6 +314,79 @@ async function rewardUserActivity(userId, xpAmount = 5, shardAmount = 1) {
 }
 
 
+
+const MARKET_ITEMS = [
+  { id: 'bubble_vertex', type: 'bubble', name: 'VERTEX Bubble', icon: '🔴', rarity: 'epic', price: 500, description: 'Mesaj balonuna kırmızı glitch havası verir.' },
+  { id: 'bubble_limbo', type: 'bubble', name: 'Limbo Bubble', icon: '⚫', rarity: 'rare', price: 350, description: 'Karanlık, minimal Limbo mesaj stili.' },
+  { id: 'bubble_ice', type: 'bubble', name: 'Nico Ice Bubble', icon: '🧊', rarity: 'rare', price: 420, description: 'Soğuk mavi buz mesaj efekti.' },
+  { id: 'bubble_gold', type: 'bubble', name: 'Rome Gold Bubble', icon: '🏛️', rarity: 'epic', price: 650, description: 'Altın Roma mesaj balonu.' },
+  { id: 'bubble_serbia', type: 'bubble', name: 'Serbia Portal Bubble', icon: '🇷🇸', rarity: 'epic', price: 700, description: 'Mor portal mesaj balonu.' },
+
+  { id: 'frame_vertex', type: 'frame', name: 'VERTEX Frame', icon: '🟥', rarity: 'epic', price: 800, description: 'Profil fotoğrafına kırmızı VERTEX çerçevesi.' },
+  { id: 'frame_limbo', type: 'frame', name: 'Limbo Frame', icon: '⬛', rarity: 'rare', price: 450, description: 'Karanlık Limbo profil çerçevesi.' },
+  { id: 'frame_five', type: 'frame', name: '5ECROPOLIS Frame', icon: '5️⃣', rarity: 'legendary', price: 1500, description: 'Özel 5ECROPOLIS profil çerçevesi.' },
+  { id: 'frame_ataturk', type: 'frame', name: 'Respect Frame', icon: '🇹🇷', rarity: 'legendary', price: 1800, description: 'Saygı protokolü profil çerçevesi.' },
+
+  { id: 'name_glitch', type: 'name', name: 'Glitch Name', icon: '⚡', rarity: 'rare', price: 500, description: 'İsme hafif glitch efekti.' },
+  { id: 'name_neon', type: 'name', name: 'Neon Name', icon: '💜', rarity: 'epic', price: 850, description: 'İsme neon mor parlama verir.' },
+  { id: 'name_legend', type: 'name', name: 'Legend Name', icon: '👑', rarity: 'legendary', price: 2000, description: 'İsme legendary altın efekt verir.' }
+];
+
+function getMarketItem(itemId) {
+  return MARKET_ITEMS.find((item) => item.id === itemId) || null;
+}
+
+async function getUserGameStats(userId) {
+  const statsResult = await pool.query(
+    `SELECT
+       (SELECT COUNT(*)::int FROM messages WHERE user_id = $1 AND deleted_at IS NULL) AS room_messages,
+       (SELECT COUNT(*)::int FROM dm_messages WHERE sender_id = $1 AND deleted_at IS NULL) AS dm_messages,
+       (SELECT COUNT(*)::int FROM group_messages WHERE sender_id = $1 AND deleted_at IS NULL) AS group_messages,
+       (SELECT COUNT(*)::int FROM friendships WHERE status = 'accepted' AND (requester_id = $1 OR addressee_id = $1)) AS friends_count,
+       (SELECT COUNT(*)::int FROM group_members WHERE user_id = $1) AS groups_count`,
+    [userId]
+  );
+
+  const stats = statsResult.rows[0] || {};
+  stats.total_messages = Number(stats.room_messages || 0) + Number(stats.dm_messages || 0) + Number(stats.group_messages || 0);
+  return stats;
+}
+
+function buildDailyQuests(stats) {
+  return [
+    { id: 'send_10_messages', title: '10 mesaj gönder', icon: '💬', target: 10, progress: Math.min(stats.total_messages_today || 0, 10), xp: 100, shards: 50 },
+    { id: 'send_1_dm', title: '1 DM gönder', icon: '📨', target: 1, progress: Math.min(stats.dm_messages_today || 0, 1), xp: 80, shards: 35 },
+    { id: 'send_1_group', title: '1 grup mesajı gönder', icon: '👥', target: 1, progress: Math.min(stats.group_messages_today || 0, 1), xp: 80, shards: 35 },
+    { id: 'send_25_total', title: '25 toplam mesaj gönder', icon: '🔥', target: 25, progress: Math.min(stats.total_messages_today || 0, 25), xp: 220, shards: 120 },
+    { id: 'room_signal', title: '5 oda mesajı gönder', icon: '🏠', target: 5, progress: Math.min(stats.room_messages_today || 0, 5), xp: 90, shards: 40 }
+  ];
+}
+
+async function getTodayStats(userId) {
+  const result = await pool.query(
+    `SELECT
+       (SELECT COUNT(*)::int FROM messages WHERE user_id = $1 AND deleted_at IS NULL AND created_at::date = CURRENT_DATE) AS room_messages_today,
+       (SELECT COUNT(*)::int FROM dm_messages WHERE sender_id = $1 AND deleted_at IS NULL AND created_at::date = CURRENT_DATE) AS dm_messages_today,
+       (SELECT COUNT(*)::int FROM group_messages WHERE sender_id = $1 AND deleted_at IS NULL AND created_at::date = CURRENT_DATE) AS group_messages_today`,
+    [userId]
+  );
+
+  const stats = result.rows[0] || {};
+  stats.total_messages_today = Number(stats.room_messages_today || 0) + Number(stats.dm_messages_today || 0) + Number(stats.group_messages_today || 0);
+  return stats;
+}
+
+async function getUserInventory(userId) {
+  const result = await pool.query('SELECT item_id, item_type, created_at FROM user_items WHERE user_id = $1', [userId]);
+  return result.rows;
+}
+
+async function getClaimedQuestsToday(userId) {
+  const result = await pool.query('SELECT quest_id FROM daily_quest_claims WHERE user_id = $1 AND claim_date = CURRENT_DATE', [userId]);
+  return new Set(result.rows.map((row) => row.quest_id));
+}
+
+
 function nowTime() {
   return new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 }
@@ -866,6 +939,32 @@ async function initDatabase() {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visible_badges TEXT DEFAULT ''`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS xp INTEGER DEFAULT 0`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS shards INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_bubble_theme VARCHAR(40) DEFAULT ''`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_profile_frame VARCHAR(40) DEFAULT ''`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_name_effect VARCHAR(40) DEFAULT ''`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_items (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      item_id VARCHAR(80) NOT NULL,
+      item_type VARCHAR(40) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, item_id)
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS daily_quest_claims (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      quest_id VARCHAR(80) NOT NULL,
+      claim_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, quest_id, claim_date)
+    );
+  `);
+
 
 
   await pool.query(`
@@ -1049,7 +1148,7 @@ app.post('/api/register', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO users (username, password_hash, display_name, last_ip, last_user_agent, last_active)
        VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards`,
       [username, passwordHash, username, ip, getClientUserAgent(req)]
     );
 
@@ -1117,7 +1216,7 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
 
   const result = await pool.query(
     `SELECT id, username, display_name, avatar_url, bio, global_role, created_at, last_seen, last_active,
-            profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards
+            profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards
      FROM users WHERE id = $1`,
     [id]
   );
@@ -1209,7 +1308,7 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
 app.post('/api/profile/bio', authMiddleware, async (req, res) => {
   const bio = cleanText(req.body.bio, 160);
   const result = await pool.query(
-    'UPDATE users SET bio = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards',
+    'UPDATE users SET bio = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards',
     [bio, req.user.id]
   );
 
@@ -1229,7 +1328,7 @@ app.post('/api/profile/badges', authMiddleware, async (req, res) => {
 
     const profileResult = await pool.query(
       `SELECT id, username, display_name, avatar_url, bio, global_role, created_at, last_seen, last_active,
-              profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards
+              profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards
        FROM users WHERE id = $1`,
       [req.user.id]
     );
@@ -1287,8 +1386,8 @@ app.post('/api/profile/v2', authMiddleware, async (req, res) => {
            favorite_egg = $2,
            profile_cover_url = COALESCE(NULLIF($3, ''), profile_cover_url)
        WHERE id = $4
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards,
-                 profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards,
+                 profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards`,
       [profileColor, favoriteEgg, coverData, req.user.id]
     );
 
@@ -1305,8 +1404,8 @@ app.delete('/api/profile/cover', authMiddleware, async (req, res) => {
       `UPDATE users
        SET profile_cover_url = NULL
        WHERE id = $1
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards,
-                 profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards,
+                 profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards`,
       [req.user.id]
     );
 
@@ -1347,7 +1446,7 @@ app.patch('/api/settings/profile', authMiddleware, async (req, res) => {
            display_name = $2,
            bio = $3
        WHERE id = $4
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards`,
       [username, displayName || username, bio, req.user.id]
     );
 
@@ -1503,7 +1602,7 @@ app.post('/api/avatar', authMiddleware, async (req, res) => {
     if (avatarData.length > 1500000) return res.status(400).json({ error: 'Profil fotoğrafı çok büyük. Daha küçük görsel seç.' });
 
     const result = await pool.query(
-      'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards',
+      'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards',
       [avatarData, req.user.id]
     );
 
@@ -1517,7 +1616,7 @@ app.post('/api/avatar', authMiddleware, async (req, res) => {
 app.delete('/api/avatar', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'UPDATE users SET avatar_url = NULL WHERE id = $1 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards',
+      'UPDATE users SET avatar_url = NULL WHERE id = $1 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards',
       [req.user.id]
     );
 
@@ -1929,6 +2028,177 @@ async function getGroupSummary(groupId, userId) {
 
 
 /* GROUP DM */
+
+
+app.get('/api/gamify/summary', authMiddleware, async (req, res) => {
+  try {
+    const userResult = await pool.query(
+      `SELECT id, username, display_name, avatar_url, xp, shards,
+              active_bubble_theme, active_profile_frame, active_name_effect
+       FROM users WHERE id = $1`,
+      [req.user.id]
+    );
+
+    const me = userResult.rows[0];
+    const todayStats = await getTodayStats(req.user.id);
+    const quests = buildDailyQuests(todayStats);
+    const claimed = await getClaimedQuestsToday(req.user.id);
+    const inventory = await getUserInventory(req.user.id);
+
+    res.json({
+      user: {
+        ...me,
+        level: profileLevelFromXp(me?.xp || 0),
+        inventory
+      },
+      quests: quests.map((q) => ({
+        ...q,
+        done: q.progress >= q.target,
+        claimed: claimed.has(q.id)
+      })),
+      market: MARKET_ITEMS.map((item) => ({
+        ...item,
+        owned: inventory.some((owned) => owned.item_id === item.id)
+      }))
+    });
+  } catch (error) {
+    console.error('Gamify summary error:', error);
+    res.status(500).json({ error: 'Oyun paneli yüklenemedi.' });
+  }
+});
+
+app.get('/api/leaderboard', authMiddleware, async (req, res) => {
+  try {
+    const type = cleanText(req.query.type || 'level', 20);
+    let orderExpr = 'COALESCE(u.xp, 0) DESC';
+
+    if (type === 'shards') orderExpr = 'COALESCE(u.shards, 0) DESC';
+    if (type === 'messages') orderExpr = 'total_messages DESC';
+    if (type === 'friends') orderExpr = 'friends_count DESC';
+
+    const result = await pool.query(
+      `SELECT u.id, u.username, u.display_name, u.avatar_url, u.xp, u.shards,
+              (
+                (SELECT COUNT(*)::int FROM messages WHERE user_id = u.id AND deleted_at IS NULL) +
+                (SELECT COUNT(*)::int FROM dm_messages WHERE sender_id = u.id AND deleted_at IS NULL) +
+                (SELECT COUNT(*)::int FROM group_messages WHERE sender_id = u.id AND deleted_at IS NULL)
+              ) AS total_messages,
+              (SELECT COUNT(*)::int FROM friendships WHERE status = 'accepted' AND (requester_id = u.id OR addressee_id = u.id)) AS friends_count
+       FROM users u
+       WHERE COALESCE(u.is_banned, FALSE) = FALSE
+       ORDER BY ${orderExpr}, u.username ASC
+       LIMIT 20`
+    );
+
+    res.json({
+      users: result.rows.map((row, index) => ({
+        ...row,
+        rank: index + 1,
+        level: profileLevelFromXp(row.xp || 0)
+      }))
+    });
+  } catch (error) {
+    console.error('Leaderboard error:', error);
+    res.status(500).json({ error: 'Liderlik tablosu yüklenemedi.' });
+  }
+});
+
+app.post('/api/quests/claim', authMiddleware, async (req, res) => {
+  try {
+    const questId = cleanText(req.body.questId, 80);
+    const todayStats = await getTodayStats(req.user.id);
+    const quest = buildDailyQuests(todayStats).find((q) => q.id === questId);
+
+    if (!quest) return res.status(404).json({ error: 'Görev bulunamadı.' });
+    if (quest.progress < quest.target) return res.status(400).json({ error: 'Görev henüz tamamlanmadı.' });
+
+    const claimed = await getClaimedQuestsToday(req.user.id);
+    if (claimed.has(quest.id)) return res.status(400).json({ error: 'Bu görevi bugün zaten aldın.' });
+
+    await pool.query(
+      `INSERT INTO daily_quest_claims (user_id, quest_id, claim_date)
+       VALUES ($1, $2, CURRENT_DATE)`,
+      [req.user.id, quest.id]
+    );
+
+    await rewardUserActivity(req.user.id, quest.xp, quest.shards);
+    const me = await pool.query('SELECT xp, shards FROM users WHERE id = $1', [req.user.id]);
+
+    res.json({ ok: true, reward: { xp: quest.xp, shards: quest.shards }, user: me.rows[0] });
+  } catch (error) {
+    console.error('Quest claim error:', error);
+    res.status(500).json({ error: 'Görev ödülü alınamadı.' });
+  }
+});
+
+app.post('/api/market/buy', authMiddleware, async (req, res) => {
+  try {
+    const itemId = cleanText(req.body.itemId, 80);
+    const item = getMarketItem(itemId);
+    if (!item) return res.status(404).json({ error: 'Ürün bulunamadı.' });
+
+    const owned = await pool.query('SELECT id FROM user_items WHERE user_id = $1 AND item_id = $2', [req.user.id, item.id]);
+    if (owned.rows.length > 0) return res.status(400).json({ error: 'Bu ürüne zaten sahipsin.' });
+
+    const userResult = await pool.query('SELECT shards FROM users WHERE id = $1', [req.user.id]);
+    const shards = Number(userResult.rows[0]?.shards || 0);
+
+    if (shards < item.price) return res.status(400).json({ error: `Yetersiz Shards. Gerekli: ${item.price}` });
+
+    await pool.query('BEGIN');
+    await pool.query('UPDATE users SET shards = COALESCE(shards,0) - $1 WHERE id = $2', [item.price, req.user.id]);
+    await pool.query(
+      `INSERT INTO user_items (user_id, item_id, item_type)
+       VALUES ($1, $2, $3)`,
+      [req.user.id, item.id, item.type]
+    );
+    await pool.query('COMMIT');
+
+    res.json({ ok: true, item });
+  } catch (error) {
+    await pool.query('ROLLBACK').catch(() => {});
+    console.error('Market buy error:', error);
+    res.status(500).json({ error: 'Ürün satın alınamadı.' });
+  }
+});
+
+app.post('/api/market/equip', authMiddleware, async (req, res) => {
+  try {
+    const itemId = cleanText(req.body.itemId, 80);
+    const item = itemId ? getMarketItem(itemId) : null;
+    const slot = cleanText(req.body.slot, 20);
+
+    const columnBySlot = {
+      bubble: 'active_bubble_theme',
+      frame: 'active_profile_frame',
+      name: 'active_name_effect'
+    };
+
+    const column = columnBySlot[slot];
+    if (!column) return res.status(400).json({ error: 'Geçersiz slot.' });
+
+    if (itemId) {
+      if (!item || item.type !== slot) return res.status(400).json({ error: 'Ürün bu slota uygun değil.' });
+      const owned = await pool.query('SELECT id FROM user_items WHERE user_id = $1 AND item_id = $2', [req.user.id, item.id]);
+      if (owned.rows.length === 0) return res.status(403).json({ error: 'Bu ürüne sahip değilsin.' });
+    }
+
+    await pool.query(`UPDATE users SET ${column} = $1 WHERE id = $2`, [itemId, req.user.id]);
+    const me = await pool.query(
+      `SELECT id, username, display_name, avatar_url, bio, global_role, last_seen,
+              profile_cover_url, profile_color, favorite_egg, profile_visible_badges,
+              active_bubble_theme, active_profile_frame, active_name_effect, xp, shards
+       FROM users WHERE id = $1`,
+      [req.user.id]
+    );
+
+    res.json({ ok: true, user: { ...me.rows[0], online: userSockets.has(String(req.user.id)) } });
+  } catch (error) {
+    console.error('Market equip error:', error);
+    res.status(500).json({ error: 'Ürün kuşanılamadı.' });
+  }
+});
+
 
 app.get('/api/groups', authMiddleware, async (req, res) => {
   const result = await pool.query(
@@ -2534,7 +2804,7 @@ io.on('connection', (socket) => {
 
       await rewardUserActivity(socket.user.id, 5, 1);
 
-      const avatarResult = await pool.query('SELECT avatar_url, display_name, username FROM users WHERE id = $1', [socket.user.id]);
+      const avatarResult = await pool.query('SELECT avatar_url, display_name, username, active_bubble_theme, active_name_effect FROM users WHERE id = $1', [socket.user.id]);
       const msg = saved.rows[0];
 
       io.to(room).emit('chat_message', {
@@ -2544,6 +2814,8 @@ io.on('connection', (socket) => {
         sender_id: socket.user.id,
         username: avatarResult.rows[0]?.display_name || msg.username,
         avatar_url: avatarResult.rows[0]?.avatar_url || null,
+        bubble_theme: avatarResult.rows[0]?.active_bubble_theme || '',
+        name_effect: avatarResult.rows[0]?.active_name_effect || '',
         text: msg.text,
         message_type: msg.message_type,
         file_name: msg.file_name,
@@ -2702,7 +2974,7 @@ io.on('connection', (socket) => {
         [socket.user.id, targetId, cleanMessage, messageType, fileName, fileMime, fileData || null, filePath, fileSize, replyToId]
       );
 
-      const avatarResult = await pool.query('SELECT avatar_url, display_name, username FROM users WHERE id = $1', [socket.user.id]);
+      const avatarResult = await pool.query('SELECT avatar_url, display_name, username, active_bubble_theme, active_name_effect FROM users WHERE id = $1', [socket.user.id]);
 
       const msg = {
         id: saved.rows[0].id,
