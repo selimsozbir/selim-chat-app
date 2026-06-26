@@ -810,3 +810,155 @@ h3 { margin: 0 0 12px; font-size: 16px; }
     padding: 8px 10px;
   }
 }
+
+
+/* v7.0.0 */
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+}
+
+.user-row div {
+  min-width: 0;
+}
+
+.user-row strong {
+  display: block;
+}
+
+.user-row span,
+.role-text {
+  color: #a1a1aa;
+  font-size: 13px;
+}
+
+.profile-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, .75);
+}
+
+.profile-card {
+  position: relative;
+  width: min(420px, 92vw);
+  padding: 24px;
+  border: 1px solid #3f3f46;
+  border-radius: 20px;
+  background: #111118;
+  text-align: center;
+  box-shadow: 0 22px 80px rgba(0, 0, 0, .6);
+}
+
+.profile-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: #27272a;
+  color: white;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.profile-avatar {
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+}
+
+.profile-avatar-inner {
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  object-fit: cover;
+  background: linear-gradient(135deg, #7c3aed, #db2777);
+  color: white;
+  font-size: 34px;
+  font-weight: 900;
+}
+
+#profileStatus {
+  color: #22c55e;
+}
+
+#profileBio {
+  color: #d4d4d8;
+}
+
+#profileBioInput {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px;
+  resize: vertical;
+  border: 1px solid #27272a;
+  border-radius: 12px;
+  background: #09090f;
+  color: white;
+}
+
+.mention-popup {
+  position: fixed;
+  z-index: 10030;
+  width: min(300px, 90vw);
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #3f3f46;
+  border-radius: 14px;
+  background: #18181f;
+  box-shadow: 0 16px 60px rgba(0, 0, 0, .55);
+}
+
+.mention-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px;
+  border-radius: 10px;
+  background: transparent;
+  color: white;
+  text-align: left;
+}
+
+.mention-item.active,
+.mention-item:hover {
+  background: #27272a;
+}
+
+.search-panel,
+.admin-panel {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #27272a;
+}
+
+#messageSearchButton {
+  padding: 0 14px;
+  border-radius: 12px;
+  background: #7c3aed;
+  color: white;
+  font-weight: 700;
+}
+
+@media (max-width: 820px) {
+  .mention-popup {
+    bottom: 78px !important;
+    left: 10px !important;
+  }
+
+  .search-panel,
+  .admin-panel {
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+}
