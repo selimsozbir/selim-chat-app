@@ -112,6 +112,8 @@ const profileFavoriteEgg = document.getElementById('profileFavoriteEgg');
 const profileBadges = document.getElementById('profileBadges');
 const profileEditPanel = document.getElementById('profileEditPanel');
 const profileCoverInput = document.getElementById('profileCoverInput');
+const profileCoverFileName = document.getElementById('profileCoverFileName');
+const profileRoleBadge = document.getElementById('profileRoleBadge');
 const profileColorInput = document.getElementById('profileColorInput');
 const profileFavoriteEggSelect = document.getElementById('profileFavoriteEggSelect');
 const profileRemoveCoverButton = document.getElementById('profileRemoveCoverButton');
@@ -344,6 +346,7 @@ profileModal.addEventListener('click', (event) => {
 
 profileSaveBioButton.addEventListener('click', saveBio);
 if (profileRemoveCoverButton) profileRemoveCoverButton.addEventListener('click', removeProfileCover);
+if (profileCoverInput) profileCoverInput.addEventListener('change', refreshProfileCoverFileName);
 
 if (settingsButton) settingsButton.addEventListener('click', openSettings);
 
@@ -2513,6 +2516,21 @@ function safeProfileColor(value) {
 }
 
 
+
+function profileRoleLabel(profile) {
+  const role = String(profile.global_role || 'user').toLowerCase();
+  if (role === 'owner') return 'OWNER';
+  if (role === 'admin') return 'ADMIN';
+  if (role === 'mod') return 'MOD';
+  return 'USER';
+}
+
+function refreshProfileCoverFileName() {
+  if (!profileCoverFileName) return;
+  const file = profileCoverInput?.files?.[0];
+  profileCoverFileName.textContent = file ? file.name : 'Dosya seçilmedi';
+}
+
 async function openProfile(userId) {
   try {
     const data = await api(`/api/profile/${userId}`);
@@ -2524,10 +2542,15 @@ async function openProfile(userId) {
     profileUsername.textContent = displayName(profile);
     profileStatus.textContent = `${formatPresence(profile)} · @${profile.username}`;
     profileBio.textContent = profile.bio || 'Bio yok.';
+    if (profileRoleBadge) {
+      profileRoleBadge.textContent = profileRoleLabel(profile);
+      profileRoleBadge.classList.remove('hidden');
+      profileRoleBadge.dataset.role = String(profile.global_role || 'user').toLowerCase();
+    }
 
     profileCover.style.setProperty('--profile-color', color);
     profileCover.style.backgroundImage = profile.profile_cover_url
-      ? `linear-gradient(135deg, rgba(0,0,0,.22), rgba(0,0,0,.42)), url("${profile.profile_cover_url}")`
+      ? `linear-gradient(180deg, rgba(7,10,19,.12), rgba(7,10,19,.78)), radial-gradient(circle at 15% 15%, ${color}55, transparent 30%), url("${profile.profile_cover_url}")`
       : `radial-gradient(circle at 20% 20%, ${color}88, transparent 34%), linear-gradient(135deg, ${color}, #0f172a 62%, #020617)`;
 
     profileLevel.textContent = profile.level || 1;
@@ -2559,8 +2582,10 @@ async function openProfile(userId) {
       profileColorInput.value = color;
       profileFavoriteEggSelect.value = profile.favorite_egg || '/serbia';
       profileCoverInput.value = '';
+      refreshProfileCoverFileName();
     }
 
+    refreshProfileCoverFileName();
     profileModal.classList.remove('hidden');
   } catch (error) {
     addSystemMessage(error.message);
@@ -2606,6 +2631,7 @@ async function removeProfileCover() {
     user = data.user;
     localStorage.setItem('chat_user', JSON.stringify(user));
     addSystemMessage('Profil kapağı kaldırıldı.');
+    refreshProfileCoverFileName();
     openProfile(user.id);
   } catch (error) {
     addSystemMessage(error.message);
