@@ -397,3 +397,73 @@ h3 { margin: 0 0 12px; font-size: 16px; }
   .message-form { padding: 10px; }
   .message-form button { padding: 0 12px; }
 }
+
+
+.message-form #attachButton,
+.message-form #voiceButton {
+  flex-shrink: 0;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: #27272a;
+  color: white;
+  font-weight: 700;
+}
+
+.message-form #voiceButton.recording {
+  background: #be123c;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: .65; }
+  50% { opacity: 1; }
+  100% { opacity: .65; }
+}
+
+.message-media {
+  margin-top: 8px;
+  max-width: 100%;
+}
+
+.message-media img {
+  max-width: 260px;
+  max-height: 260px;
+  border-radius: 12px;
+  display: block;
+}
+
+.message-media audio {
+  width: 260px;
+  max-width: 100%;
+}
+
+.file-link {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.12);
+  color: white;
+  text-decoration: none;
+}
+
+.reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.reaction-pill {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.14);
+  font-size: 13px;
+}
+
+.reaction-picker {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+}
