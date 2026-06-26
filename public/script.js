@@ -114,6 +114,13 @@ const profileEditPanel = document.getElementById('profileEditPanel');
 const profileCoverInput = document.getElementById('profileCoverInput');
 const profileCoverFileName = document.getElementById('profileCoverFileName');
 const profileRoleBadge = document.getElementById('profileRoleBadge');
+const profileCardV2 = document.getElementById('profileCardV2');
+const profileAboutText = document.getElementById('profileAboutText');
+const profileAboutMeta = document.getElementById('profileAboutMeta');
+const profileActionButtons = document.getElementById('profileActionButtons');
+const profileMessageButton = document.getElementById('profileMessageButton');
+const profileFriendButton = document.getElementById('profileFriendButton');
+const achievementToastContainer = document.getElementById('achievementToastContainer');
 const profileColorInput = document.getElementById('profileColorInput');
 const profileFavoriteEggSelect = document.getElementById('profileFavoriteEggSelect');
 const profileRemoveCoverButton = document.getElementById('profileRemoveCoverButton');
@@ -191,6 +198,8 @@ let myRoomRole = null;
 let roomMutedUsers = [];
 let canOpenGlobalAdmin = false;
 let isUploadingFile = false;
+let badgeCheckCooldown = 0;
+let activeProfileUser = null;
 
 const contextMenu = document.createElement('div');
 contextMenu.className = 'message-context-menu hidden';
@@ -347,6 +356,12 @@ profileModal.addEventListener('click', (event) => {
 profileSaveBioButton.addEventListener('click', saveBio);
 if (profileRemoveCoverButton) profileRemoveCoverButton.addEventListener('click', removeProfileCover);
 if (profileCoverInput) profileCoverInput.addEventListener('change', refreshProfileCoverFileName);
+if (profileMessageButton) profileMessageButton.addEventListener('click', openProfileDmFromCard);
+if (profileFriendButton) profileFriendButton.addEventListener('click', sendFriendRequestFromCard);
+if (profileCardV2) {
+  profileCardV2.addEventListener('mousemove', syncProfileParallax);
+  profileCardV2.addEventListener('mouseleave', resetProfileParallax);
+}
 
 if (settingsButton) settingsButton.addEventListener('click', openSettings);
 
@@ -885,6 +900,7 @@ async function startApp() {
   connectSocket();
 
   await Promise.allSettled([refreshMe(), loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration(), loadGlobalAdminStatus(), loadGroups()]);
+  checkForUnlockedBadges(true);
 }
 
 function renderProfile() {
@@ -948,6 +964,7 @@ function connectSocket() {
     }
   });
   socket.on('chat_message', (message) => {
+    if (message.sender_id === user.id || message.user_id === user.id) checkForUnlockedBadges();
     if (chatMode !== 'room') return;
     if (!message.room || message.room === currentRoom) {
       addRoomMessage(message);
@@ -985,6 +1002,7 @@ function connectSocket() {
   });
 
   socket.on('dm_message', (message) => {
+    if (message.sender_id === user.id) checkForUnlockedBadges();
     const otherId = message.sender_id === user.id ? message.receiver_id : message.sender_id;
 
     if (chatMode === 'dm' && activeFriend && activeFriend.id === otherId) {
@@ -1002,6 +1020,7 @@ function connectSocket() {
   });
 
   socket.on('group_message', (message) => {
+    if (message.sender_id === user.id) checkForUnlockedBadges();
     const sameGroup = chatMode === 'group' && activeGroup && Number(activeGroup.id) === Number(message.group_id);
 
     if (sameGroup) {
@@ -2531,12 +2550,146 @@ function refreshProfileCoverFileName() {
   profileCoverFileName.textContent = file ? file.name : 'Dosya seçilmedi';
 }
 
+
+const PROFILE_BADGE_RARITY = {
+  new_anomaly: 'common',
+  first_signal: 'common',
+  face_revealed: 'common',
+  active_member: 'rare',
+  group_energy: 'rare',
+  dm_operator: 'rare',
+  cover_artist: 'epic',
+  vertex_witness: 'epic',
+  limbo_survivor: 'epic',
+  dimension_speaker: 'legendary',
+  respect_protocol: 'legendary'
+};
+
+function badgeRarity(badge) {
+  return PROFILE_BADGE_RARITY[String(badge?.key || '')] || 'common';
+}
+
+function rarityLabel(rarity) {
+  if (rarity === 'legendary') return 'Legendary';
+  if (rarity === 'epic') return 'Epic';
+  if (rarity === 'rare') return 'Rare';
+  return 'Common';
+}
+
+function storedBadgeKey() {
+  return user ? `chat_badges_seen_${user.id}` : 'chat_badges_seen';
+}
+
+function getSeenBadgeKeys() {
+  try { return JSON.parse(localStorage.getItem(storedBadgeKey()) || '[]'); } catch { return []; }
+}
+
+function setSeenBadgeKeys(keys) {
+  localStorage.setItem(storedBadgeKey(), JSON.stringify(Array.from(new Set(keys))));
+}
+
+function findFriendById(friendId) {
+  return friends.find((f) => Number(f.id) === Number(friendId)) || null;
+}
+
+function renderAchievementToast(badge) {
+  if (!achievementToastContainer || !badge) return;
+  const rarity = badgeRarity(badge);
+  const toast = document.createElement('div');
+  toast.className = `achievement-toast rarity-${rarity}`;
+  toast.innerHTML = `
+    <div class="achievement-icon">${escapeHtml(badge.icon || '🏆')}</div>
+    <div class="achievement-copy">
+      <small>Başarım açıldı · ${rarityLabel(rarity)}</small>
+      <strong>${escapeHtml(badge.name || 'Yeni rozet')}</strong>
+      <span>${escapeHtml(badge.description || 'Yeni bir rozet kazandın.')}</span>
+    </div>
+    <div class="achievement-glow"></div>
+  `;
+  achievementToastContainer.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  playUiBeep('egg');
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 380);
+  }, 5000);
+}
+
+async function checkForUnlockedBadges(force = false) {
+  if (!token || !user) return;
+  const now = Date.now();
+  if (!force && now - badgeCheckCooldown < 4500) return;
+  badgeCheckCooldown = now;
+
+  try {
+    const data = await api(`/api/profile/${user.id}`);
+    const badges = data.profile?.badges || [];
+    const keys = badges.map((badge) => badge.key).filter(Boolean);
+    const seen = getSeenBadgeKeys();
+
+    if (seen.length === 0) {
+      setSeenBadgeKeys(keys);
+      return;
+    }
+
+    badges.filter((badge) => badge.key && !seen.includes(badge.key)).forEach(renderAchievementToast);
+    setSeenBadgeKeys(keys);
+  } catch {}
+}
+
+function renderProfileAbout(profile, stats = {}, isMe = false) {
+  if (!profileAboutText || !profileAboutMeta) return;
+  const about = profile.bio || (isMe ? 'Burası senin mini hakkında alanın. Ayarlardan bio yazarak kişiselleştirebilirsin.' : 'Bu kullanıcı henüz bir hakkında metni eklememiş.');
+  profileAboutText.textContent = about;
+  profileAboutMeta.innerHTML = `
+    <span>@${escapeHtml(profile.username || '')}</span>
+    <span>${Number(stats.friends_count || 0)} arkadaş</span>
+    <span>${Number(stats.groups_count || 0)} grup</span>
+    <span>${escapeHtml(profile.favorite_egg || '/serbia')}</span>
+  `;
+}
+
+function syncProfileActionState(profile, isMe = false) {
+  if (!profileActionButtons || !profileMessageButton || !profileFriendButton) return;
+  const isFriend = !!findFriendById(profile.id);
+  profileActionButtons.classList.toggle('hidden', isMe);
+  profileMessageButton.dataset.userId = String(profile.id || '');
+  profileMessageButton.dataset.username = String(profile.username || '');
+  profileFriendButton.dataset.userId = String(profile.id || '');
+  profileFriendButton.dataset.username = String(profile.username || '');
+  profileFriendButton.disabled = isFriend;
+  profileFriendButton.textContent = isFriend ? 'Zaten arkadaş' : 'Arkadaş ekle';
+  profileMessageButton.textContent = isFriend ? 'Mesaj gönder' : 'DM aç';
+}
+
+function syncProfileParallax(event) {
+  if (!profileCardV2 || window.matchMedia('(max-width: 820px)').matches) return;
+  const rect = profileCardV2.getBoundingClientRect();
+  const px = (event.clientX - rect.left) / rect.width;
+  const py = (event.clientY - rect.top) / rect.height;
+  const rotateY = (px - 0.5) * 12;
+  const rotateX = (0.5 - py) * 10;
+  profileCardV2.style.setProperty('--tilt-x', `${rotateX.toFixed(2)}deg`);
+  profileCardV2.style.setProperty('--tilt-y', `${rotateY.toFixed(2)}deg`);
+  profileCardV2.style.setProperty('--parallax-x', `${((px - 0.5) * 20).toFixed(1)}px`);
+  profileCardV2.style.setProperty('--parallax-y', `${((py - 0.5) * 16).toFixed(1)}px`);
+}
+
+function resetProfileParallax() {
+  if (!profileCardV2) return;
+  profileCardV2.style.setProperty('--tilt-x', '0deg');
+  profileCardV2.style.setProperty('--tilt-y', '0deg');
+  profileCardV2.style.setProperty('--parallax-x', '0px');
+  profileCardV2.style.setProperty('--parallax-y', '0px');
+}
+
 async function openProfile(userId) {
   try {
     const data = await api(`/api/profile/${userId}`);
     const profile = data.profile;
     const color = safeProfileColor(profile.profile_color);
     const stats = profile.stats || {};
+    activeProfileUser = profile;
 
     profileAvatar.innerHTML = avatarHtml(profile.username, profile.avatar_url, 'profile-avatar-inner');
     profileUsername.textContent = displayName(profile);
@@ -2568,13 +2721,16 @@ async function openProfile(userId) {
     profileBadges.innerHTML = '';
     (profile.badges || []).forEach((badge) => {
       const item = document.createElement('div');
-      item.className = 'profile-badge';
+      const rarity = badgeRarity(badge);
+      item.className = `profile-badge rarity-${rarity}`;
       item.title = badge.description || '';
-      item.innerHTML = `<span>${escapeHtml(badge.icon || '🏆')}</span><div><strong>${escapeHtml(badge.name || 'Badge')}</strong><small>${escapeHtml(badge.description || '')}</small></div>`;
+      item.innerHTML = `<span>${escapeHtml(badge.icon || '🏆')}</span><div><strong>${escapeHtml(badge.name || 'Badge')}</strong><small>${escapeHtml(badge.description || '')}</small></div><label>${rarityLabel(rarity)}</label>`;
       profileBadges.appendChild(item);
     });
 
     const isMe = Number(profile.id) === Number(user.id);
+    renderProfileAbout(profile, stats, isMe);
+    syncProfileActionState(profile, isMe);
     profileEditPanel.classList.toggle('hidden', !isMe);
 
     if (isMe) {
@@ -2587,6 +2743,7 @@ async function openProfile(userId) {
 
     refreshProfileCoverFileName();
     profileModal.classList.remove('hidden');
+    if (isMe) checkForUnlockedBadges(true);
   } catch (error) {
     addSystemMessage(error.message);
   }
@@ -2594,6 +2751,35 @@ async function openProfile(userId) {
 
 function closeProfile() {
   profileModal.classList.add('hidden');
+  resetProfileParallax();
+}
+
+async function openProfileDmFromCard() {
+  const targetId = Number(profileMessageButton?.dataset.userId || 0);
+  if (!Number.isInteger(targetId) || !targetId) return;
+  const friend = findFriendById(targetId);
+  if (!friend) {
+    addSystemMessage('DM açmak için önce arkadaş olmanız gerekiyor.');
+    return;
+  }
+  closeProfile();
+  await openDm(friend);
+}
+
+async function sendFriendRequestFromCard() {
+  const username = String(profileFriendButton?.dataset.username || '').trim();
+  if (!username) return;
+  try {
+    await api('/api/friends/request', {
+      method: 'POST',
+      body: JSON.stringify({ username })
+    });
+    addSystemMessage('Arkadaş isteği gönderildi.');
+    profileFriendButton.disabled = true;
+    profileFriendButton.textContent = 'İstek gönderildi';
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
 }
 
 async function saveBio() {
@@ -2619,6 +2805,7 @@ async function saveBio() {
     user = { ...bioData.user, ...data.user };
     localStorage.setItem('chat_user', JSON.stringify(user));
     addSystemMessage('Profil kartı güncellendi.');
+    await checkForUnlockedBadges(true);
     openProfile(user.id);
   } catch (error) {
     addSystemMessage(error.message);
@@ -2632,6 +2819,7 @@ async function removeProfileCover() {
     localStorage.setItem('chat_user', JSON.stringify(user));
     addSystemMessage('Profil kapağı kaldırıldı.');
     refreshProfileCoverFileName();
+    await checkForUnlockedBadges(true);
     openProfile(user.id);
   } catch (error) {
     addSystemMessage(error.message);
