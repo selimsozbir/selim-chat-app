@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.1.2",
-  "description": "Selim Chat v7.1.2 with forced OWNER_USERNAME role sync fix",
+  "version": "7.2.0",
+  "description": "Selim Chat v7.2.0 with Supabase Storage upload support for images, audio and files",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
@@ -12,6 +12,7 @@
     "cors": "2.8.5",
     "express": "4.18.2",
     "jsonwebtoken": "9.0.2",
+    "multer": "1.4.5-lts.1",
     "pg": "8.12.0",
     "socket.io": "4.7.5"
   },
