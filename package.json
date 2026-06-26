@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.0.1",
-  "description": "Selim Chat v8.0.1 profile card polish update",
+  "version": "8.1.0",
+  "description": "Selim Chat v8.1.0 cinematic profile card update",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
