@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v8.2.0</title>
-  <link rel="stylesheet" href="style.css?v=820" />
+  <title>Selim Chat v8.3.0</title>
+  <link rel="stylesheet" href="style.css?v=830" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -165,15 +165,27 @@
 
       <main class="chat-main">
         <header class="chat-header">
-          <div>
-            <h2 id="chatTitle"># genel</h2>
-            <span class="encryption-label">Uçtan Uca Şifreleme 🔒</span>
-            <span id="statusText">Bağlanıyor...</span>
+          <div class="chat-title-block">
+            <div class="chat-title-row">
+              <div id="chatHeaderAvatar" class="chat-header-avatar">#</div>
+              <div class="chat-title-copy">
+                <h2 id="chatTitle"># genel</h2>
+                <div class="chat-subline">
+                  <span class="encryption-label">Şifreli sohbet 🔒</span>
+                  <span id="statusText">Bağlanıyor...</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <button id="enableNotificationsButton" class="small-button">Bildirim aç</button>
+          <div class="chat-header-actions">
+            <button id="focusComposerButton" class="small-button" type="button">Yaz</button>
+            <button id="jumpBottomHeaderButton" class="small-button" type="button">Aşağı</button>
+            <button id="enableNotificationsButton" class="small-button">Bildirim aç</button>
+          </div>
         </header>
 
         <div id="messages" class="messages"></div>
+        <button id="scrollBottomButton" class="scroll-bottom-button hidden" type="button">↓ Yeni mesajlar</button>
         <div id="typingText" class="typing"></div>
 
         <div id="replyBar" class="reply-bar hidden">
@@ -188,8 +200,11 @@
           <button id="attachButton" type="button" title="Dosya gönder">📎</button>
           <button id="voiceButton" type="button" title="Sesli mesaj">🎙️</button>
           <input id="fileInput" type="file" accept="image/*,audio/*,.pdf,.txt,.zip,.rar,.doc,.docx" hidden />
-          <input id="messageInput" type="text" placeholder="Mesaj yaz..." maxlength="1000" autocomplete="off" />
-          <button type="submit">Gönder</button>
+          <div class="composer-field">
+            <input id="messageInput" type="text" placeholder="Mesaj yaz..." maxlength="1000" autocomplete="off" />
+            <span id="composerHint" class="composer-hint">Enter gönderir</span>
+          </div>
+          <button id="sendButton" type="submit">Gönder</button>
         </form>
 
         <nav id="mobileBottomNav" class="mobile-bottom-nav">
@@ -526,7 +541,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=820"></script>
+  <script src="script.js?v=830"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
