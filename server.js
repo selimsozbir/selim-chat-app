@@ -743,8 +743,8 @@ io.on('connection', (socket) => {
       if (!socket.data.room) return;
       if (messageType === 'text' && !text) return;
       if (messageType !== 'text' && !fileData.startsWith('data:')) return;
-      if (fileData.length > 3000000) {
-        socket.emit('system_message', 'Dosya çok büyük. Daha küçük dosya gönder.');
+      if (fileData.length > 7200000) {
+        socket.emit('system_message', 'Dosya çok büyük. 5 MB altı dosya gönder.');
         return;
       }
 
@@ -849,8 +849,8 @@ io.on('connection', (socket) => {
       if (!Number.isInteger(targetId)) return;
       if (messageType === 'text' && !cleanMessage) return;
       if (messageType !== 'text' && !fileData.startsWith('data:')) return;
-      if (fileData.length > 3000000) {
-        socket.emit('notification', { type: 'error', payload: { message: 'Dosya çok büyük. Daha küçük dosya gönder.' } });
+      if (fileData.length > 7200000) {
+        socket.emit('notification', { type: 'error', payload: { message: 'Dosya çok büyük. 5 MB altı dosya gönder.' } });
         return;
       }
 
