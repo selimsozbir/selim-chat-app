@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.4.1",
-  "description": "Selim Chat v7.4.1 group DM login/form crash fix",
+  "version": "7.4.2",
+  "description": "Selim Chat v7.4.2 visible group tab and panel fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
