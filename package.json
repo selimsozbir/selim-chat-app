@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.4.0",
-  "description": "Selim Chat v8.4.0 XP market daily quests leaderboard and cosmetics",
+  "version": "8.4.1",
+  "description": "Selim Chat v8.4.1 fixes gamify tabs easter eggs and adds emoji panel",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
