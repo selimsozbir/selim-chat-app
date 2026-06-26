@@ -88,12 +88,22 @@ const refreshGamifyButton = document.getElementById('refreshGamifyButton');
 const questsTabButton = document.getElementById('questsTabButton');
 const marketTabButton = document.getElementById('marketTabButton');
 const leaderboardTabButton = document.getElementById('leaderboardTabButton');
+const casinoTabButton = document.getElementById('casinoTabButton');
 const questsPanel = document.getElementById('questsPanel');
 const marketPanel = document.getElementById('marketPanel');
 const leaderboardPanel = document.getElementById('leaderboardPanel');
+const casinoPanel = document.getElementById('casinoPanel');
 const questsList = document.getElementById('questsList');
 const marketList = document.getElementById('marketList');
 const leaderboardList = document.getElementById('leaderboardList');
+const slotBetInput = document.getElementById('slotBetInput');
+const slotSpinButton = document.getElementById('slotSpinButton');
+const slotResult = document.getElementById('slotResult');
+const blackjackBetInput = document.getElementById('blackjackBetInput');
+const blackjackStartButton = document.getElementById('blackjackStartButton');
+const blackjackHitButton = document.getElementById('blackjackHitButton');
+const blackjackStandButton = document.getElementById('blackjackStandButton');
+const blackjackTable = document.getElementById('blackjackTable');
 const leaderboardFilters = document.querySelectorAll('.leaderboard-filter');
 
 const notificationBadge = document.getElementById('notificationBadge');
@@ -872,6 +882,31 @@ function bindGamifyControls() {
   if (leaderboardTabButton && !leaderboardTabButton.dataset.bound) {
     leaderboardTabButton.dataset.bound = '1';
     leaderboardTabButton.addEventListener('click', () => switchGamifyTab('leaderboard'));
+  }
+
+  if (casinoTabButton && !casinoTabButton.dataset.bound) {
+    casinoTabButton.dataset.bound = '1';
+    casinoTabButton.addEventListener('click', () => switchGamifyTab('casino'));
+  }
+
+  if (slotSpinButton && !slotSpinButton.dataset.bound) {
+    slotSpinButton.dataset.bound = '1';
+    slotSpinButton.addEventListener('click', playSlot);
+  }
+
+  if (blackjackStartButton && !blackjackStartButton.dataset.bound) {
+    blackjackStartButton.dataset.bound = '1';
+    blackjackStartButton.addEventListener('click', startBlackjack);
+  }
+
+  if (blackjackHitButton && !blackjackHitButton.dataset.bound) {
+    blackjackHitButton.dataset.bound = '1';
+    blackjackHitButton.addEventListener('click', hitBlackjack);
+  }
+
+  if (blackjackStandButton && !blackjackStandButton.dataset.bound) {
+    blackjackStandButton.dataset.bound = '1';
+    blackjackStandButton.addEventListener('click', standBlackjack);
   }
 
   leaderboardFilters.forEach((btn) => {
@@ -1770,9 +1805,11 @@ function switchGamifyTab(tab) {
   questsTabButton?.classList.toggle('active', tab === 'quests');
   marketTabButton?.classList.toggle('active', tab === 'market');
   leaderboardTabButton?.classList.toggle('active', tab === 'leaderboard');
+  casinoTabButton?.classList.toggle('active', tab === 'casino');
   questsPanel?.classList.toggle('hidden', tab !== 'quests');
   marketPanel?.classList.toggle('hidden', tab !== 'market');
   leaderboardPanel?.classList.toggle('hidden', tab !== 'leaderboard');
+  casinoPanel?.classList.toggle('hidden', tab !== 'casino');
 
   if (tab === 'market') loadGamify();
   if (tab === 'leaderboard') loadLeaderboard();
@@ -1926,6 +1963,99 @@ async function equipMarketItem(itemId, slot) {
     addSystemMessage(error.message);
   }
 }
+
+
+function cleanCasinoBet(input) {
+  return Math.max(1, Math.min(1000, Math.floor(Number(input?.value || 1) || 1)));
+}
+
+function cardText(card) {
+  if (!card) return '?';
+  return `${card.rank}${card.suit}`;
+}
+
+function renderBlackjack(session) {
+  if (!blackjackTable || !session) return;
+
+  const player = (session.player || []).map(cardText).join(' ');
+  const dealer = (session.dealer || []).map(cardText).join(' ');
+
+  blackjackTable.innerHTML = `
+    <div><strong>Sen:</strong> ${escapeHtml(player)} <span>(${session.player_value ?? '-'})</span></div>
+    <div><strong>Dealer:</strong> ${escapeHtml(dealer)} <span>${session.dealer_value ? '(' + session.dealer_value + ')' : ''}</span></div>
+    <div><strong>Durum:</strong> ${escapeHtml(session.result || 'Oynanıyor')} ${session.payout ? ' · Payout: ' + session.payout : ''}</div>
+  `;
+
+  const playing = session.status === 'playing';
+  if (blackjackHitButton) blackjackHitButton.disabled = !playing;
+  if (blackjackStandButton) blackjackStandButton.disabled = !playing;
+}
+
+async function refreshShardText(shards) {
+  if (typeof shards === 'number') {
+    user.shards = shards;
+    localStorage.setItem('chat_user', JSON.stringify(user));
+  }
+  await loadGamify();
+}
+
+async function playSlot() {
+  try {
+    const bet = cleanCasinoBet(slotBetInput);
+    const data = await api('/api/casino/slot', {
+      method: 'POST',
+      body: JSON.stringify({ bet })
+    });
+
+    if (slotResult) {
+      slotResult.innerHTML = `
+        <div class="slot-reels">${data.reels.map(escapeHtml).join(' ')}</div>
+        <strong>${escapeHtml(data.result)}</strong>
+        <span>Bet: ${data.bet} · Payout: ${data.payout} · Net: ${data.net > 0 ? '+' : ''}${data.net}</span>
+      `;
+    }
+
+    await refreshShardText(data.shards);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function startBlackjack() {
+  try {
+    const bet = cleanCasinoBet(blackjackBetInput);
+    const data = await api('/api/casino/blackjack/start', {
+      method: 'POST',
+      body: JSON.stringify({ bet })
+    });
+
+    renderBlackjack(data.session);
+    await refreshShardText(data.shards);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function hitBlackjack() {
+  try {
+    const data = await api('/api/casino/blackjack/hit', { method: 'POST' });
+    renderBlackjack(data.session);
+    await refreshShardText(data.shards);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function standBlackjack() {
+  try {
+    const data = await api('/api/casino/blackjack/stand', { method: 'POST' });
+    renderBlackjack(data.session);
+    await refreshShardText(data.shards);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
 
 async function loadLeaderboard(type = 'level') {
   if (!leaderboardList) return;
