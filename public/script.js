@@ -32,6 +32,9 @@ const typingText = document.getElementById('typingText');
 
 const messageForm = document.getElementById('messageForm');
 const messageInput = document.getElementById('messageInput');
+const attachButton = document.getElementById('attachButton');
+const voiceButton = document.getElementById('voiceButton');
+const fileInput = document.getElementById('fileInput');
 
 const searchInput = document.getElementById('searchInput');
 const searchButton = document.getElementById('searchButton');
@@ -56,6 +59,9 @@ let currentRoom = localStorage.getItem('chat_room') || 'genel';
 let unreadNotifications = 0;
 let typingTimer = null;
 let dmTypingTimer = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecording = false;
 
 function setMode(nextMode) {
   mode = nextMode;
@@ -130,9 +136,9 @@ messageForm.addEventListener('submit', (event) => {
       addSystemMessage('Önce bir arkadaş seç.');
       return;
     }
-    socket.emit('dm_message', { receiverId: activeFriend.id, text });
+    socket.emit('dm_message', { receiverId: activeFriend.id, text, type: 'text' });
   } else {
-    socket.emit('chat_message', text);
+    socket.emit('chat_message', { text, type: 'text' });
   }
 
   messageInput.value = '';
@@ -148,6 +154,105 @@ messageInput.addEventListener('input', () => {
     socket.emit('typing');
   }
 });
+
+attachButton.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', async () => {
+  const file = fileInput.files?.[0];
+  if (!file) return;
+
+  try {
+    await sendFileMessage(file);
+  } catch (error) {
+    addSystemMessage(error.message);
+  } finally {
+    fileInput.value = '';
+  }
+});
+
+voiceButton.addEventListener('click', async () => {
+  if (isRecording) {
+    stopVoiceRecording();
+    return;
+  }
+
+  await startVoiceRecording();
+});
+
+async function sendFileMessage(file) {
+  if (file.size > 2_200_000) {
+    throw new Error('Dosya çok büyük. 2 MB altı dosya seç.');
+  }
+
+  const dataUrl = await fileToDataUrl(file);
+  const isImage = file.type.startsWith('image/');
+  const isAudio = file.type.startsWith('audio/');
+
+  const payload = {
+    text: isImage ? 'Fotoğraf' : isAudio ? 'Ses dosyası' : file.name,
+    type: isImage ? 'image' : isAudio ? 'audio' : 'file',
+    fileName: file.name,
+    fileMime: file.type || 'application/octet-stream',
+    fileData: dataUrl
+  };
+
+  if (chatMode === 'dm') {
+    if (!activeFriend) {
+      addSystemMessage('Önce bir arkadaş seç.');
+      return;
+    }
+    socket.emit('dm_message', { receiverId: activeFriend.id, ...payload });
+  } else {
+    socket.emit('chat_message', payload);
+  }
+}
+
+async function startVoiceRecording() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    addSystemMessage('Tarayıcın ses kaydı desteklemiyor.');
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) recordedChunks.push(event.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(track => track.stop());
+
+      const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+      const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+
+      try {
+        await sendFileMessage(file);
+      } catch (error) {
+        addSystemMessage(error.message);
+      }
+    };
+
+    mediaRecorder.start();
+    isRecording = true;
+    voiceButton.classList.add('recording');
+    voiceButton.textContent = '⏹️';
+    addSystemMessage('Ses kaydı başladı. Durdurmak için kırmızı butona bas.');
+  } catch {
+    addSystemMessage('Mikrofon izni verilmedi.');
+  }
+}
+
+function stopVoiceRecording() {
+  if (!mediaRecorder || !isRecording) return;
+
+  mediaRecorder.stop();
+  isRecording = false;
+  voiceButton.classList.remove('recording');
+  voiceButton.textContent = '🎙️';
+}
 
 avatarInput.addEventListener('change', async () => {
   const file = avatarInput.files?.[0];
@@ -326,6 +431,10 @@ function connectSocket() {
     }
   });
 
+  socket.on('reaction_added', ({ scope, messageId, emoji }) => {
+    addReactionToElement(scope, messageId, emoji);
+  });
+
   socket.on('friend_removed', () => {
     loadFriends();
     addSystemMessage('Bir arkadaşlık kaldırıldı.');
@@ -389,6 +498,10 @@ async function loadOldRoomMessages(room) {
         username: message.username,
         avatar_url: message.avatar_url,
         text: message.text,
+        message_type: message.message_type,
+        file_name: message.file_name,
+        file_mime: message.file_mime,
+        file_data: message.file_data,
         edited_at: message.edited_at,
         deleted_at: message.deleted_at,
         time: formatTime(message.created_at)
@@ -407,6 +520,10 @@ function addRoomMessage(message) {
     username: message.username,
     avatar_url: message.avatar_url,
     text: message.text,
+    message_type: message.message_type,
+    file_name: message.file_name,
+    file_mime: message.file_mime,
+    file_data: message.file_data,
     time: message.time,
     mine: user && message.username === user.username,
     edited: Boolean(message.edited_at),
@@ -677,6 +794,10 @@ function addDmMessage(message) {
     username: message.sender_username || (message.sender_id === user.id ? user.username : 'Arkadaş'),
     avatar_url: message.sender_avatar_url || (message.sender_id === user.id ? user.avatar_url : null),
     text: message.text,
+    message_type: message.message_type,
+    file_name: message.file_name,
+    file_mime: message.file_mime,
+    file_data: message.file_data,
     time: message.time || formatTime(message.created_at),
     mine: message.sender_id === user.id,
     edited: Boolean(message.edited_at),
@@ -763,7 +884,7 @@ function renderUsers(users) {
   });
 }
 
-function addMessage({ type, id, username, avatar_url, text, time, mine, edited, deleted, read }) {
+function addMessage({ type, id, username, avatar_url, text, message_type, file_name, file_mime, file_data, time, mine, edited, deleted, read }) {
   const div = document.createElement('div');
   div.className = `message ${mine ? 'mine' : ''}`;
   div.dataset.type = type;
@@ -792,6 +913,10 @@ function addMessage({ type, id, username, avatar_url, text, time, mine, edited, 
   bubble.appendChild(meta);
   bubble.appendChild(body);
 
+  if (file_data && !deleted) {
+    bubble.appendChild(renderMedia({ message_type, file_name, file_mime, file_data }));
+  }
+
   if (mine && !deleted) {
     const actions = document.createElement('div');
     actions.className = 'message-actions';
@@ -810,6 +935,8 @@ function addMessage({ type, id, username, avatar_url, text, time, mine, edited, 
     actions.appendChild(del);
     bubble.appendChild(actions);
   }
+
+  addReactionPicker(bubble, type, id);
 
   if (type === 'dm' && mine) {
     const status = document.createElement('span');
@@ -859,6 +986,102 @@ function deleteMessage(type, id) {
   } else {
     socket.emit('room_message_delete', { messageId: id });
   }
+}
+
+function renderMedia({ message_type, file_name, file_mime, file_data }) {
+  const wrap = document.createElement('div');
+  wrap.className = 'message-media';
+
+  if (message_type === 'image') {
+    const img = document.createElement('img');
+    img.src = file_data;
+    img.alt = file_name || 'image';
+    wrap.appendChild(img);
+    return wrap;
+  }
+
+  if (message_type === 'audio') {
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.src = file_data;
+    wrap.appendChild(audio);
+    return wrap;
+  }
+
+  const link = document.createElement('a');
+  link.className = 'file-link';
+  link.href = file_data;
+  link.download = file_name || 'dosya';
+  link.textContent = `📄 ${file_name || 'Dosya indir'}`;
+  wrap.appendChild(link);
+  return wrap;
+}
+
+function addReactionPicker(bubble, scope, messageId) {
+  if (!messageId) return;
+
+  const reactions = document.createElement('div');
+  reactions.className = 'reactions';
+  bubble.appendChild(reactions);
+
+  const picker = document.createElement('div');
+  picker.className = 'reaction-picker';
+
+  ['👍', '😂', '❤️', '🔥'].forEach((emoji) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'message-action';
+    btn.textContent = emoji;
+    btn.onclick = () => sendReaction(scope, messageId, emoji);
+    picker.appendChild(btn);
+  });
+
+  bubble.appendChild(picker);
+}
+
+async function sendReaction(scope, messageId, emoji) {
+  try {
+    await api('/api/reactions', {
+      method: 'POST',
+      body: JSON.stringify({ scope, messageId, emoji })
+    });
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+function addReactionToElement(scope, messageId, emoji) {
+  const el = document.querySelector(`.message[data-type="${scope}"][data-id="${messageId}"]`);
+  if (!el) return;
+
+  let reactions = el.querySelector('.reactions');
+  if (!reactions) return;
+
+  const existing = Array.from(reactions.querySelectorAll('.reaction-pill'))
+    .find(p => p.dataset.emoji === emoji);
+
+  if (existing) {
+    const count = Number(existing.dataset.count || '1') + 1;
+    existing.dataset.count = String(count);
+    existing.textContent = `${emoji} ${count}`;
+    return;
+  }
+
+  const pill = document.createElement('span');
+  pill.className = 'reaction-pill';
+  pill.dataset.emoji = emoji;
+  pill.dataset.count = '1';
+  pill.textContent = `${emoji} 1`;
+  reactions.appendChild(pill);
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 function addSystemMessage(message) {
