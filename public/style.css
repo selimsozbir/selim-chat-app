@@ -1059,3 +1059,30 @@ h3 { margin: 0 0 12px; font-size: 16px; }
     gap: 7px;
   }
 }
+
+
+/* v7.4.2 group tab visibility */
+#groupModeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.group-details {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #27272a;
+}
+
+.selectable-row {
+  cursor: pointer;
+}
+
+.selectable-row input {
+  width: 18px;
+  height: 18px;
+}
+
+.danger-button {
+  background: #be123c !important;
+}
