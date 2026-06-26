@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v8.4.1</title>
-  <link rel="stylesheet" href="style.css?v=841" />
+  <title>Selim Chat v8.4.2</title>
+  <link rel="stylesheet" href="style.css?v=842" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -158,6 +158,7 @@
             <button id="questsTabButton" class="gamify-tab active" type="button">Görev</button>
             <button id="marketTabButton" class="gamify-tab" type="button">Market</button>
             <button id="leaderboardTabButton" class="gamify-tab" type="button">Liderlik</button>
+            <button id="casinoTabButton" class="gamify-tab" type="button">Casino</button>
           </div>
 
           <div id="questsPanel" class="gamify-panel">
@@ -176,6 +177,32 @@
               <button class="leaderboard-filter" data-leaderboard="friends" type="button">Arkadaş</button>
             </div>
             <div id="leaderboardList" class="gamify-list"></div>
+          </div>
+
+          <div id="casinoPanel" class="gamify-panel casino-panel hidden">
+            <p class="casino-note">Sadece sanal Shards ile test oyunudur. Gerçek para yoktur.</p>
+
+            <div class="casino-card">
+              <h4>🎰 Slot Çevir</h4>
+              <div class="casino-row">
+                <input id="slotBetInput" type="number" min="1" max="1000" value="1" />
+                <button id="slotSpinButton" class="small-button" type="button">Çevir</button>
+              </div>
+              <div id="slotResult" class="casino-result">🍒 🍋 🔔</div>
+            </div>
+
+            <div class="casino-card">
+              <h4>🃏 Blackjack</h4>
+              <div class="casino-row">
+                <input id="blackjackBetInput" type="number" min="1" max="1000" value="1" />
+                <button id="blackjackStartButton" class="small-button" type="button">Başlat</button>
+              </div>
+              <div id="blackjackTable" class="blackjack-table">Oyun bekliyor.</div>
+              <div class="casino-actions">
+                <button id="blackjackHitButton" class="small-button" type="button">Kart Çek</button>
+                <button id="blackjackStandButton" class="small-button" type="button">Dur</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -578,7 +605,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=841"></script>
+  <script src="script.js?v=842"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
