@@ -16,6 +16,17 @@ const avatarImg = document.getElementById('avatarImg');
 const avatarLetter = document.getElementById('avatarLetter');
 const removeAvatarButton = document.getElementById('removeAvatarButton');
 const settingsButton = document.getElementById('settingsButton');
+const mobileTopBar = document.getElementById('mobileTopBar');
+const mobileMenuButton = document.getElementById('mobileMenuButton');
+const mobileSettingsButton = document.getElementById('mobileSettingsButton');
+const mobileBackdrop = document.getElementById('mobileBackdrop');
+const mobileTitle = document.getElementById('mobileTitle');
+const mobileStatus = document.getElementById('mobileStatus');
+const mobileBottomNav = document.getElementById('mobileBottomNav');
+const mobileRoomButton = document.getElementById('mobileRoomButton');
+const mobileDmButton = document.getElementById('mobileDmButton');
+const mobileGroupButton = document.getElementById('mobileGroupButton');
+const mobilePanelButton = document.getElementById('mobilePanelButton');
 
 const roomModeButton = document.getElementById('roomModeButton');
 const dmModeButton = document.getElementById('dmModeButton');
@@ -318,6 +329,33 @@ profileModal.addEventListener('click', (event) => {
 profileSaveBioButton.addEventListener('click', saveBio);
 
 if (settingsButton) settingsButton.addEventListener('click', openSettings);
+
+bindMobileTap(mobileMenuButton, openMobileSidebar);
+bindMobileTap(mobileBackdrop, closeMobileSidebar);
+bindMobileTap(mobileSettingsButton, openSettings);
+
+bindMobileTap(mobileRoomButton, () => {
+  setChatMode('room');
+  closeMobileSidebar();
+  messageInput?.focus();
+});
+
+bindMobileTap(mobileDmButton, () => {
+  setChatMode('dm');
+  loadFriends();
+  loadRequests();
+  loadBlocked();
+  openMobileSidebar();
+});
+
+bindMobileTap(mobileGroupButton, () => {
+  setChatMode('group');
+  loadGroups();
+  renderNewGroupFriends();
+  openMobileSidebar();
+});
+
+bindMobileTap(mobilePanelButton, openMobileSidebar);
 if (settingsCloseButton) settingsCloseButton.addEventListener('click', closeSettings);
 if (settingsModal) settingsModal.addEventListener('click', (event) => {
   if (event.target === settingsModal) closeSettings();
@@ -696,6 +734,54 @@ async function api(url, options = {}, withAuth = true) {
   return data;
 }
 
+
+function isMobileLayout() {
+  return window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+}
+
+function bindMobileTap(element, handler) {
+  if (!element) return;
+  let touchHandledAt = 0;
+
+  element.addEventListener('touchend', (event) => {
+    touchHandledAt = Date.now();
+    event.preventDefault();
+    handler(event);
+  }, { passive: false });
+
+  element.addEventListener('click', (event) => {
+    if (Date.now() - touchHandledAt < 650) return;
+    event.preventDefault();
+    handler(event);
+  });
+}
+
+function openMobileSidebar() {
+  if (!isMobileLayout()) return;
+  syncMobileNav();
+  document.body.classList.add('mobile-sidebar-open');
+  mobileBackdrop?.classList.remove('hidden');
+}
+
+function closeMobileSidebar() {
+  document.body.classList.remove('mobile-sidebar-open');
+  mobileBackdrop?.classList.add('hidden');
+}
+
+function syncMobileNav() {
+  if (!mobileRoomButton || !mobileDmButton || !mobileGroupButton) return;
+  mobileRoomButton.classList.toggle('active', chatMode === 'room');
+  mobileDmButton.classList.toggle('active', chatMode === 'dm');
+  mobileGroupButton.classList.toggle('active', chatMode === 'group');
+}
+
+function syncMobileHeader() {
+  if (mobileTitle && chatTitle) mobileTitle.textContent = chatTitle.textContent || '# genel';
+  if (mobileStatus && statusText) mobileStatus.textContent = statusText.textContent || '';
+  syncMobileNav();
+}
+
+
 function getLocalSettings() {
   return {
     theme: localStorage.getItem('chat_theme') || 'neon',
@@ -774,6 +860,7 @@ async function startApp() {
   authScreen.classList.add('hidden');
   chatScreen.classList.remove('hidden');
   renderProfile();
+  syncMobileHeader();
   roomInput.value = currentRoom;
   connectSocket();
 
@@ -800,6 +887,7 @@ function connectSocket() {
 
   socket.on('connect', () => {
     statusText.textContent = 'Bağlandı';
+    syncMobileHeader();
     if (chatMode === 'group' && activeGroup) {
       socket.emit('group_join', { groupId: activeGroup.id });
     } else {
@@ -1344,6 +1432,7 @@ async function openDm(friend) {
   friendsPanel.classList.remove('hidden');
 
   chatTitle.textContent = `DM: ${friend.username}`;
+  syncMobileHeader();
   syncMobileHeader();
   messagesEl.innerHTML = '';
   typingText.textContent = '';
@@ -2596,6 +2685,7 @@ async function openGroup(group) {
   activeFriend = null;
   setChatMode('group');
   chatTitle.textContent = `Grup: ${group.name}`;
+  syncMobileHeader();
   syncMobileHeader();
   messagesEl.innerHTML = '';
   typingText.textContent = '';
