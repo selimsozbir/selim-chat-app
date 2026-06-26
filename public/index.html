@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v8.0.1</title>
-  <link rel="stylesheet" href="style.css?v=801" />
+  <title>Selim Chat v8.1.0</title>
+  <link rel="stylesheet" href="style.css?v=810" />
 </head>
 <body>
   <div class="app">
@@ -202,7 +202,7 @@
   </div>
 
   <div id="profileModal" class="profile-modal hidden">
-    <div class="profile-card profile-card-v2">
+    <div id="profileCardV2" class="profile-card profile-card-v2">
       <button id="profileCloseButton" class="profile-close" type="button">×</button>
 
       <div id="profileCover" class="profile-cover-v2">
@@ -219,9 +219,9 @@
       </div>
 
       <div class="profile-stats-v2">
-        <div><strong id="profileLevel">1</strong><span>Level</span></div>
-        <div><strong id="profileShards">0</strong><span>Shards</span></div>
-        <div><strong id="profileTotalMessages">0</strong><span>Mesaj</span></div>
+        <div><em>⚡</em><strong id="profileLevel">1</strong><span>Level</span></div>
+        <div><em>✦</em><strong id="profileShards">0</strong><span>Shards</span></div>
+        <div><em>💬</em><strong id="profileTotalMessages">0</strong><span>Mesaj</span></div>
       </div>
 
       <div class="profile-level-box">
@@ -238,6 +238,18 @@
         <div><span>Katılma</span><strong id="profileJoinDate">-</strong></div>
         <div><span>Son aktiflik</span><strong id="profileLastActive">-</strong></div>
         <div><span>Favori Egg</span><strong id="profileFavoriteEgg">/serbia</strong></div>
+      </div>
+
+      <div class="profile-about-box">
+        <div class="profile-about-head">
+          <h3>Hakkında</h3>
+          <div id="profileActionButtons" class="profile-action-buttons hidden">
+            <button id="profileMessageButton" class="small-button" type="button">Mesaj gönder</button>
+            <button id="profileFriendButton" class="small-button secondary" type="button">Arkadaş ekle</button>
+          </div>
+        </div>
+        <p id="profileAboutText">Bu kullanıcı henüz kendini tanıtmadı.</p>
+        <div id="profileAboutMeta" class="profile-about-meta"></div>
       </div>
 
       <div class="profile-badges-v2">
@@ -496,6 +508,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=801"></script>
+  <script src="script.js?v=810"></script>
+  <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
