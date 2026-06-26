@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.1.1",
-  "description": "Selim Chat v7.1.1 with room unmute controls for admins and moderators",
+  "version": "7.1.2",
+  "description": "Selim Chat v7.1.2 with forced OWNER_USERNAME role sync fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
