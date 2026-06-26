@@ -18,8 +18,22 @@ const removeAvatarButton = document.getElementById('removeAvatarButton');
 
 const roomModeButton = document.getElementById('roomModeButton');
 const dmModeButton = document.getElementById('dmModeButton');
+const groupModeButton = document.getElementById('groupModeButton');
 const roomPanel = document.getElementById('roomPanel');
 const friendsPanel = document.getElementById('friendsPanel');
+const groupsPanel = document.getElementById('groupsPanel');
+const newGroupNameInput = document.getElementById('newGroupNameInput');
+const createGroupButton = document.getElementById('createGroupButton');
+const newGroupFriendsList = document.getElementById('newGroupFriendsList');
+const groupsList = document.getElementById('groupsList');
+const groupDetailsBox = document.getElementById('groupDetailsBox');
+const activeGroupInfo = document.getElementById('activeGroupInfo');
+const groupAvatarInput = document.getElementById('groupAvatarInput');
+const changeGroupAvatarButton = document.getElementById('changeGroupAvatarButton');
+const removeGroupAvatarButton = document.getElementById('removeGroupAvatarButton');
+const leaveGroupButton = document.getElementById('leaveGroupButton');
+const groupMembersList = document.getElementById('groupMembersList');
+const addGroupFriendList = document.getElementById('addGroupFriendList');
 
 const roomInput = document.getElementById('roomInput');
 const joinRoomButton = document.getElementById('joinRoomButton');
@@ -80,6 +94,10 @@ const mentionPopup = document.getElementById('mentionPopup');
 let mode = 'login';
 let chatMode = 'room';
 let activeFriend = null;
+let activeGroup = null;
+let groups = [];
+let groupMembers = [];
+let selectedGroupFriendIds = new Set();
 
 let socket = null;
 let token = localStorage.getItem('chat_token');
@@ -242,6 +260,11 @@ profileModal.addEventListener('click', (event) => {
 });
 
 profileSaveBioButton.addEventListener('click', saveBio);
+createGroupButton.addEventListener('click', createGroup);
+changeGroupAvatarButton.addEventListener('click', () => groupAvatarInput.click());
+groupAvatarInput.addEventListener('change', changeGroupAvatar);
+removeGroupAvatarButton.addEventListener('click', removeGroupAvatar);
+leaveGroupButton.addEventListener('click', leaveGroup);
 refreshAdminButton.addEventListener('click', loadGlobalAdminPanel);
 ipBanButton.addEventListener('click', banIpFromInput);
 searchInput.addEventListener('keydown', (event) => {
@@ -412,6 +435,19 @@ async function sendFileMessage(file) {
       });
 
       clearReply();
+    } else if (chatMode === 'group') {
+      if (!activeGroup) {
+        addSystemMessage('Önce bir grup seç.');
+        return;
+      }
+
+      socket.emit('group_message', {
+        groupId: activeGroup.id,
+        ...payload,
+        replyToId: replyingTo?.id || null
+      });
+
+      clearReply();
     } else {
       socket.emit('chat_message', {
         ...payload,
@@ -575,7 +611,7 @@ async function startApp() {
   roomInput.value = currentRoom;
   connectSocket();
 
-  await Promise.allSettled([refreshMe(), loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration(), loadGlobalAdminStatus()]);
+  await Promise.allSettled([refreshMe(), loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration(), loadGlobalAdminStatus(), loadGroups()]);
 }
 
 function renderProfile() {
@@ -705,6 +741,10 @@ function connectSocket() {
       showBrowserNotification('Yeni DM', `${notification.payload.fromUsername}: ${notification.payload.text}`);
     }
 
+    if (notification.type === 'group_dm') {
+      showBrowserNotification('Yeni Grup DM', `${notification.payload.fromUsername}: ${notification.payload.text}`);
+    }
+
     if (notification.type === 'mention' || notification.type === 'mention_everyone') {
       showBrowserNotification('Etiketlendin', `${notification.payload.fromUsername}: ${notification.payload.text}`);
     }
@@ -734,8 +774,10 @@ function setChatMode(nextMode) {
   chatMode = nextMode;
   roomModeButton.classList.toggle('active', chatMode === 'room');
   dmModeButton.classList.toggle('active', chatMode === 'dm');
+  groupModeButton.classList.toggle('active', chatMode === 'group');
   roomPanel.classList.toggle('hidden', chatMode !== 'room');
   friendsPanel.classList.toggle('hidden', chatMode !== 'dm');
+  groupsPanel.classList.toggle('hidden', chatMode !== 'group');
 
   messagesEl.innerHTML = '';
   typingText.textContent = '';
@@ -1160,6 +1202,7 @@ function notificationTitle(n) {
   if (n.type === 'friend_request') return 'Arkadaş isteği';
   if (n.type === 'friend_accept') return 'İstek kabul edildi';
   if (n.type === 'dm') return 'Yeni DM';
+  if (n.type === 'group_dm') return 'Grup DM';
   if (n.type === 'mention') return 'Etiket';
   if (n.type === 'mention_everyone') return '@everyone';
   return 'Bildirim';
@@ -1170,6 +1213,7 @@ function notificationText(n) {
   if (n.type === 'friend_request') return `${p.fromUsername} arkadaş isteği gönderdi.`;
   if (n.type === 'friend_accept') return `${p.fromUsername} arkadaş oldu.`;
   if (n.type === 'dm') return `${p.fromUsername}: ${p.text || ''}`;
+  if (n.type === 'group_dm') return `${p.fromUsername}: ${p.text || ''}`;
   if (n.type === 'mention' || n.type === 'mention_everyone') return `${p.fromUsername} seni ${p.room} odasında etiketledi.`;
   return p.message || '';
 }
@@ -2032,6 +2076,300 @@ function formatPresence(profile) {
     minute: '2-digit'
   })}`;
 }
+
+
+async function loadGroups() {
+  try {
+    const data = await api('/api/groups');
+    groups = data.groups || [];
+    renderGroups();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+function renderGroups() {
+  groupsList.innerHTML = '';
+
+  if (!groups.length) {
+    groupsList.innerHTML = '<div class="mini-item">Grup yok.</div>';
+    return;
+  }
+
+  groups.forEach((group) => {
+    const item = document.createElement('div');
+    item.className = 'mini-item';
+    item.innerHTML = `<div class="mini-left">${avatarHtml(group.name, group.avatar_url)}<div><strong>${escapeHtml(group.name)}</strong><span>${group.member_count} üye • ${group.my_role}</span></div></div>`;
+    item.onclick = () => openGroup(group);
+    groupsList.appendChild(item);
+  });
+}
+
+function renderNewGroupFriends() {
+  newGroupFriendsList.innerHTML = '';
+
+  if (!friends.length) {
+    newGroupFriendsList.innerHTML = '<div class="mini-item">Grup kurmak için önce arkadaş ekle.</div>';
+    return;
+  }
+
+  friends.forEach((friend) => {
+    const item = document.createElement('label');
+    item.className = 'mini-item selectable-row';
+    item.innerHTML = `<div class="mini-left">${avatarHtml(friend.username, friend.avatar_url)}<div><strong>${escapeHtml(friend.username)}</strong><span>Gruba ekle</span></div></div><input type="checkbox">`;
+
+    const checkbox = item.querySelector('input');
+    checkbox.checked = selectedGroupFriendIds.has(friend.id);
+    checkbox.onchange = () => {
+      if (checkbox.checked) selectedGroupFriendIds.add(friend.id);
+      else selectedGroupFriendIds.delete(friend.id);
+    };
+
+    newGroupFriendsList.appendChild(item);
+  });
+}
+
+async function createGroup() {
+  const name = newGroupNameInput.value.trim();
+  if (!name) {
+    addSystemMessage('Grup adı yaz.');
+    return;
+  }
+
+  try {
+    const data = await api('/api/groups', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        memberIds: Array.from(selectedGroupFriendIds)
+      })
+    });
+
+    newGroupNameInput.value = '';
+    selectedGroupFriendIds.clear();
+    await loadGroups();
+    renderNewGroupFriends();
+    openGroup(data.group);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function openGroup(group) {
+  activeGroup = group;
+  activeFriend = null;
+  setChatMode('group');
+  chatTitle.textContent = `Grup: ${group.name}`;
+  messagesEl.innerHTML = '';
+  typingText.textContent = '';
+
+  socket.emit('group_join', { groupId: group.id });
+
+  await Promise.allSettled([
+    loadGroupMessages(group.id),
+    loadGroupDetails(group.id)
+  ]);
+}
+
+async function loadGroupMessages(groupId) {
+  try {
+    const data = await api(`/api/groups/${groupId}/messages`);
+    messagesEl.innerHTML = '';
+    (data.messages || []).forEach(addGroupMessage);
+    scrollToBottom();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function loadGroupDetails(groupId) {
+  try {
+    const data = await api(`/api/groups/${groupId}`);
+    activeGroup = data.group;
+    groupMembers = data.members || [];
+    groupDetailsBox.classList.remove('hidden');
+
+    activeGroupInfo.innerHTML = `<div class="mini-item"><div class="mini-left">${avatarHtml(activeGroup.name, activeGroup.avatar_url)}<div><strong>${escapeHtml(activeGroup.name)}</strong><span>${activeGroup.member_count} üye • rolün: ${activeGroup.my_role}</span></div></div></div>`;
+
+    renderGroupMembers();
+    renderAddGroupFriends();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+function renderGroupMembers() {
+  groupMembersList.innerHTML = '';
+
+  const myMember = groupMembers.find((m) => m.id === user.id);
+  const canManage = myMember && ['owner', 'admin'].includes(myMember.role);
+
+  groupMembers.forEach((member) => {
+    const item = document.createElement('div');
+    item.className = 'mini-item';
+    item.innerHTML = `<div class="mini-left">${avatarHtml(member.display_name || member.username, member.avatar_url)}<div><strong>${escapeHtml(member.display_name || member.username)}</strong><span>${member.role} • ${member.online ? 'Çevrimiçi' : 'Çevrimdışı'}</span></div></div>`;
+
+    const actions = document.createElement('div');
+    actions.className = 'mini-actions';
+
+    if (activeGroup.my_role === 'owner' && member.role !== 'owner') {
+      const roleBtn = document.createElement('button');
+      roleBtn.className = 'action-button gray';
+      roleBtn.textContent = member.role === 'admin' ? 'Admin al' : 'Admin yap';
+      roleBtn.onclick = () => setGroupRole(member.id, member.role === 'admin' ? 'member' : 'admin');
+      actions.appendChild(roleBtn);
+    }
+
+    if (canManage && member.id !== user.id && member.role !== 'owner') {
+      const remove = document.createElement('button');
+      remove.className = 'action-button red';
+      remove.textContent = 'Çıkar';
+      remove.onclick = () => removeGroupMember(member.id);
+      actions.appendChild(remove);
+    }
+
+    item.appendChild(actions);
+    groupMembersList.appendChild(item);
+  });
+}
+
+function renderAddGroupFriends() {
+  addGroupFriendList.innerHTML = '';
+
+  const canManage = ['owner', 'admin'].includes(activeGroup?.my_role);
+  if (!canManage) {
+    addGroupFriendList.innerHTML = '<div class="mini-item">Üye eklemek için grup admini olmalısın.</div>';
+    return;
+  }
+
+  const memberIds = new Set(groupMembers.map((m) => m.id));
+  const addable = friends.filter((f) => !memberIds.has(f.id));
+
+  if (!addable.length) {
+    addGroupFriendList.innerHTML = '<div class="mini-item">Eklenebilecek arkadaş yok.</div>';
+    return;
+  }
+
+  addable.forEach((friend) => {
+    const item = document.createElement('div');
+    item.className = 'mini-item';
+    item.innerHTML = `<div class="mini-left">${avatarHtml(friend.username, friend.avatar_url)}<div><strong>${escapeHtml(friend.username)}</strong><span>Gruba ekle</span></div></div>`;
+
+    const add = document.createElement('button');
+    add.className = 'action-button';
+    add.textContent = 'Ekle';
+    add.onclick = () => addGroupMember(friend.id);
+
+    item.appendChild(add);
+    addGroupFriendList.appendChild(item);
+  });
+}
+
+async function addGroupMember(userId) {
+  try {
+    await api(`/api/groups/${activeGroup.id}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ userId })
+    });
+    await loadGroupDetails(activeGroup.id);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function removeGroupMember(userId) {
+  if (!confirm('Bu kişiyi gruptan çıkarmak istiyor musun?')) return;
+
+  try {
+    await api(`/api/groups/${activeGroup.id}/members/${userId}`, { method: 'DELETE' });
+    await loadGroupDetails(activeGroup.id);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function setGroupRole(userId, role) {
+  try {
+    await api(`/api/groups/${activeGroup.id}/members/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role })
+    });
+    await loadGroupDetails(activeGroup.id);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function leaveGroup() {
+  if (!activeGroup) return;
+  if (!confirm('Gruptan çıkmak istiyor musun?')) return;
+
+  try {
+    await api(`/api/groups/${activeGroup.id}/members/${user.id}`, { method: 'DELETE' });
+    activeGroup = null;
+    groupDetailsBox.classList.add('hidden');
+    messagesEl.innerHTML = '';
+    chatTitle.textContent = 'Grup seç';
+    await loadGroups();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function changeGroupAvatar() {
+  const file = groupAvatarInput.files?.[0];
+  if (!file || !activeGroup) return;
+
+  try {
+    const avatar = await resizeImageToDataUrl(file, 256, 256, 0.82);
+    await api(`/api/groups/${activeGroup.id}/avatar`, {
+      method: 'POST',
+      body: JSON.stringify({ avatar_url: avatar })
+    });
+    await loadGroupDetails(activeGroup.id);
+    await loadGroups();
+  } catch (error) {
+    addSystemMessage(error.message);
+  } finally {
+    groupAvatarInput.value = '';
+  }
+}
+
+async function removeGroupAvatar() {
+  if (!activeGroup) return;
+
+  try {
+    await api(`/api/groups/${activeGroup.id}/avatar`, { method: 'DELETE' });
+    await loadGroupDetails(activeGroup.id);
+    await loadGroups();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+function addGroupMessage(message) {
+  addMessage({
+    type: 'group',
+    id: message.id,
+    username: message.display_name || message.username,
+    avatar_url: message.avatar_url,
+    text: message.text,
+    message_type: message.message_type,
+    file_name: message.file_name,
+    file_mime: message.file_mime,
+    file_data: message.file_data,
+    file_path: message.file_path,
+    file_size: message.file_size,
+    reply_to_id: message.reply_to_id,
+    reply_username: message.reply_display_name || message.reply_username,
+    reply_text: message.reply_text,
+    time: message.time || formatTime(message.created_at),
+    mine: message.sender_id === user.id,
+    edited: message.edited_at,
+    deleted: message.deleted_at
+  });
+}
+
 
 function addSystemMessage(message) {
   const div = document.createElement('div');
