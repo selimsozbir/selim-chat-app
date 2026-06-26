@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.4.0",
-  "description": "Selim Chat v7.4.0 with Group DM chats, group photos, owners/admins and media support",
+  "version": "7.4.1",
+  "description": "Selim Chat v7.4.1 group DM login/form crash fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
