@@ -38,6 +38,7 @@ const searchButton = document.getElementById('searchButton');
 const searchResults = document.getElementById('searchResults');
 const requestsList = document.getElementById('requestsList');
 const friendsList = document.getElementById('friendsList');
+const blockedList = document.getElementById('blockedList');
 
 const notificationsList = document.getElementById('notificationsList');
 const notificationBadge = document.getElementById('notificationBadge');
@@ -52,8 +53,9 @@ let socket = null;
 let token = localStorage.getItem('chat_token');
 let user = JSON.parse(localStorage.getItem('chat_user') || 'null');
 let currentRoom = localStorage.getItem('chat_room') || 'genel';
-let typingTimer = null;
 let unreadNotifications = 0;
+let typingTimer = null;
+let dmTypingTimer = null;
 
 function setMode(nextMode) {
   mode = nextMode;
@@ -71,7 +73,6 @@ authForm.addEventListener('submit', async (event) => {
 
   const username = usernameInput.value.trim();
   const password = passwordInput.value;
-
   authError.textContent = '';
   authButton.disabled = true;
 
@@ -87,7 +88,6 @@ authForm.addEventListener('submit', async (event) => {
 
     localStorage.setItem('chat_token', token);
     localStorage.setItem('chat_user', JSON.stringify(user));
-
     startApp();
   } catch (error) {
     authError.textContent = error.message;
@@ -110,10 +110,10 @@ dmModeButton.addEventListener('click', () => {
   setChatMode('dm');
   loadFriends();
   loadRequests();
+  loadBlocked();
 });
 
 joinRoomButton.addEventListener('click', () => joinRoom(roomInput.value.trim() || 'genel'));
-
 searchButton.addEventListener('click', searchUsers);
 searchInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') searchUsers();
@@ -121,6 +121,7 @@ searchInput.addEventListener('keydown', (event) => {
 
 messageForm.addEventListener('submit', (event) => {
   event.preventDefault();
+
   const text = messageInput.value.trim();
   if (!text || !socket) return;
 
@@ -139,8 +140,13 @@ messageForm.addEventListener('submit', (event) => {
 });
 
 messageInput.addEventListener('input', () => {
-  if (!socket || chatMode !== 'room') return;
-  socket.emit('typing');
+  if (!socket) return;
+
+  if (chatMode === 'dm' && activeFriend) {
+    socket.emit('dm_typing', { receiverId: activeFriend.id });
+  } else if (chatMode === 'room') {
+    socket.emit('typing');
+  }
 });
 
 avatarInput.addEventListener('change', async () => {
@@ -198,12 +204,10 @@ enableNotificationsButton.addEventListener('click', async () => {
 
 async function api(url, options = {}, withAuth = true) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-
   if (withAuth && token) headers.Authorization = `Bearer ${token}`;
 
   const response = await fetch(url, { ...options, headers });
   const data = await response.json().catch(() => ({}));
-
   if (!response.ok) throw new Error(data.error || 'İşlem başarısız.');
   return data;
 }
@@ -217,12 +221,11 @@ async function startApp() {
 
   authScreen.classList.add('hidden');
   chatScreen.classList.remove('hidden');
-
   renderProfile();
   roomInput.value = currentRoom;
   connectSocket();
 
-  await Promise.allSettled([loadFriends(), loadRequests(), loadNotifications()]);
+  await Promise.allSettled([loadFriends(), loadRequests(), loadBlocked(), loadNotifications()]);
 }
 
 function renderProfile() {
@@ -241,7 +244,6 @@ function renderProfile() {
 
 function connectSocket() {
   if (socket) socket.disconnect();
-
   socket = io({ auth: { token } });
 
   socket.on('connect', () => {
@@ -249,10 +251,7 @@ function connectSocket() {
     joinRoom(currentRoom);
   });
 
-  socket.on('disconnect', () => {
-    statusText.textContent = 'Bağlantı koptu';
-  });
-
+  socket.on('disconnect', () => statusText.textContent = 'Bağlantı koptu');
   socket.on('connect_error', (error) => {
     statusText.textContent = 'Bağlantı hatası: ' + error.message;
     addSystemMessage(error.message || 'Bağlantı hatası.');
@@ -262,10 +261,30 @@ function connectSocket() {
   socket.on('chat_message', addRoomMessage);
   socket.on('users', renderUsers);
 
+  socket.on('room_message_updated', (msg) => updateMessageElement('room', msg.id, msg.text, true, false));
+  socket.on('room_message_deleted', (msg) => updateMessageElement('room', msg.id, msg.text, false, true));
+
+  socket.on('dm_message_updated', (msg) => updateMessageElement('dm', msg.id, msg.text, true, false));
+  socket.on('dm_message_deleted', (msg) => updateMessageElement('dm', msg.id, msg.text, false, true));
+
+  socket.on('dm_read', ({ byId }) => {
+    if (activeFriend && activeFriend.id === byId) {
+      document.querySelectorAll('.read-status.mine').forEach(el => el.textContent = 'Görüldü ✓✓');
+    }
+  });
+
   socket.on('typing', (username) => {
     typingText.textContent = `${username} yazıyor...`;
     clearTimeout(typingTimer);
     typingTimer = setTimeout(() => typingText.textContent = '', 1200);
+  });
+
+  socket.on('dm_typing', ({ fromId, fromUsername }) => {
+    if (chatMode === 'dm' && activeFriend && activeFriend.id === fromId) {
+      typingText.textContent = `${fromUsername} yazıyor...`;
+      clearTimeout(dmTypingTimer);
+      dmTypingTimer = setTimeout(() => typingText.textContent = '', 1200);
+    }
   });
 
   socket.on('dm_message', (message) => {
@@ -273,6 +292,7 @@ function connectSocket() {
 
     if (chatMode === 'dm' && activeFriend && activeFriend.id === otherId) {
       addDmMessage(message);
+      markDmRead(activeFriend.id);
     } else if (message.sender_id !== user.id) {
       showBrowserNotification('Yeni DM', `${message.sender_username}: ${message.text}`);
       addNotificationToList({
@@ -305,11 +325,24 @@ function connectSocket() {
       showBrowserNotification('Yeni DM', `${notification.payload.fromUsername}: ${notification.payload.text}`);
     }
   });
+
+  socket.on('friend_removed', () => {
+    loadFriends();
+    addSystemMessage('Bir arkadaşlık kaldırıldı.');
+  });
+
+  socket.on('blocked_by_user', () => {
+    loadFriends();
+    if (chatMode === 'dm') {
+      activeFriend = null;
+      messagesEl.innerHTML = '';
+      addSystemMessage('Bu kullanıcıyla DM kapatıldı.');
+    }
+  });
 }
 
 function setChatMode(nextMode) {
   chatMode = nextMode;
-
   roomModeButton.classList.toggle('active', chatMode === 'room');
   dmModeButton.classList.toggle('active', chatMode === 'dm');
   roomPanel.classList.toggle('hidden', chatMode !== 'room');
@@ -344,7 +377,6 @@ async function joinRoom(room) {
   typingText.textContent = '';
 
   await loadOldRoomMessages(currentRoom);
-
   if (socket && socket.connected) socket.emit('join', { room: currentRoom });
 }
 
@@ -353,9 +385,12 @@ async function loadOldRoomMessages(room) {
     const data = await api(`/api/messages/${encodeURIComponent(room)}`);
     data.messages.forEach((message) => {
       addRoomMessage({
+        id: message.id,
         username: message.username,
         avatar_url: message.avatar_url,
         text: message.text,
+        edited_at: message.edited_at,
+        deleted_at: message.deleted_at,
         time: formatTime(message.created_at)
       });
     });
@@ -367,19 +402,16 @@ async function loadOldRoomMessages(room) {
 
 function addRoomMessage(message) {
   addMessage({
+    type: 'room',
+    id: message.id,
     username: message.username,
+    avatar_url: message.avatar_url,
     text: message.text,
     time: message.time,
-    mine: user && message.username === user.username
+    mine: user && message.username === user.username,
+    edited: Boolean(message.edited_at),
+    deleted: Boolean(message.deleted_at)
   });
-}
-
-function avatarHtml(username, avatarUrl, className = 'mini-avatar') {
-  if (avatarUrl) {
-    return `<img class="${className}" src="${avatarUrl}" alt="">`;
-  }
-
-  return `<div class="${className}">${escapeHtml(String(username || '?').charAt(0).toUpperCase())}</div>`;
 }
 
 async function searchUsers() {
@@ -403,12 +435,22 @@ async function searchUsers() {
       item.className = 'mini-item';
       item.innerHTML = `<div class="mini-left">${avatarHtml(u.username, u.avatar_url)}<div><strong>${escapeHtml(u.username)}</strong><span>ID: ${u.id}</span></div></div>`;
 
-      const btn = document.createElement('button');
-      btn.className = 'action-button';
-      btn.textContent = 'Ekle';
-      btn.onclick = () => sendFriendRequest(u.username);
+      const actions = document.createElement('div');
+      actions.className = 'mini-actions';
 
-      item.appendChild(btn);
+      const add = document.createElement('button');
+      add.className = 'action-button';
+      add.textContent = 'Ekle';
+      add.onclick = () => sendFriendRequest(u.username);
+
+      const block = document.createElement('button');
+      block.className = 'action-button red';
+      block.textContent = 'Engelle';
+      block.onclick = () => blockUser(u.id);
+
+      actions.appendChild(add);
+      actions.appendChild(block);
+      item.appendChild(actions);
       searchResults.appendChild(item);
     });
   } catch (error) {
@@ -495,16 +537,105 @@ async function loadFriends() {
       item.className = 'mini-item';
       item.innerHTML = `<div class="mini-left">${avatarHtml(friend.username, friend.avatar_url)}<div><strong>${escapeHtml(friend.username)}</strong><span>DM aç</span></div></div>`;
 
-      const btn = document.createElement('button');
-      btn.className = 'action-button';
-      btn.textContent = 'DM';
-      btn.onclick = () => openDm(friend);
+      const actions = document.createElement('div');
+      actions.className = 'mini-actions';
 
-      item.appendChild(btn);
+      const dm = document.createElement('button');
+      dm.className = 'action-button';
+      dm.textContent = 'DM';
+      dm.onclick = () => openDm(friend);
+
+      const remove = document.createElement('button');
+      remove.className = 'action-button gray';
+      remove.textContent = 'Sil';
+      remove.onclick = () => removeFriend(friend.id);
+
+      const block = document.createElement('button');
+      block.className = 'action-button red';
+      block.textContent = 'Engelle';
+      block.onclick = () => blockUser(friend.id);
+
+      actions.appendChild(dm);
+      actions.appendChild(remove);
+      actions.appendChild(block);
+      item.appendChild(actions);
       friendsList.appendChild(item);
     });
   } catch (error) {
     friendsList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+async function removeFriend(friendId) {
+  if (!confirm('Arkadaşı silmek istiyor musun?')) return;
+
+  try {
+    const data = await api(`/api/friends/${friendId}`, { method: 'DELETE' });
+    addSystemMessage(data.message);
+    if (activeFriend && activeFriend.id === friendId) {
+      activeFriend = null;
+      messagesEl.innerHTML = '';
+    }
+    loadFriends();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function blockUser(userId) {
+  if (!confirm('Bu kullanıcıyı engellemek istiyor musun?')) return;
+
+  try {
+    const data = await api('/api/block', {
+      method: 'POST',
+      body: JSON.stringify({ userId })
+    });
+    addSystemMessage(data.message);
+    if (activeFriend && activeFriend.id === userId) {
+      activeFriend = null;
+      messagesEl.innerHTML = '';
+    }
+    await Promise.allSettled([loadFriends(), loadBlocked(), loadRequests()]);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function loadBlocked() {
+  try {
+    const data = await api('/api/blocked');
+    blockedList.innerHTML = '';
+
+    if (data.blocked.length === 0) {
+      blockedList.innerHTML = '<div class="mini-item">Engellenen yok.</div>';
+      return;
+    }
+
+    data.blocked.forEach((row) => {
+      const item = document.createElement('div');
+      item.className = 'mini-item';
+      item.innerHTML = `<div class="mini-left">${avatarHtml(row.username, row.avatar_url)}<div><strong>${escapeHtml(row.username)}</strong><span>Engellendi</span></div></div>`;
+
+      const unblock = document.createElement('button');
+      unblock.className = 'action-button';
+      unblock.textContent = 'Kaldır';
+      unblock.onclick = () => unblockUser(row.user_id);
+
+      item.appendChild(unblock);
+      blockedList.appendChild(item);
+    });
+  } catch (error) {
+    blockedList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+async function unblockUser(userId) {
+  try {
+    const data = await api(`/api/block/${userId}`, { method: 'DELETE' });
+    addSystemMessage(data.message);
+    loadBlocked();
+  } catch (error) {
+    addSystemMessage(error.message);
   }
 }
 
@@ -521,22 +652,36 @@ async function openDm(friend) {
   messagesEl.innerHTML = '';
   typingText.textContent = '';
 
+  if (socket) socket.emit('dm_join', { friendId: friend.id });
+
   try {
     const data = await api(`/api/dm/${friend.id}`);
     data.messages.forEach(addDmMessage);
+    await markDmRead(friend.id);
     scrollToBottom();
   } catch (error) {
     addSystemMessage(error.message);
   }
 }
 
+async function markDmRead(friendId) {
+  try {
+    await api(`/api/dm/${friendId}/read`, { method: 'POST' });
+  } catch {}
+}
+
 function addDmMessage(message) {
   addMessage({
+    type: 'dm',
+    id: message.id,
     username: message.sender_username || (message.sender_id === user.id ? user.username : 'Arkadaş'),
     avatar_url: message.sender_avatar_url || (message.sender_id === user.id ? user.avatar_url : null),
     text: message.text,
     time: message.time || formatTime(message.created_at),
-    mine: message.sender_id === user.id
+    mine: message.sender_id === user.id,
+    edited: Boolean(message.edited_at),
+    deleted: Boolean(message.deleted_at),
+    read: Boolean(message.read_at)
   });
 }
 
@@ -567,7 +712,7 @@ function addNotificationToList(notification, isNew) {
 
   if (notification.id) {
     const del = document.createElement('button');
-    del.className = 'action-button notification-delete';
+    del.className = 'action-button gray';
     del.textContent = 'Sil';
     del.onclick = () => deleteNotification(notification.id, item);
     item.appendChild(del);
@@ -618,13 +763,14 @@ function renderUsers(users) {
   });
 }
 
-function addMessage({ username, avatar_url, text, time, mine }) {
+function addMessage({ type, id, username, avatar_url, text, time, mine, edited, deleted, read }) {
   const div = document.createElement('div');
   div.className = `message ${mine ? 'mine' : ''}`;
+  div.dataset.type = type;
+  div.dataset.id = id;
 
   const avatar = document.createElement(avatar_url ? 'img' : 'div');
   avatar.className = 'msg-avatar';
-
   if (avatar_url) {
     avatar.src = avatar_url;
     avatar.alt = username;
@@ -637,7 +783,7 @@ function addMessage({ username, avatar_url, text, time, mine }) {
 
   const meta = document.createElement('div');
   meta.className = 'meta';
-  meta.textContent = `${username} • ${time || ''}`;
+  meta.textContent = `${username} • ${time || ''}${edited ? ' • düzenlendi' : ''}${deleted ? ' • silindi' : ''}`;
 
   const body = document.createElement('div');
   body.className = 'text';
@@ -646,10 +792,73 @@ function addMessage({ username, avatar_url, text, time, mine }) {
   bubble.appendChild(meta);
   bubble.appendChild(body);
 
+  if (mine && !deleted) {
+    const actions = document.createElement('div');
+    actions.className = 'message-actions';
+
+    const edit = document.createElement('button');
+    edit.className = 'message-action';
+    edit.textContent = 'Düzenle';
+    edit.onclick = () => editMessage(type, id, body.textContent);
+
+    const del = document.createElement('button');
+    del.className = 'message-action';
+    del.textContent = 'Sil';
+    del.onclick = () => deleteMessage(type, id);
+
+    actions.appendChild(edit);
+    actions.appendChild(del);
+    bubble.appendChild(actions);
+  }
+
+  if (type === 'dm' && mine) {
+    const status = document.createElement('span');
+    status.className = 'read-status mine';
+    status.textContent = read ? 'Görüldü ✓✓' : 'Gönderildi ✓';
+    bubble.appendChild(status);
+  }
+
   div.appendChild(avatar);
   div.appendChild(bubble);
   messagesEl.appendChild(div);
   scrollToBottom();
+}
+
+function updateMessageElement(type, id, text, edited, deleted) {
+  const el = document.querySelector(`.message[data-type="${type}"][data-id="${id}"]`);
+  if (!el) return;
+
+  const body = el.querySelector('.text');
+  const meta = el.querySelector('.meta');
+  const actions = el.querySelector('.message-actions');
+
+  if (body) body.textContent = text;
+  if (meta) {
+    if (deleted && !meta.textContent.includes('silindi')) meta.textContent += ' • silindi';
+    else if (edited && !meta.textContent.includes('düzenlendi')) meta.textContent += ' • düzenlendi';
+  }
+  if (deleted && actions) actions.remove();
+}
+
+function editMessage(type, id, oldText) {
+  const newText = prompt('Yeni mesaj:', oldText);
+  if (!newText || !newText.trim()) return;
+
+  if (type === 'dm') {
+    socket.emit('dm_message_edit', { messageId: id, text: newText.trim() });
+  } else {
+    socket.emit('room_message_edit', { messageId: id, text: newText.trim() });
+  }
+}
+
+function deleteMessage(type, id) {
+  if (!confirm('Mesajı silmek istiyor musun?')) return;
+
+  if (type === 'dm') {
+    socket.emit('dm_message_delete', { messageId: id });
+  } else {
+    socket.emit('room_message_delete', { messageId: id });
+  }
 }
 
 function addSystemMessage(message) {
@@ -658,6 +867,11 @@ function addSystemMessage(message) {
   div.textContent = message;
   messagesEl.appendChild(div);
   scrollToBottom();
+}
+
+function avatarHtml(username, avatarUrl, className = 'mini-avatar') {
+  if (avatarUrl) return `<img class="${className}" src="${avatarUrl}" alt="">`;
+  return `<div class="${className}">${escapeHtml(String(username || '?').charAt(0).toUpperCase())}</div>`;
 }
 
 function scrollToBottom() {
