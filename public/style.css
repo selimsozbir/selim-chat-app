@@ -3782,3 +3782,51 @@ body.bot-compact-mode .bot-message .meta {
     height: 40px;
   }
 }
+
+
+/* =========================================================
+   v7.9.1 — Mobile Bottom Nav Tap Fix
+   ========================================================= */
+
+@media (max-width: 760px) {
+  .mobile-bottom-nav {
+    z-index: 10040 !important;
+    pointer-events: auto !important;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .mobile-nav-item {
+    position: relative;
+    z-index: 10041;
+    pointer-events: auto !important;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 48px;
+  }
+
+  .message-form {
+    z-index: 10030 !important;
+  }
+
+  .mobile-topbar {
+    z-index: 10042 !important;
+  }
+
+  .mobile-backdrop {
+    z-index: 10043 !important;
+  }
+
+  .sidebar {
+    z-index: 10044 !important;
+  }
+
+  body.mobile-sidebar-open .mobile-bottom-nav {
+    z-index: 10045 !important;
+  }
+
+  body.mobile-sidebar-open .mobile-nav-item.active {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.35);
+  }
+}
