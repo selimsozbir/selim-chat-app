@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.2.2",
-  "description": "Selim Chat v7.2.2 no-SDK Supabase Storage fix with upload timeout and clearer errors",
+  "version": "7.2.3",
+  "description": "Selim Chat v7.2.3 stable Supabase Storage upload fix without SDK",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
