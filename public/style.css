@@ -715,3 +715,26 @@ h3 { margin: 0 0 12px; font-size: 16px; }
     font-size: 12px;
   }
 }
+
+
+/* v6.2.0 */
+.reaction-pill {
+  border: 0;
+  cursor: pointer;
+  color: white;
+}
+
+.reaction-pill:hover {
+  background: rgba(255,255,255,.24);
+}
+
+/* Hide notification button on mobile so it does not cover the screen */
+@media (max-width: 820px) {
+  #enableNotificationsButton {
+    display: none !important;
+  }
+
+  .chat-header {
+    grid-template-columns: 1fr;
+  }
+}
