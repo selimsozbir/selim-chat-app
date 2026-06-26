@@ -313,6 +313,11 @@ messageForm.addEventListener('submit', (event) => {
   const text = messageInput.value.trim();
   if (!text || !socket) return;
 
+  const fiveEggCommand = normalizeFiveEggText(text);
+  if (FIVE_EGG_COMMANDS.includes(fiveEggCommand)) {
+    runFiveEgg(fiveEggCommand, user?.display_name || user?.username || '');
+  }
+
   if (chatMode === 'dm') {
     if (!activeFriend) {
       addSystemMessage('Önce bir arkadaş seç.');
@@ -693,7 +698,10 @@ function connectSocket() {
   });
   socket.on('chat_message', (message) => {
     if (chatMode !== 'room') return;
-    if (!message.room || message.room === currentRoom) addRoomMessage(message);
+    if (!message.room || message.room === currentRoom) {
+      addRoomMessage(message);
+      maybeRunFiveEggFromMessage(message);
+    }
   });
   socket.on('users', renderUsers);
 
@@ -730,6 +738,7 @@ function connectSocket() {
 
     if (chatMode === 'dm' && activeFriend && activeFriend.id === otherId) {
       addDmMessage(message);
+      maybeRunFiveEggFromMessage(message);
       markDmRead(activeFriend.id);
     } else if (message.sender_id !== user.id) {
       showBrowserNotification('Yeni DM', `${message.sender_username}: ${message.text}`);
@@ -746,6 +755,7 @@ function connectSocket() {
 
     if (sameGroup) {
       addGroupMessage(message);
+      maybeRunFiveEggFromMessage(message);
       scrollToBottom();
       return;
     }
@@ -2461,6 +2471,108 @@ function addGroupMessage(message) {
     edited: message.edited_at,
     deleted: message.deleted_at
   });
+}
+
+
+
+
+/* 5ECROPOLIS EASTER EGGS */
+
+let fiveEggTimeout = null;
+const FIVE_EGG_COMMANDS = ['/serbia', '/limbo', '/vertex', '/rome'];
+
+function getFiveEggLayer() {
+  let layer = document.getElementById('fiveEggLayer');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.id = 'fiveEggLayer';
+    layer.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(layer);
+  }
+  return layer;
+}
+
+function clearFiveEggClasses() {
+  document.body.classList.remove('egg-serbia', 'egg-limbo', 'egg-vertex', 'egg-rome');
+  const layer = getFiveEggLayer();
+  layer.innerHTML = '';
+}
+
+function normalizeFiveEggText(value) {
+  return String(value || '').trim().toLowerCase().split(/\s+/)[0];
+}
+
+function runFiveEgg(command, username = '') {
+  const normalized = normalizeFiveEggText(command);
+  const layer = getFiveEggLayer();
+
+  clearTimeout(fiveEggTimeout);
+  clearFiveEggClasses();
+
+  if (normalized === '/serbia') {
+    document.body.classList.add('egg-serbia');
+    layer.innerHTML = `
+      <div class="egg-portal-ring"></div>
+      <div class="egg-portal-core"></div>
+      <div class="egg-portal-text">SERBIA GATE OPENED</div>
+      <div class="egg-portal-sub">5ECROPOLIS anomaly detected</div>
+    `;
+    addSystemMessage(`🌀 ${username ? username + ' ' : ''}Sırbistan kapısını açtı. Frekans değişiyor...`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4200);
+    return true;
+  }
+
+  if (normalized === '/limbo') {
+    document.body.classList.add('egg-limbo');
+    layer.innerHTML = `
+      <div class="egg-limbo-text">LIMBO</div>
+      <div class="egg-limbo-sub">sesler kesildi · gerçeklik askıya alındı</div>
+    `;
+    addSystemMessage(`◼ ${username ? username + ' ' : ''}Limbo'ya düştü. Ekran birkaç saniyeliğine kararıyor...`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3600);
+    return true;
+  }
+
+  if (normalized === '/vertex') {
+    document.body.classList.add('egg-vertex');
+    layer.innerHTML = `
+      <div class="egg-vertex-text" data-text="VERTEX">VERTEX</div>
+      <div class="egg-vertex-sub">red universe breach</div>
+    `;
+    addSystemMessage(`🔴 VERTEX aktifleşti. Kırmızı evren çatlağı açılıyor...`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3600);
+    return true;
+  }
+
+  if (normalized === '/rome') {
+    document.body.classList.add('egg-rome');
+    layer.innerHTML = `
+      <div class="egg-rome-emblem">Ⅴ</div>
+      <div class="egg-rome-text">ROMA PROTOKOLÜ</div>
+      <div class="egg-rome-sub">kurallara uymayanlar yüksek yapıya çıkarılır</div>
+    `;
+    addFiveSystemMessage('rome', `🏛️ ROMA PROTOKOLÜ: Kurallar değişti. Saçlar tıraş edildi, simülasyon yeniden yazıldı.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4200);
+    return true;
+  }
+
+  return false;
+}
+
+function maybeRunFiveEggFromMessage(message) {
+  const command = normalizeFiveEggText(message?.text);
+  if (!FIVE_EGG_COMMANDS.includes(command)) return false;
+
+  const username = message?.username || message?.sender_username || message?.display_name || '';
+  return runFiveEgg(command, username);
+}
+
+function addFiveSystemMessage(kind, message) {
+  const div = document.createElement('div');
+  div.className = `message system five-system five-system-${kind}`;
+  div.textContent = message;
+  messagesEl.appendChild(div);
+  scrollToBottom();
 }
 
 
