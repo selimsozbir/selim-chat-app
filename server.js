@@ -16,7 +16,9 @@ if (process.env.OPENAI_API_KEY) {
   openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
   });
+  console.log('API KEY VAR MI: EVET');
 } else {
+  console.log('API KEY VAR MI: HAYIR');
   console.log('OPENAI_API_KEY bulunamadı. ChatGPT bot devre dışı.');
 }
 
@@ -52,7 +54,7 @@ function sendBotMessage(room, text) {
 }
 
 async function answerWithBot(room, userQuestion) {
-  if (!process.env.OPENAI_API_KEY) {
+  if (!openai) {
     sendBotMessage(
       room,
       'Bot API key ayarlı değil. Render > Environment kısmına OPENAI_API_KEY eklemen lazım.'
@@ -69,7 +71,7 @@ async function answerWithBot(room, userQuestion) {
         {
           role: 'system',
           content:
-            'Sen bir mesajlaşma uygulamasındaki Türkçe konuşan yardımcı botsun. Cevapların kısa, net ve samimi olsun. Tehlikeli veya yasa dışı şeylerde yardımcı olma.'
+            'Sen bir mesajlaşma uygulamasındaki Türkçe konuşan yardımcı botsun. Cevapların kısa, net ve samimi olsun.'
         },
         {
           role: 'user',
