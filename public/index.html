@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Selim Chat v7.7.5</title>
-  <link rel="stylesheet" href="style.css?v=775" />
+  <title>Selim Chat v7.8.0</title>
+  <link rel="stylesheet" href="style.css?v=780" />
 </head>
 <body>
   <div class="app">
@@ -39,6 +39,7 @@
 
           <div>
             <strong id="currentUsername">Kullanıcı</strong>
+            <button id="settingsButton" class="small-button">Ayarlar</button>
             <button id="removeAvatarButton" class="small-button">PP kaldır</button>
             <button id="logoutButton" class="small-button">Çıkış</button>
           </div>
@@ -196,9 +197,81 @@
     </div>
   </div>
 
+
+  <div id="settingsModal" class="settings-modal hidden">
+    <div class="settings-card">
+      <button id="settingsCloseButton" class="profile-close" type="button">×</button>
+      <h2>Ayarlar</h2>
+      <p class="settings-muted">Hesabını, görünümünü ve yerel tercihlerini buradan değiştir.</p>
+
+      <div class="settings-grid">
+        <section class="settings-section">
+          <h3>Profil</h3>
+          <label for="settingsUsernameInput">Kullanıcı adı / @etiket</label>
+          <input id="settingsUsernameInput" type="text" maxlength="30" placeholder="kullaniciadi" />
+
+          <label for="settingsDisplayNameInput">Görünen nick</label>
+          <input id="settingsDisplayNameInput" type="text" maxlength="40" placeholder="Nick" />
+
+          <label for="settingsBioInput">Bio</label>
+          <textarea id="settingsBioInput" maxlength="160" placeholder="Kısa bio..."></textarea>
+
+          <button id="settingsSaveProfileButton" class="action-button settings-action" type="button">Profili Kaydet</button>
+          <p id="settingsProfileStatus" class="settings-status"></p>
+        </section>
+
+        <section class="settings-section">
+          <h3>Şifre</h3>
+          <label for="settingsCurrentPasswordInput">Mevcut şifre</label>
+          <input id="settingsCurrentPasswordInput" type="password" autocomplete="current-password" />
+
+          <label for="settingsNewPasswordInput">Yeni şifre</label>
+          <input id="settingsNewPasswordInput" type="password" minlength="6" autocomplete="new-password" />
+
+          <label for="settingsNewPasswordAgainInput">Yeni şifre tekrar</label>
+          <input id="settingsNewPasswordAgainInput" type="password" minlength="6" autocomplete="new-password" />
+
+          <button id="settingsChangePasswordButton" class="action-button settings-action" type="button">Şifreyi Değiştir</button>
+          <p id="settingsPasswordStatus" class="settings-status"></p>
+        </section>
+
+        <section class="settings-section">
+          <h3>Görünüm</h3>
+          <label for="settingsThemeSelect">Tema</label>
+          <select id="settingsThemeSelect">
+            <option value="neon">Neon / Cyber</option>
+            <option value="dark">Koyu</option>
+            <option value="light">Açık</option>
+          </select>
+
+          <label class="settings-check">
+            <input id="settingsCompactToggle" type="checkbox" />
+            <span>Kompakt mod</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsReducedMotionToggle" type="checkbox" />
+            <span>Az animasyon</span>
+          </label>
+
+          <button id="settingsSaveLocalButton" class="action-button settings-action" type="button">Görünümü Kaydet</button>
+          <p id="settingsLocalStatus" class="settings-status"></p>
+        </section>
+
+        <section class="settings-section">
+          <h3>Bildirim</h3>
+          <p class="settings-muted">Tarayıcı bildirimi açarsan DM, mention ve grup bildirimleri daha net gelir.</p>
+          <button id="settingsEnableNotificationsButton" class="action-button settings-action" type="button">Bildirim İznini Aç</button>
+          <button id="settingsClearNotificationsButton" class="small-button" type="button">Bildirimleri Temizle</button>
+        </section>
+      </div>
+    </div>
+  </div>
+
+
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=775"></script>
+  <script src="script.js?v=780"></script>
 </body>
 </html>
