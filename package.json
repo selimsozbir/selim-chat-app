@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.6.0",
-  "description": "Selim Chat v7.6.0 Groq AI bot with @bot support in rooms, groups and bot DM",
+  "version": "7.7.1",
+  "description": "Selim Chat v7.7.1 feiz AI bot with editable rules",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
