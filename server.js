@@ -178,23 +178,129 @@ function levelProgressFromXp(xp) {
   return { level, progress, currentLevelStart, nextLevelStart };
 }
 
-function buildProfileBadges({ user, stats }) {
-  const badges = [];
 
-  if ((stats.total_messages || 0) >= 1) badges.push({ key: 'first_signal', icon: '📡', name: 'First Signal', description: 'İlk mesajını gönderdi.' });
-  if ((stats.total_messages || 0) >= 100) badges.push({ key: 'active_member', icon: '💬', name: 'Active Member', description: '100+ mesaj gönderdi.' });
-  if ((stats.total_messages || 0) >= 500) badges.push({ key: 'dimension_speaker', icon: '🌀', name: 'Dimension Speaker', description: '500+ mesaj gönderdi.' });
-  if ((stats.group_messages || 0) >= 25) badges.push({ key: 'group_energy', icon: '👥', name: 'Group Energy', description: 'Gruplarda aktif.' });
-  if ((stats.dm_messages || 0) >= 25) badges.push({ key: 'dm_operator', icon: '📨', name: 'DM Operator', description: 'DM tarafında aktif.' });
-  if (user.avatar_url) badges.push({ key: 'face_revealed', icon: '🖼️', name: 'Face Revealed', description: 'Profil fotoğrafı ekledi.' });
-  if (user.profile_cover_url) badges.push({ key: 'cover_artist', icon: '🎨', name: 'Cover Artist', description: 'Profil kapağı ekledi.' });
-  if (user.favorite_egg === '/vertex') badges.push({ key: 'vertex_witness', icon: '🔴', name: 'VERTEX Witness', description: 'Favori easter egg: VERTEX.' });
-  if (user.favorite_egg === '/limbo') badges.push({ key: 'limbo_survivor', icon: '⚫', name: 'Limbo Survivor', description: 'Favori easter egg: Limbo.' });
-  if (user.favorite_egg === '/ataturk') badges.push({ key: 'respect_protocol', icon: '🇹🇷', name: 'Respect Protocol', description: 'Saygı protokolü aktif.' });
+function badgeDefinition(key, icon, name, description, rarity, unlocked) {
+  return { key, icon, name, description, rarity, unlocked: Boolean(unlocked) };
+}
 
-  if (badges.length === 0) badges.push({ key: 'new_anomaly', icon: '✨', name: 'New Anomaly', description: 'Yeni profil.' });
+function buildAllProfileBadges({ user, stats, xp, shards, level }) {
+  const total = Number(stats.total_messages || 0);
+  const room = Number(stats.room_messages || 0);
+  const dm = Number(stats.dm_messages || 0);
+  const group = Number(stats.group_messages || 0);
+  const friends = Number(stats.friends_count || 0);
+  const groups = Number(stats.groups_count || 0);
+  const fav = String(user.favorite_egg || '');
+  const role = String(user.global_role || 'user').toLowerCase();
+  const hasBio = String(user.bio || '').trim().length >= 8;
+  const customColor = String(user.profile_color || '#8b5cf6').toLowerCase() !== '#8b5cf6';
 
-  return badges.slice(0, 10);
+  const badges = [
+    badgeDefinition('new_anomaly', '✨', 'New Anomaly', '5ECROPOLIS ağına giriş yaptı.', 'common', true),
+    badgeDefinition('first_signal', '📡', 'First Signal', 'İlk mesajını gönderdi.', 'common', total >= 1),
+    badgeDefinition('ten_messages', '✉️', 'Signal Starter', '10+ mesaj gönderdi.', 'common', total >= 10),
+    badgeDefinition('fifty_messages', '🔊', 'Chat Pulse', '50+ mesaj gönderdi.', 'common', total >= 50),
+    badgeDefinition('active_member', '💬', 'Active Member', '100+ mesaj gönderdi.', 'rare', total >= 100),
+    badgeDefinition('chat_grinder', '⚙️', 'Chat Grinder', '250+ mesaj gönderdi.', 'rare', total >= 250),
+    badgeDefinition('dimension_speaker', '🌀', 'Dimension Speaker', '500+ mesaj gönderdi.', 'legendary', total >= 500),
+    badgeDefinition('thousand_echoes', '🌌', 'Thousand Echoes', '1000+ mesaj gönderdi.', 'legendary', total >= 1000),
+    badgeDefinition('void_broadcaster', '📻', 'Void Broadcaster', '2500+ mesaj gönderdi.', 'legendary', total >= 2500),
+
+    badgeDefinition('room_roamer', '🏠', 'Room Roamer', 'Odalarda 25+ mesaj gönderdi.', 'common', room >= 25),
+    badgeDefinition('room_regular', '🛋️', 'Room Regular', 'Odalarda 100+ mesaj gönderdi.', 'rare', room >= 100),
+    badgeDefinition('room_legend', '🏛️', 'Room Legend', 'Odalarda 500+ mesaj gönderdi.', 'legendary', room >= 500),
+
+    badgeDefinition('dm_operator', '📨', 'DM Operator', 'DM tarafında aktif.', 'rare', dm >= 25),
+    badgeDefinition('private_signal', '🔐', 'Private Signal', '100+ DM mesajı gönderdi.', 'epic', dm >= 100),
+    badgeDefinition('whisper_network', '🕯️', 'Whisper Network', '300+ DM mesajı gönderdi.', 'legendary', dm >= 300),
+
+    badgeDefinition('group_energy', '👥', 'Group Energy', 'Gruplarda aktif.', 'rare', group >= 25),
+    badgeDefinition('squad_voice', '📣', 'Squad Voice', '100+ grup mesajı gönderdi.', 'epic', group >= 100),
+    badgeDefinition('council_member', '🛡️', 'Council Member', '300+ grup mesajı gönderdi.', 'legendary', group >= 300),
+
+    badgeDefinition('first_friend', '🤝', 'First Friend', 'İlk arkadaşını ekledi.', 'common', friends >= 1),
+    badgeDefinition('social_core', '🧩', 'Social Core', '5+ arkadaşı var.', 'rare', friends >= 5),
+    badgeDefinition('networker', '🕸️', 'Networker', '10+ arkadaşı var.', 'epic', friends >= 10),
+    badgeDefinition('alliance_builder', '🏰', 'Alliance Builder', '25+ arkadaşı var.', 'legendary', friends >= 25),
+
+    badgeDefinition('group_joiner', '🚪', 'Group Joiner', 'En az 1 gruba katıldı.', 'common', groups >= 1),
+    badgeDefinition('multi_group', '🧭', 'Multi Group', '3+ grupta yer alıyor.', 'rare', groups >= 3),
+    badgeDefinition('group_nomad', '🧳', 'Group Nomad', '10+ grupta yer alıyor.', 'epic', groups >= 10),
+
+    badgeDefinition('face_revealed', '🖼️', 'Face Revealed', 'Profil fotoğrafı ekledi.', 'common', Boolean(user.avatar_url)),
+    badgeDefinition('cover_artist', '🎨', 'Cover Artist', 'Profil kapağı ekledi.', 'epic', Boolean(user.profile_cover_url)),
+    badgeDefinition('bio_writer', '📝', 'Bio Writer', 'Profil hakkında yazısı ekledi.', 'common', hasBio),
+    badgeDefinition('color_tuner', '🎛️', 'Color Tuner', 'Profil tema rengini özelleştirdi.', 'rare', customColor),
+
+    badgeDefinition('level_5', '⚡', 'Level 5', 'Level 5 seviyesine ulaştı.', 'rare', level >= 5),
+    badgeDefinition('level_10', '💠', 'Level 10', 'Level 10 seviyesine ulaştı.', 'epic', level >= 10),
+    badgeDefinition('level_20', '👑', 'Level 20', 'Level 20 seviyesine ulaştı.', 'legendary', level >= 20),
+
+    badgeDefinition('shard_collector', '✦', 'Shard Collector', '100+ Shards topladı.', 'rare', shards >= 100),
+    badgeDefinition('shard_hoarder', '💎', 'Shard Hoarder', '500+ Shards topladı.', 'epic', shards >= 500),
+    badgeDefinition('shard_overlord', '🔮', 'Shard Overlord', '1000+ Shards topladı.', 'legendary', shards >= 1000),
+    badgeDefinition('shard_dimension', '🌠', 'Shard Dimension', '5000+ Shards topladı.', 'legendary', shards >= 5000),
+
+    badgeDefinition('serbia_walker', '🇷🇸', 'Serbia Walker', 'Favori easter egg: Serbia.', 'epic', fav === '/serbia'),
+    badgeDefinition('vertex_witness', '🔴', 'VERTEX Witness', 'Favori easter egg: VERTEX.', 'epic', fav === '/vertex'),
+    badgeDefinition('limbo_survivor', '⚫', 'Limbo Survivor', 'Favori easter egg: Limbo.', 'epic', fav === '/limbo'),
+    badgeDefinition('rome_survivor', '🏺', 'Rome Survivor', 'Favori easter egg: Rome.', 'epic', fav === '/rome'),
+    badgeDefinition('egypt_drifter', '🏜️', 'Egypt Drifter', 'Favori easter egg: Egypt.', 'epic', fav === '/egypt'),
+    badgeDefinition('anitkabir_signal', '🇹🇷', 'Anıtkabir Signal', 'Favori easter egg: Anıtkabir.', 'legendary', fav === '/anitkabir'),
+    badgeDefinition('cat_watcher', '🐈', 'Cat Watcher', 'Favori easter egg: Cat.', 'rare', fav === '/cat'),
+    badgeDefinition('reset_presser', '🔘', 'Reset Presser', 'Favori easter egg: Reset.', 'epic', fav === '/reset'),
+    badgeDefinition('rift_touched', '🩸', 'Rift Touched', 'Favori easter egg: Rift.', 'epic', fav === '/rift'),
+    badgeDefinition('five_marked', '5️⃣', '5 Marked', 'Favori easter egg: 5ECROPOLIS.', 'legendary', fav === '/5ecropolis'),
+    badgeDefinition('selim_protocol', '🧬', 'Selim Protocol', 'Favori easter egg: Selim.', 'legendary', fav === '/selim'),
+    badgeDefinition('xara_reset', '🪐', 'Xara Reset', 'Favori easter egg: Xara.', 'epic', fav === '/xara'),
+    badgeDefinition('nico_frequency', '🧊', 'Nico Frequency', 'Favori easter egg: Nico.', 'rare', fav === '/nico'),
+    badgeDefinition('menekse_signal', '🟪', 'Menekşe Signal', 'Favori easter egg: Yasin.', 'rare', fav === '/yasin'),
+    badgeDefinition('jung_bass', '🎧', 'Jung Bass', 'Favori easter egg: Jung.', 'epic', fav === '/jung'),
+    badgeDefinition('oracle_eye', '👁️', 'Oracle Eye', 'Favori easter egg: Fetullah.', 'epic', fav === '/fetullah'),
+    badgeDefinition('yung_blake', '♛', 'Yung Blake', 'Favori easter egg: Blake.', 'epic', fav === '/blake'),
+    badgeDefinition('feiz_online', '🤖', 'feiz Online', 'Favori easter egg: feiz.', 'rare', fav === '/feiz'),
+    badgeDefinition('parallel_nico', '🪞', 'Parallel Nico', 'Favori easter egg: Parallel Nico.', 'epic', fav === '/pnico'),
+    badgeDefinition('parallel_yasin', '💜', 'Parallel Yasin', 'Favori easter egg: Parallel Yasin.', 'epic', fav === '/pyasin'),
+    badgeDefinition('respect_protocol', '🇹🇷', 'Respect Protocol', 'Favori easter egg: Atatürk.', 'legendary', fav === '/ataturk'),
+
+    badgeDefinition('owner_core', '👑', 'Owner Core', 'Platform sahibi.', 'legendary', role === 'owner'),
+    badgeDefinition('admin_core', '🛡️', 'Admin Core', 'Global admin yetkisi var.', 'legendary', role === 'admin'),
+    badgeDefinition('mod_signal', '🔧', 'Mod Signal', 'Moderatör yetkisi var.', 'epic', role === 'mod')
+  ];
+
+  return badges;
+}
+
+function parseVisibleBadges(value) {
+  return String(value || '')
+    .split(',')
+    .map((key) => key.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function buildProfileBadges({ user, stats, xp = 0, shards = 0, level = 1 }) {
+  const allBadges = buildAllProfileBadges({ user, stats, xp, shards, level });
+  const unlocked = allBadges.filter((badge) => badge.unlocked);
+  const selectedKeys = parseVisibleBadges(user.profile_visible_badges);
+  const selectedUnlocked = selectedKeys
+    .map((key) => unlocked.find((badge) => badge.key === key))
+    .filter(Boolean);
+
+  const visible = selectedUnlocked.length > 0
+    ? selectedUnlocked
+    : unlocked.sort((a, b) => {
+        const order = { legendary: 4, epic: 3, rare: 2, common: 1 };
+        return (order[b.rarity] || 0) - (order[a.rarity] || 0);
+      }).slice(0, 8);
+
+  return {
+    visible,
+    all: allBadges,
+    unlocked_count: unlocked.length,
+    total_count: allBadges.length,
+    selected_keys: selectedKeys
+  };
 }
 
 async function rewardUserActivity(userId, xpAmount = 5, shardAmount = 1) {
@@ -757,6 +863,7 @@ async function initDatabase() {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_cover_url TEXT`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_color VARCHAR(20) DEFAULT '#8b5cf6'`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_egg VARCHAR(40) DEFAULT '/serbia'`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visible_badges TEXT DEFAULT ''`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS xp INTEGER DEFAULT 0`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS shards INTEGER DEFAULT 0`);
 
@@ -942,7 +1049,7 @@ app.post('/api/register', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO users (username, password_hash, display_name, last_ip, last_user_agent, last_active)
        VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards`,
       [username, passwordHash, username, ip, getClientUserAgent(req)]
     );
 
@@ -1010,7 +1117,7 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
 
   const result = await pool.query(
     `SELECT id, username, display_name, avatar_url, bio, global_role, created_at, last_seen, last_active,
-            profile_cover_url, profile_color, favorite_egg, xp, shards
+            profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards
      FROM users WHERE id = $1`,
     [id]
   );
@@ -1035,8 +1142,48 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
   const fallbackXp = stats.total_messages * 5;
   const xp = Math.max(Number(profile.xp || 0), fallbackXp);
   const shards = Math.max(Number(profile.shards || 0), Math.floor(stats.total_messages / 3));
+
+  let mutual = { friends: [], groups: [] };
+  if (Number(req.user.id) !== Number(id)) {
+    const mutualFriendsResult = await pool.query(
+      `WITH my_friends AS (
+         SELECT CASE WHEN requester_id = $1 THEN addressee_id ELSE requester_id END AS friend_id
+         FROM friendships
+         WHERE status = 'accepted' AND (requester_id = $1 OR addressee_id = $1)
+       ),
+       their_friends AS (
+         SELECT CASE WHEN requester_id = $2 THEN addressee_id ELSE requester_id END AS friend_id
+         FROM friendships
+         WHERE status = 'accepted' AND (requester_id = $2 OR addressee_id = $2)
+       )
+       SELECT u.id, u.username, u.display_name, u.avatar_url
+       FROM my_friends mf
+       JOIN their_friends tf ON tf.friend_id = mf.friend_id
+       JOIN users u ON u.id = mf.friend_id
+       ORDER BY u.username ASC
+       LIMIT 6`,
+      [req.user.id, id]
+    );
+
+    const mutualGroupsResult = await pool.query(
+      `SELECT gc.id, gc.name, gc.avatar_url
+       FROM group_members gm1
+       JOIN group_members gm2 ON gm2.group_id = gm1.group_id
+       JOIN group_chats gc ON gc.id = gm1.group_id
+       WHERE gm1.user_id = $1 AND gm2.user_id = $2
+       ORDER BY gc.name ASC
+       LIMIT 6`,
+      [req.user.id, id]
+    );
+
+    mutual = {
+      friends: mutualFriendsResult.rows,
+      groups: mutualGroupsResult.rows
+    };
+  }
+
   const levelInfo = levelProgressFromXp(xp);
-  const badges = buildProfileBadges({ user: profile, stats });
+  const badgeData = buildProfileBadges({ user: profile, stats, xp, shards, level: levelInfo.level });
 
   res.json({
     profile: {
@@ -1048,7 +1195,12 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
       next_level_xp: levelInfo.nextLevelStart,
       current_level_xp: levelInfo.currentLevelStart,
       stats,
-      badges,
+      badges: badgeData.visible,
+      all_badges: badgeData.all,
+      unlocked_badges_count: badgeData.unlocked_count,
+      total_badges_count: badgeData.total_count,
+      selected_badges: badgeData.selected_keys,
+      mutual,
       online: userSockets.has(String(id))
     }
   });
@@ -1057,13 +1209,62 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
 app.post('/api/profile/bio', authMiddleware, async (req, res) => {
   const bio = cleanText(req.body.bio, 160);
   const result = await pool.query(
-    'UPDATE users SET bio = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, xp, shards',
+    'UPDATE users SET bio = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards',
     [bio, req.user.id]
   );
 
   res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
 });
 
+
+
+
+app.post('/api/profile/badges', authMiddleware, async (req, res) => {
+  try {
+    const requested = Array.isArray(req.body.badges) ? req.body.badges : [];
+    const cleanKeys = requested
+      .map((key) => cleanText(key, 60))
+      .filter(Boolean)
+      .slice(0, 8);
+
+    const profileResult = await pool.query(
+      `SELECT id, username, display_name, avatar_url, bio, global_role, created_at, last_seen, last_active,
+              profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards
+       FROM users WHERE id = $1`,
+      [req.user.id]
+    );
+
+    if (profileResult.rows.length === 0) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+
+    const profile = profileResult.rows[0];
+    const statsResult = await pool.query(
+      `SELECT
+         (SELECT COUNT(*)::int FROM messages WHERE user_id = $1 AND deleted_at IS NULL) AS room_messages,
+         (SELECT COUNT(*)::int FROM dm_messages WHERE sender_id = $1 AND deleted_at IS NULL) AS dm_messages,
+         (SELECT COUNT(*)::int FROM group_messages WHERE sender_id = $1 AND deleted_at IS NULL) AS group_messages,
+         (SELECT COUNT(*)::int FROM friendships WHERE status = 'accepted' AND (requester_id = $1 OR addressee_id = $1)) AS friends_count,
+         (SELECT COUNT(*)::int FROM group_members WHERE user_id = $1) AS groups_count`,
+      [req.user.id]
+    );
+
+    const stats = statsResult.rows[0] || {};
+    stats.total_messages = Number(stats.room_messages || 0) + Number(stats.dm_messages || 0) + Number(stats.group_messages || 0);
+
+    const xp = Math.max(Number(profile.xp || 0), stats.total_messages * 5);
+    const shards = Math.max(Number(profile.shards || 0), Math.floor(stats.total_messages / 3));
+    const levelInfo = levelProgressFromXp(xp);
+    const badgeData = buildProfileBadges({ user: profile, stats, xp, shards, level: levelInfo.level });
+    const unlockedKeys = new Set(badgeData.all.filter((badge) => badge.unlocked).map((badge) => badge.key));
+    const allowed = cleanKeys.filter((key) => unlockedKeys.has(key)).slice(0, 8);
+
+    await pool.query('UPDATE users SET profile_visible_badges = $1 WHERE id = $2', [allowed.join(','), req.user.id]);
+
+    res.json({ ok: true, selected_badges: allowed });
+  } catch (error) {
+    console.error('Rozet seçme hatası:', error);
+    res.status(500).json({ error: 'Rozet vitrini kaydedilemedi.' });
+  }
+});
 
 
 app.post('/api/profile/v2', authMiddleware, async (req, res) => {
@@ -1086,8 +1287,8 @@ app.post('/api/profile/v2', authMiddleware, async (req, res) => {
            favorite_egg = $2,
            profile_cover_url = COALESCE(NULLIF($3, ''), profile_cover_url)
        WHERE id = $4
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, xp, shards,
-                 profile_cover_url, profile_color, favorite_egg, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards,
+                 profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards`,
       [profileColor, favoriteEgg, coverData, req.user.id]
     );
 
@@ -1104,8 +1305,8 @@ app.delete('/api/profile/cover', authMiddleware, async (req, res) => {
       `UPDATE users
        SET profile_cover_url = NULL
        WHERE id = $1
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, xp, shards,
-                 profile_cover_url, profile_color, favorite_egg, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards,
+                 profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards`,
       [req.user.id]
     );
 
@@ -1146,7 +1347,7 @@ app.patch('/api/settings/profile', authMiddleware, async (req, res) => {
            display_name = $2,
            bio = $3
        WHERE id = $4
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards`,
       [username, displayName || username, bio, req.user.id]
     );
 
@@ -1302,7 +1503,7 @@ app.post('/api/avatar', authMiddleware, async (req, res) => {
     if (avatarData.length > 1500000) return res.status(400).json({ error: 'Profil fotoğrafı çok büyük. Daha küçük görsel seç.' });
 
     const result = await pool.query(
-      'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, xp, shards',
+      'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards',
       [avatarData, req.user.id]
     );
 
@@ -1316,7 +1517,7 @@ app.post('/api/avatar', authMiddleware, async (req, res) => {
 app.delete('/api/avatar', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'UPDATE users SET avatar_url = NULL WHERE id = $1 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, xp, shards',
+      'UPDATE users SET avatar_url = NULL WHERE id = $1 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, xp, shards',
       [req.user.id]
     );
 
