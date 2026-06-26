@@ -2730,3 +2730,271 @@ input::placeholder {
   .egg-fetullah-eye::before { inset: 18px 60px; }
   .egg-fetullah-rays { width: 270px; height: 190px; }
 }
+
+
+/* =========================================================
+   v7.7.5 — More Character Easter Eggs
+   /blake /feiz /pnico /pyasin /ataturk
+   ========================================================= */
+
+.egg-blake #fiveEggLayer {
+  background:
+    radial-gradient(circle at center, rgba(239,68,68,0.16), transparent 28%),
+    linear-gradient(135deg, rgba(2,6,23,0.25), rgba(88,28,135,0.18), rgba(127,29,29,0.24));
+}
+
+.egg-blake-grid {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(239,68,68,0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,85,247,0.12) 1px, transparent 1px);
+  background-size: 42px 42px;
+  transform: perspective(420px) rotateX(58deg) translateY(18%);
+  transform-origin: bottom;
+  animation: blakeGrid 1.2s linear infinite;
+}
+
+.egg-blake-crown {
+  position: absolute;
+  top: 30%;
+  font-size: clamp(82px, 15vw, 170px);
+  color: #fecaca;
+  text-shadow: 0 0 22px rgba(239,68,68,0.88), 0 0 60px rgba(168,85,247,0.5);
+  animation: blakeBounce 1s ease-in-out infinite alternate;
+}
+
+.egg-blake-text,
+.egg-feiz-text,
+.egg-pnico-text,
+.egg-pyasin-text,
+.egg-ataturk-text {
+  position: absolute;
+  top: 16%;
+  width: 100%;
+  text-align: center;
+  font-weight: 1000;
+  letter-spacing: 0.14em;
+  font-size: clamp(28px, 6vw, 74px);
+  color: #fff;
+}
+
+.egg-blake-sub,
+.egg-feiz-sub,
+.egg-pnico-sub,
+.egg-pyasin-sub,
+.egg-ataturk-sub {
+  position: absolute;
+  top: calc(16% + clamp(50px, 8vw, 92px));
+  width: 100%;
+  text-align: center;
+  color: rgba(255,255,255,0.75);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  font-size: clamp(11px, 2vw, 17px);
+}
+
+.egg-blake-text {
+  color: #fecaca;
+  text-shadow: 0 0 25px rgba(239,68,68,0.9), 0 0 45px rgba(168,85,247,0.55);
+}
+
+.egg-feiz #fiveEggLayer {
+  background:
+    radial-gradient(circle at center, rgba(34,211,238,0.16), transparent 28%),
+    rgba(0, 10, 18, 0.24);
+}
+
+.egg-feiz-bot {
+  position: absolute;
+  top: 34%;
+  width: 230px;
+  height: 135px;
+  display: grid;
+  place-items: center;
+  border-radius: 32px;
+  border: 3px solid rgba(34,211,238,0.9);
+  color: #cffafe;
+  font-weight: 1000;
+  letter-spacing: 0.16em;
+  background: rgba(8,47,73,0.55);
+  box-shadow: 0 0 34px rgba(34,211,238,0.65), inset 0 0 24px rgba(34,211,238,0.18);
+  animation: feizBoot 1.1s ease-in-out infinite alternate;
+}
+
+.egg-feiz-bot::before,
+.egg-feiz-bot::after {
+  content: "";
+  position: absolute;
+  top: 42px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #67e8f9;
+  box-shadow: 0 0 18px rgba(103,232,249,0.9);
+}
+
+.egg-feiz-bot::before { left: 48px; }
+.egg-feiz-bot::after { right: 48px; }
+
+.egg-feiz-scan {
+  position: absolute;
+  top: 28%;
+  width: min(760px, 90vw);
+  height: 4px;
+  background: linear-gradient(90deg, transparent, rgba(103,232,249,0.95), transparent);
+  box-shadow: 0 0 22px rgba(34,211,238,0.85);
+  animation: feizScan 1.2s linear infinite;
+}
+
+.egg-feiz-text {
+  color: #cffafe;
+  text-shadow: 0 0 24px rgba(34,211,238,0.9);
+}
+
+.egg-pnico #fiveEggLayer {
+  background:
+    linear-gradient(90deg, rgba(14,165,233,0.12), transparent 50%, rgba(236,72,153,0.14)),
+    rgba(2,6,23,0.24);
+}
+
+.egg-parallel-split {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(34,211,238,0.22) 0 49%, rgba(255,255,255,0.08) 49% 51%, rgba(236,72,153,0.22) 51% 100%);
+  animation: parallelFlicker 0.18s linear infinite;
+}
+
+.egg-pnico-ghost {
+  position: absolute;
+  top: 42%;
+  font-size: clamp(52px, 9vw, 110px);
+  font-weight: 1000;
+  letter-spacing: 0.08em;
+}
+
+.egg-pnico-ghost-1 {
+  transform: translateX(-90px);
+  color: rgba(103,232,249,0.78);
+  text-shadow: 0 0 24px rgba(34,211,238,0.8);
+}
+
+.egg-pnico-ghost-2 {
+  transform: translateX(90px);
+  color: rgba(244,114,182,0.78);
+  text-shadow: 0 0 24px rgba(236,72,153,0.8);
+}
+
+.egg-pnico-text {
+  color: #e0f2fe;
+  text-shadow: 0 0 24px rgba(34,211,238,0.7), 0 0 35px rgba(236,72,153,0.52);
+}
+
+.egg-pyasin #fiveEggLayer {
+  background:
+    radial-gradient(circle at center, rgba(192,132,252,0.18), transparent 28%),
+    rgba(20, 5, 35, 0.25);
+}
+
+.egg-pyasin-mirror {
+  position: absolute;
+  top: 32%;
+  width: min(420px, 75vw);
+  height: 260px;
+  border-radius: 42px;
+  border: 4px solid rgba(216,180,254,0.8);
+  background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(147,51,234,0.2), rgba(255,255,255,0.06));
+  box-shadow: 0 0 40px rgba(168,85,247,0.55), inset 0 0 30px rgba(255,255,255,0.08);
+  transform: skewX(-5deg);
+  animation: mirrorPulse 1.4s ease-in-out infinite alternate;
+}
+
+.egg-pyasin-flower {
+  position: absolute;
+  top: 38%;
+  font-size: clamp(80px, 13vw, 150px);
+  color: #f5d0fe;
+  text-shadow: 0 0 28px rgba(216,180,254,0.95);
+  animation: portalSpin 3.2s linear infinite;
+}
+
+.egg-pyasin-text {
+  color: #f5d0fe;
+  text-shadow: 0 0 26px rgba(192,132,252,0.95);
+}
+
+.egg-ataturk #fiveEggLayer {
+  background:
+    radial-gradient(circle at center, rgba(239,68,68,0.18), transparent 34%),
+    linear-gradient(180deg, rgba(127,29,29,0.26), rgba(15,23,42,0.32));
+}
+
+.egg-ataturk-sun {
+  position: absolute;
+  top: 28%;
+  font-size: clamp(90px, 16vw, 180px);
+  color: #fff7ed;
+  text-shadow: 0 0 28px rgba(255,255,255,0.8), 0 0 70px rgba(239,68,68,0.6);
+  animation: ataturkSun 2.2s ease-in-out infinite alternate;
+}
+
+.egg-ataturk-line {
+  position: absolute;
+  top: 55%;
+  width: min(720px, 82vw);
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent);
+  box-shadow: 0 0 22px rgba(255,255,255,0.55);
+}
+
+.egg-ataturk-text {
+  top: 17%;
+  color: #fff;
+  text-shadow: 0 0 22px rgba(239,68,68,0.9), 0 0 40px rgba(255,255,255,0.35);
+}
+
+.egg-ataturk-sub {
+  color: rgba(255,255,255,0.82);
+}
+
+@keyframes blakeGrid {
+  to { background-position: 42px 42px; }
+}
+
+@keyframes blakeBounce {
+  from { transform: translateY(0) rotate(-4deg); }
+  to { transform: translateY(-14px) rotate(4deg); }
+}
+
+@keyframes feizBoot {
+  from { transform: scale(0.96); filter: brightness(0.9); }
+  to { transform: scale(1.04); filter: brightness(1.25); }
+}
+
+@keyframes feizScan {
+  from { transform: translateY(-90px); opacity: 0.15; }
+  50% { opacity: 1; }
+  to { transform: translateY(210px); opacity: 0.15; }
+}
+
+@keyframes parallelFlicker {
+  0%,100% { filter: hue-rotate(0deg) brightness(1); }
+  50% { filter: hue-rotate(38deg) brightness(1.25); }
+}
+
+@keyframes mirrorPulse {
+  from { transform: skewX(-5deg) scale(0.96); opacity: 0.72; }
+  to { transform: skewX(5deg) scale(1.03); opacity: 1; }
+}
+
+@keyframes ataturkSun {
+  from { transform: scale(0.96); opacity: 0.86; }
+  to { transform: scale(1.08); opacity: 1; }
+}
+
+@media (max-width: 640px) {
+  .egg-feiz-bot { width: 190px; height: 118px; }
+  .egg-pnico-ghost-1 { transform: translateX(-52px); }
+  .egg-pnico-ghost-2 { transform: translateX(52px); }
+  .egg-pyasin-mirror { height: 210px; }
+}
