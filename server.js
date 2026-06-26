@@ -20,6 +20,13 @@ const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '');
 const SUPABASE_BUCKET = String(process.env.SUPABASE_BUCKET || 'chat-uploads');
 
+const AI_BOT_ENABLED = String(process.env.AI_BOT_ENABLED || 'false').toLowerCase() === 'true';
+const AI_BOT_NAME = cleanBotName(process.env.AI_BOT_NAME || 'Feiz');
+const AI_BOT_USERNAME = cleanBotUsername(AI_BOT_NAME);
+const GROQ_API_KEY = String(process.env.GROQ_API_KEY || '');
+const GROQ_MODEL = String(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile');
+const AI_BOT_COOLDOWN_MS = Number(process.env.AI_BOT_COOLDOWN_MS || 10000);
+
 app.set('trust proxy', true);
 
 const pool = new Pool({
@@ -137,6 +144,8 @@ async function uploadToSupabaseStorage(file, userId) {
 
 const onlineUsers = new Map();
 const userSockets = new Map();
+const aiBotCooldowns = new Map();
+let aiBotUserCache = null;
 
 function nowTime() {
   return new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
@@ -144,6 +153,31 @@ function nowTime() {
 
 function cleanText(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength);
+}
+
+function cleanBotName(value) {
+  return String(value || 'SelimBot').trim().replace(/\s+/g, ' ').slice(0, 40) || 'SelimBot';
+}
+
+function cleanBotUsername(value) {
+  const raw = String(value || 'SelimBot').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 24);
+  return raw || 'selimbot';
+}
+
+function botMentioned(text) {
+  const t = String(text || '').trim();
+  const botName = AI_BOT_NAME.toLowerCase().replace(/\s+/g, '');
+  return /^@bot\b/i.test(t) || new RegExp(`^@${botName}\\b`, 'i').test(t);
+}
+
+function extractBotPrompt(text) {
+  const t = String(text || '').trim();
+  const botName = AI_BOT_NAME.toLowerCase().replace(/\s+/g, '');
+  return t
+    .replace(/^@bot\b[:,]?\s*/i, '')
+    .replace(new RegExp(`^@${botName}\\b[:,]?\\s*`, 'i'), '')
+    .trim()
+    .slice(0, 1800);
 }
 
 function getClientIp(req) {
@@ -363,6 +397,234 @@ async function notifyRoomMentions({ room, text, senderId, senderUsername }) {
   }
 }
 
+
+/* AI BOT */
+
+async function ensureAiBotUser() {
+  if (aiBotUserCache) return aiBotUserCache;
+
+  let result = await pool.query('SELECT id, username, display_name, avatar_url FROM users WHERE LOWER(username) = $1 LIMIT 1', [AI_BOT_USERNAME]);
+
+  if (result.rows.length === 0) {
+    const passwordHash = await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 10);
+    result = await pool.query(
+      `INSERT INTO users (username, password_hash, display_name, bio, global_role)
+       VALUES ($1, $2, $3, $4, 'user')
+       RETURNING id, username, display_name, avatar_url`,
+      [AI_BOT_USERNAME, passwordHash, AI_BOT_NAME, 'Ben Selim Chat içindeki yapay zeka botuyum. @bot yazarak beni çağırabilirsin.']
+    );
+  } else if (result.rows[0].display_name !== AI_BOT_NAME) {
+    result = await pool.query(
+      `UPDATE users SET display_name = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url`,
+      [AI_BOT_NAME, result.rows[0].id]
+    );
+  }
+
+  aiBotUserCache = result.rows[0];
+  return aiBotUserCache;
+}
+
+async function ensureAiFriendship(userId) {
+  const bot = await ensureAiBotUser();
+  if (bot.id === userId) return bot;
+
+  const a = Math.min(Number(userId), Number(bot.id));
+  const b = Math.max(Number(userId), Number(bot.id));
+
+  await pool.query(
+    `INSERT INTO friendships (requester_id, addressee_id, status, updated_at)
+     VALUES ($1, $2, 'accepted', CURRENT_TIMESTAMP)
+     ON CONFLICT (requester_id, addressee_id)
+     DO UPDATE SET status = 'accepted', updated_at = CURRENT_TIMESTAMP`,
+    [a, b]
+  );
+
+  return bot;
+}
+
+function checkAiCooldown(userId) {
+  const now = Date.now();
+  const key = String(userId);
+  const last = aiBotCooldowns.get(key) || 0;
+  const wait = AI_BOT_COOLDOWN_MS - (now - last);
+
+  if (wait > 0) return Math.ceil(wait / 1000);
+
+  aiBotCooldowns.set(key, now);
+  return 0;
+}
+
+async function askGroq(prompt, context = {}) {
+  if (!GROQ_API_KEY) throw new Error('GROQ_API_KEY eksik.');
+
+  const systemPrompt = [
+    `Sen ${AI_BOT_NAME} adında Selim Chat içinde çalışan Türkçe konuşan yardımcı bir botsun.`,
+    'Kısa, net, samimi ve doğal cevap ver.',
+    'Kullanıcı Türkçe konuşuyorsa Türkçe cevap ver.',
+    'Gereksiz uzun yazma; genelde 1-6 cümle yeter.',
+    'Kod istenirse okunabilir kod ver.',
+    'Tehlikeli, gizli anahtar, şifre veya kötüye kullanım isteklerine yardımcı olma.'
+  ].join(' ');
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Bağlam: ${context.scope || 'chat'}${context.room ? ` / oda: ${context.room}` : ''}${context.groupName ? ` / grup: ${context.groupName}` : ''}\nKullanıcı: ${context.username || 'kullanıcı'}\nMesaj: ${prompt}` }
+      ],
+      temperature: 0.7,
+      max_tokens: 450
+    })
+  });
+
+  const raw = await response.text();
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    throw new Error(`Groq cevabı okunamadı. HTTP ${response.status}`);
+  }
+
+  if (!response.ok) {
+    const message = data.error?.message || `Groq hata verdi. HTTP ${response.status}`;
+    throw new Error(message);
+  }
+
+  return cleanText(data.choices?.[0]?.message?.content || '', 4000) || 'Cevap üretemedim.';
+}
+
+async function maybeHandleAiBot({ scope, text, senderId, senderUsername, room, groupId, groupName }) {
+  if (!AI_BOT_ENABLED || !botMentioned(text)) return;
+
+  const wait = checkAiCooldown(senderId);
+  if (wait > 0) {
+    if (scope === 'room' && room) io.to(room).emit('system_message', `${AI_BOT_NAME}: Çok hızlı yazıyorsun kanka. ${wait} saniye bekle.`);
+    else emitToUser(senderId, 'notification', { type: 'error', payload: { message: `${AI_BOT_NAME}: ${wait} saniye bekle.` } });
+    return;
+  }
+
+  const prompt = extractBotPrompt(text);
+  if (!prompt) {
+    const helpText = `Beni şöyle çağır: @bot oyun fikri ver`;
+    await sendAiBotMessage({ scope, text: helpText, targetUserId: senderId, room, groupId });
+    return;
+  }
+
+  try {
+    const answer = await askGroq(prompt, { scope, room, groupName, username: senderUsername });
+    await sendAiBotMessage({ scope, text: answer, targetUserId: senderId, room, groupId });
+  } catch (error) {
+    console.error('AI bot hatası:', error);
+    const message = `${AI_BOT_NAME} cevap veremedi: ${String(error.message || error).slice(0, 160)}`;
+    if (scope === 'room' && room) io.to(room).emit('system_message', message);
+    else emitToUser(senderId, 'notification', { type: 'error', payload: { message } });
+  }
+}
+
+async function sendAiBotMessage({ scope, text, targetUserId, room, groupId }) {
+  const bot = scope === 'dm' ? await ensureAiFriendship(targetUserId) : await ensureAiBotUser();
+  const botDisplayName = bot.display_name || AI_BOT_NAME;
+  const createdAt = new Date();
+
+  if (scope === 'room') {
+    const saved = await pool.query(
+      `INSERT INTO messages (room, user_id, username, text, message_type)
+       VALUES ($1, $2, $3, $4, 'text')
+       RETURNING id, room, username, text, created_at, edited_at, deleted_at, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id`,
+      [room, bot.id, bot.username, text]
+    );
+
+    const msg = saved.rows[0];
+    io.to(room).emit('chat_message', {
+      id: msg.id,
+      room: msg.room,
+      username: botDisplayName,
+      avatar_url: bot.avatar_url || null,
+      text: msg.text,
+      message_type: msg.message_type,
+      file_name: msg.file_name,
+      file_mime: msg.file_mime,
+      file_data: msg.file_data,
+      file_path: msg.file_path,
+      file_size: msg.file_size,
+      reply_to_id: msg.reply_to_id,
+      reply_username: null,
+      reply_text: null,
+      edited_at: msg.edited_at,
+      deleted_at: msg.deleted_at,
+      time: nowTime()
+    });
+    return;
+  }
+
+  if (scope === 'group') {
+    const saved = await pool.query(
+      `INSERT INTO group_messages (group_id, sender_id, text, message_type)
+       VALUES ($1, $2, $3, 'text')
+       RETURNING id, group_id, sender_id, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, edited_at, deleted_at, created_at`,
+      [groupId, bot.id, text]
+    );
+
+    const msg = {
+      ...saved.rows[0],
+      username: botDisplayName,
+      avatar_url: bot.avatar_url || null,
+      reply_username: null,
+      reply_text: null,
+      time: nowTime()
+    };
+
+    await emitGroupToMembers(groupId, 'group_message', msg);
+    return;
+  }
+
+  if (scope === 'dm') {
+    const saved = await pool.query(
+      `INSERT INTO dm_messages (sender_id, receiver_id, text, message_type)
+       VALUES ($1, $2, $3, 'text')
+       RETURNING id, sender_id, receiver_id, text, created_at, edited_at, deleted_at, read_at, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id`,
+      [bot.id, targetUserId, text]
+    );
+
+    const msg = {
+      id: saved.rows[0].id,
+      sender_id: saved.rows[0].sender_id,
+      receiver_id: saved.rows[0].receiver_id,
+      sender_username: botDisplayName,
+      sender_avatar_url: bot.avatar_url || null,
+      text: saved.rows[0].text,
+      message_type: saved.rows[0].message_type,
+      file_name: saved.rows[0].file_name,
+      file_mime: saved.rows[0].file_mime,
+      file_data: saved.rows[0].file_data,
+      file_path: saved.rows[0].file_path,
+      file_size: saved.rows[0].file_size,
+      reply_to_id: saved.rows[0].reply_to_id,
+      reply_username: null,
+      reply_text: null,
+      edited_at: saved.rows[0].edited_at,
+      deleted_at: saved.rows[0].deleted_at,
+      read_at: saved.rows[0].read_at,
+      time: nowTime(),
+      created_at: saved.rows[0].created_at
+    };
+
+    emitToUser(targetUserId, 'dm_message', msg);
+    await createNotification(targetUserId, 'dm', {
+      fromId: bot.id,
+      fromUsername: botDisplayName,
+      text: text.slice(0, 80)
+    });
+  }
+}
+
+
 async function initDatabase() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -575,6 +837,15 @@ async function initDatabase() {
       console.log('Owner otomatik en eski kullanıcıya verildi.');
     } else {
       console.log(`OWNER_USERNAME bulunamadı: ${OWNER_USERNAME}`);
+    }
+  }
+
+  if (AI_BOT_ENABLED) {
+    try {
+      const bot = await ensureAiBotUser();
+      console.log(`AI bot hazır: ${bot.display_name || AI_BOT_NAME} (@${bot.username}) / model: ${GROQ_MODEL}`);
+    } catch (error) {
+      console.error('AI bot hazırlanamadı:', error);
     }
   }
 
@@ -1865,6 +2136,14 @@ io.on('connection', (socket) => {
         senderId: socket.user.id,
         senderUsername: socket.user.username
       });
+
+      maybeHandleAiBot({
+        scope: 'room',
+        text,
+        senderId: socket.user.id,
+        senderUsername: socket.user.username,
+        room
+      }).catch((error) => console.error('Oda AI bot işlem hatası:', error));
     } catch (error) {
       console.error('Mesaj kayıt hatası:', error);
       socket.emit('system_message', 'Mesaj gönderilemedi.');
@@ -2027,6 +2306,13 @@ io.on('connection', (socket) => {
         fromUsername: socket.user.username,
         text: cleanMessage.slice(0, 80)
       });
+
+      maybeHandleAiBot({
+        scope: 'dm',
+        text: cleanMessage,
+        senderId: socket.user.id,
+        senderUsername: socket.user.username
+      }).catch((error) => console.error('DM AI bot işlem hatası:', error));
     } catch (error) {
       console.error('DM hatası:', error);
       socket.emit('notification', { type: 'error', payload: { message: 'DM gönderilemedi.' } });
@@ -2169,6 +2455,16 @@ io.on('connection', (socket) => {
           text: cleanMessage || fileName || 'Dosya'
         });
       }
+
+      const groupNameResult = await pool.query('SELECT name FROM group_chats WHERE id = $1', [groupId]);
+      maybeHandleAiBot({
+        scope: 'group',
+        text: cleanMessage,
+        senderId: socket.user.id,
+        senderUsername: socket.user.username,
+        groupId,
+        groupName: groupNameResult.rows[0]?.name || ''
+      }).catch((error) => console.error('Grup AI bot işlem hatası:', error));
     } catch (error) {
       console.error('Grup mesaj hatası:', error);
     }
