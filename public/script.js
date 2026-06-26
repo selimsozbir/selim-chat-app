@@ -100,6 +100,7 @@ let selectedMentionIndex = 0;
 let myRoomRole = null;
 let roomMutedUsers = [];
 let canOpenGlobalAdmin = false;
+let isUploadingFile = false;
 
 const contextMenu = document.createElement('div');
 contextMenu.className = 'message-context-menu hidden';
@@ -330,32 +331,65 @@ voiceButton.addEventListener('click', async () => {
 });
 
 async function sendFileMessage(file) {
-  if (file.size > 5_000_000) {
-    throw new Error('Dosya çok büyük. 5 MB altı dosya seç.');
+  if (isUploadingFile) {
+    addSystemMessage('Zaten bir dosya yükleniyor.');
+    return;
   }
 
-  const dataUrl = await fileToDataUrl(file);
-  const isImage = file.type.startsWith('image/');
-  const isAudio = file.type.startsWith('audio/');
+  if (file.size > 25_000_000) {
+    throw new Error('Dosya çok büyük. 25 MB altı dosya seç.');
+  }
 
-  const payload = {
-    text: isImage ? 'Fotoğraf' : isAudio ? 'Ses dosyası' : file.name,
-    type: isImage ? 'image' : isAudio ? 'audio' : 'file',
-    fileName: file.name,
-    fileMime: file.type || 'application/octet-stream',
-    fileData: dataUrl
-  };
+  isUploadingFile = true;
+  attachButton.disabled = true;
+  voiceButton.disabled = true;
 
-  if (chatMode === 'dm') {
-    if (!activeFriend) {
-      addSystemMessage('Önce bir arkadaş seç.');
-      return;
+  try {
+    addSystemMessage('Dosya storage’a yükleniyor...');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Dosya yüklenemedi.');
     }
-    socket.emit('dm_message', { receiverId: activeFriend.id, ...payload, replyToId: replyingTo?.id || null });
-    clearReply();
-  } else {
-    socket.emit('chat_message', { ...payload, replyToId: replyingTo?.id || null });
-    clearReply();
+
+    const uploaded = data.file;
+    const payload = {
+      text: uploaded.type === 'image' ? 'Fotoğraf' : uploaded.type === 'audio' ? 'Ses dosyası' : uploaded.fileName,
+      type: uploaded.type,
+      fileName: uploaded.fileName,
+      fileMime: uploaded.fileMime,
+      fileData: uploaded.fileUrl,
+      filePath: uploaded.filePath,
+      fileSize: uploaded.fileSize
+    };
+
+    if (chatMode === 'dm') {
+      if (!activeFriend) {
+        addSystemMessage('Önce bir arkadaş seç.');
+        return;
+      }
+      socket.emit('dm_message', { receiverId: activeFriend.id, ...payload, replyToId: replyingTo?.id || null });
+      clearReply();
+    } else {
+      socket.emit('chat_message', { ...payload, replyToId: replyingTo?.id || null });
+      clearReply();
+    }
+  } finally {
+    isUploadingFile = false;
+    attachButton.disabled = false;
+    voiceButton.disabled = false;
   }
 }
 
@@ -710,6 +744,8 @@ async function loadOldRoomMessages(room) {
         file_name: message.file_name,
         file_mime: message.file_mime,
         file_data: message.file_data,
+        file_path: message.file_path,
+        file_size: message.file_size,
         reply_to_id: message.reply_to_id,
         reply_username: message.reply_username,
         reply_text: message.reply_text,
@@ -735,6 +771,8 @@ function addRoomMessage(message) {
     file_name: message.file_name,
     file_mime: message.file_mime,
     file_data: message.file_data,
+    file_path: message.file_path,
+    file_size: message.file_size,
     reply_to_id: message.reply_to_id,
     reply_username: message.reply_username,
     reply_text: message.reply_text,
@@ -1015,6 +1053,8 @@ function addDmMessage(message) {
     file_name: message.file_name,
     file_mime: message.file_mime,
     file_data: message.file_data,
+    file_path: message.file_path,
+    file_size: message.file_size,
     reply_to_id: message.reply_to_id,
     reply_username: message.reply_username,
     reply_text: message.reply_text,
@@ -1110,7 +1150,7 @@ function renderUsers(users) {
   loadModeration();
 }
 
-function addMessage({ type, id, username, avatar_url, text, message_type, file_name, file_mime, file_data, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read }) {
+function addMessage({ type, id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read }) {
   const div = document.createElement('div');
   div.className = `message ${mine ? 'mine' : ''}`;
   div.dataset.type = type;
@@ -1148,7 +1188,7 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
   bubble.appendChild(body);
 
   if (file_data && !deleted) {
-    bubble.appendChild(renderMedia({ message_type, file_name, file_mime, file_data }));
+    bubble.appendChild(renderMedia({ message_type, file_name, file_mime, file_data, file_path, file_size }));
   }
 
   if (mine && !deleted) {
@@ -1314,7 +1354,7 @@ function clearReply() {
   replyText.textContent = '';
 }
 
-function renderMedia({ message_type, file_name, file_mime, file_data }) {
+function renderMedia({ message_type, file_name, file_mime, file_data, file_path, file_size }) {
   const wrap = document.createElement('div');
   wrap.className = 'message-media';
 
@@ -1341,8 +1381,11 @@ function renderMedia({ message_type, file_name, file_mime, file_data }) {
   const link = document.createElement('a');
   link.className = 'file-link';
   link.href = file_data;
+  link.target = '_blank';
+  link.rel = 'noopener';
   link.download = file_name || 'dosya';
-  link.textContent = `📄 ${file_name || 'Dosya indir'}`;
+  const sizeText = file_size ? ` (${formatFileSize(file_size)})` : '';
+  link.textContent = `📄 ${file_name || 'Dosya aç'}${sizeText}`;
   wrap.appendChild(link);
   return wrap;
 }
@@ -1435,6 +1478,14 @@ function openImageModal(src) {
 function closeImageModal() {
   imageModal.classList.add('hidden');
   imageModalImg.src = '';
+}
+
+function formatFileSize(bytes) {
+  const n = Number(bytes || 0);
+  if (!n) return '';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function fileToDataUrl(file) {
