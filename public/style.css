@@ -3830,3 +3830,50 @@ body.bot-compact-mode .bot-message .meta {
     box-shadow: 0 0 20px rgba(139, 92, 246, 0.35);
   }
 }
+
+
+/* =========================================================
+   v7.9.2 — Mobile Send Button + Own Message Fix
+   ========================================================= */
+
+@media (max-width: 760px) {
+  .message-form button[type="submit"] {
+    position: relative !important;
+    flex: 0 0 46px !important;
+    width: 46px !important;
+    min-width: 46px !important;
+    max-width: 46px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-indent: -9999px !important;
+    color: transparent !important;
+    line-height: 0 !important;
+  }
+
+  .message-form button[type="submit"]::after {
+    content: "➤" !important;
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-indent: 0 !important;
+    color: #fff !important;
+    font-size: 18px !important;
+    line-height: 1 !important;
+  }
+
+  .message-form input#messageInput {
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .message-form button[type="submit"] {
+    flex-basis: 42px !important;
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
+  }
+}
