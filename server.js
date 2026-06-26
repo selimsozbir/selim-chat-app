@@ -148,6 +148,66 @@ const userSockets = new Map();
 const aiBotCooldowns = new Map();
 let aiBotUserCache = null;
 
+
+function cleanHexColor(value) {
+  const color = String(value || '').trim();
+  return /^#[0-9a-fA-F]{6}$/.test(color) ? color.toLowerCase() : '#8b5cf6';
+}
+
+function cleanFavoriteEgg(value) {
+  const allowed = new Set([
+    '/serbia', '/limbo', '/vertex', '/rome', '/egypt', '/anitkabir', '/cat', '/reset',
+    '/rift', '/5ecropolis', '/selim', '/xara', '/nico', '/yasin', '/jung', '/fetullah',
+    '/blake', '/feiz', '/pnico', '/pyasin', '/ataturk'
+  ]);
+  const egg = String(value || '').trim().toLowerCase();
+  return allowed.has(egg) ? egg : '/serbia';
+}
+
+function profileLevelFromXp(xp) {
+  const safeXp = Math.max(0, Number(xp) || 0);
+  return Math.max(1, Math.floor(Math.sqrt(safeXp / 100)) + 1);
+}
+
+function levelProgressFromXp(xp) {
+  const safeXp = Math.max(0, Number(xp) || 0);
+  const level = profileLevelFromXp(safeXp);
+  const currentLevelStart = Math.pow(level - 1, 2) * 100;
+  const nextLevelStart = Math.pow(level, 2) * 100;
+  const progress = Math.max(0, Math.min(100, Math.round(((safeXp - currentLevelStart) / (nextLevelStart - currentLevelStart)) * 100)));
+  return { level, progress, currentLevelStart, nextLevelStart };
+}
+
+function buildProfileBadges({ user, stats }) {
+  const badges = [];
+
+  if ((stats.total_messages || 0) >= 1) badges.push({ key: 'first_signal', icon: '📡', name: 'First Signal', description: 'İlk mesajını gönderdi.' });
+  if ((stats.total_messages || 0) >= 100) badges.push({ key: 'active_member', icon: '💬', name: 'Active Member', description: '100+ mesaj gönderdi.' });
+  if ((stats.total_messages || 0) >= 500) badges.push({ key: 'dimension_speaker', icon: '🌀', name: 'Dimension Speaker', description: '500+ mesaj gönderdi.' });
+  if ((stats.group_messages || 0) >= 25) badges.push({ key: 'group_energy', icon: '👥', name: 'Group Energy', description: 'Gruplarda aktif.' });
+  if ((stats.dm_messages || 0) >= 25) badges.push({ key: 'dm_operator', icon: '📨', name: 'DM Operator', description: 'DM tarafında aktif.' });
+  if (user.avatar_url) badges.push({ key: 'face_revealed', icon: '🖼️', name: 'Face Revealed', description: 'Profil fotoğrafı ekledi.' });
+  if (user.profile_cover_url) badges.push({ key: 'cover_artist', icon: '🎨', name: 'Cover Artist', description: 'Profil kapağı ekledi.' });
+  if (user.favorite_egg === '/vertex') badges.push({ key: 'vertex_witness', icon: '🔴', name: 'VERTEX Witness', description: 'Favori easter egg: VERTEX.' });
+  if (user.favorite_egg === '/limbo') badges.push({ key: 'limbo_survivor', icon: '⚫', name: 'Limbo Survivor', description: 'Favori easter egg: Limbo.' });
+  if (user.favorite_egg === '/ataturk') badges.push({ key: 'respect_protocol', icon: '🇹🇷', name: 'Respect Protocol', description: 'Saygı protokolü aktif.' });
+
+  if (badges.length === 0) badges.push({ key: 'new_anomaly', icon: '✨', name: 'New Anomaly', description: 'Yeni profil.' });
+
+  return badges.slice(0, 10);
+}
+
+async function rewardUserActivity(userId, xpAmount = 5, shardAmount = 1) {
+  await pool.query(
+    `UPDATE users
+     SET xp = COALESCE(xp, 0) + $1,
+         shards = COALESCE(shards, 0) + $2
+     WHERE id = $3`,
+    [xpAmount, shardAmount, userId]
+  );
+}
+
+
 function nowTime() {
   return new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 }
@@ -694,6 +754,12 @@ async function initDatabase() {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_user_agent TEXT`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_cover_url TEXT`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_color VARCHAR(20) DEFAULT '#8b5cf6'`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_egg VARCHAR(40) DEFAULT '/serbia'`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS xp INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS shards INTEGER DEFAULT 0`);
+
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ip_bans (
@@ -876,7 +942,7 @@ app.post('/api/register', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO users (username, password_hash, display_name, last_ip, last_user_agent, last_active)
        VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, xp, shards`,
       [username, passwordHash, username, ip, getClientUserAgent(req)]
     );
 
@@ -943,7 +1009,8 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Geçersiz kullanıcı.' });
 
   const result = await pool.query(
-    `SELECT id, username, display_name, avatar_url, bio, global_role, created_at, last_seen, last_active
+    `SELECT id, username, display_name, avatar_url, bio, global_role, created_at, last_seen, last_active,
+            profile_cover_url, profile_color, favorite_egg, xp, shards
      FROM users WHERE id = $1`,
     [id]
   );
@@ -951,9 +1018,37 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
   if (result.rows.length === 0) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
 
   const profile = result.rows[0];
+
+  const statsResult = await pool.query(
+    `SELECT
+       (SELECT COUNT(*)::int FROM messages WHERE user_id = $1 AND deleted_at IS NULL) AS room_messages,
+       (SELECT COUNT(*)::int FROM dm_messages WHERE sender_id = $1 AND deleted_at IS NULL) AS dm_messages,
+       (SELECT COUNT(*)::int FROM group_messages WHERE sender_id = $1 AND deleted_at IS NULL) AS group_messages,
+       (SELECT COUNT(*)::int FROM friendships WHERE status = 'accepted' AND (requester_id = $1 OR addressee_id = $1)) AS friends_count,
+       (SELECT COUNT(*)::int FROM group_members WHERE user_id = $1) AS groups_count`,
+    [id]
+  );
+
+  const stats = statsResult.rows[0] || {};
+  stats.total_messages = Number(stats.room_messages || 0) + Number(stats.dm_messages || 0) + Number(stats.group_messages || 0);
+
+  const fallbackXp = stats.total_messages * 5;
+  const xp = Math.max(Number(profile.xp || 0), fallbackXp);
+  const shards = Math.max(Number(profile.shards || 0), Math.floor(stats.total_messages / 3));
+  const levelInfo = levelProgressFromXp(xp);
+  const badges = buildProfileBadges({ user: profile, stats });
+
   res.json({
     profile: {
       ...profile,
+      xp,
+      shards,
+      level: levelInfo.level,
+      level_progress: levelInfo.progress,
+      next_level_xp: levelInfo.nextLevelStart,
+      current_level_xp: levelInfo.currentLevelStart,
+      stats,
+      badges,
       online: userSockets.has(String(id))
     }
   });
@@ -962,11 +1057,63 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
 app.post('/api/profile/bio', authMiddleware, async (req, res) => {
   const bio = cleanText(req.body.bio, 160);
   const result = await pool.query(
-    'UPDATE users SET bio = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen',
+    'UPDATE users SET bio = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, xp, shards',
     [bio, req.user.id]
   );
 
   res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
+});
+
+
+
+app.post('/api/profile/v2', authMiddleware, async (req, res) => {
+  try {
+    const profileColor = cleanHexColor(req.body.profileColor);
+    const favoriteEgg = cleanFavoriteEgg(req.body.favoriteEgg);
+    const coverData = String(req.body.coverData || '');
+
+    if (coverData && !coverData.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Geçerli bir profil kapağı seç.' });
+    }
+
+    if (coverData && coverData.length > 2600000) {
+      return res.status(400).json({ error: 'Profil kapağı çok büyük. Daha küçük görsel seç.' });
+    }
+
+    const result = await pool.query(
+      `UPDATE users
+       SET profile_color = $1,
+           favorite_egg = $2,
+           profile_cover_url = COALESCE(NULLIF($3, ''), profile_cover_url)
+       WHERE id = $4
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, xp, shards,
+                 profile_cover_url, profile_color, favorite_egg, xp, shards`,
+      [profileColor, favoriteEgg, coverData, req.user.id]
+    );
+
+    res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
+  } catch (error) {
+    console.error('Profil V2 hatası:', error);
+    res.status(500).json({ error: 'Profil kartı güncellenemedi.' });
+  }
+});
+
+app.delete('/api/profile/cover', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE users
+       SET profile_cover_url = NULL
+       WHERE id = $1
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, xp, shards,
+                 profile_cover_url, profile_color, favorite_egg, xp, shards`,
+      [req.user.id]
+    );
+
+    res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
+  } catch (error) {
+    console.error('Profil kapağı kaldırma hatası:', error);
+    res.status(500).json({ error: 'Profil kapağı kaldırılamadı.' });
+  }
 });
 
 
@@ -999,7 +1146,7 @@ app.patch('/api/settings/profile', authMiddleware, async (req, res) => {
            display_name = $2,
            bio = $3
        WHERE id = $4
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, xp, shards`,
       [username, displayName || username, bio, req.user.id]
     );
 
@@ -1155,7 +1302,7 @@ app.post('/api/avatar', authMiddleware, async (req, res) => {
     if (avatarData.length > 1500000) return res.status(400).json({ error: 'Profil fotoğrafı çok büyük. Daha küçük görsel seç.' });
 
     const result = await pool.query(
-      'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen',
+      'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, xp, shards',
       [avatarData, req.user.id]
     );
 
@@ -1169,7 +1316,7 @@ app.post('/api/avatar', authMiddleware, async (req, res) => {
 app.delete('/api/avatar', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'UPDATE users SET avatar_url = NULL WHERE id = $1 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen',
+      'UPDATE users SET avatar_url = NULL WHERE id = $1 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, xp, shards',
       [req.user.id]
     );
 
@@ -2183,6 +2330,8 @@ io.on('connection', (socket) => {
          RETURNING id, room, username, text, created_at, edited_at, deleted_at, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id`,
         [room, socket.user.id, socket.user.username, text, messageType, fileName, fileMime, fileData || null, filePath, fileSize, replyToId]
       );
+
+      await rewardUserActivity(socket.user.id, 5, 1);
 
       const avatarResult = await pool.query('SELECT avatar_url, display_name, username FROM users WHERE id = $1', [socket.user.id]);
       const msg = saved.rows[0];
