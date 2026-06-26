@@ -72,6 +72,7 @@ contextMenu.innerHTML = `
   <button data-emoji="👍">👍</button>
   <button data-emoji="😂">😂</button>
   <button data-emoji="🔥">🔥</button>
+  <button data-emoji="😘">😘</button>
   <button data-action="edit">Düzenle</button>
   <button data-action="delete" class="danger">Sil</button>
 `;
@@ -466,7 +467,7 @@ function connectSocket() {
   });
 
   socket.on('dm_typing', ({ fromId, fromUsername }) => {
-    if (chatMode === 'dm' && activeFriend && activeFriend.id === fromId) {
+    if (chatMode === 'dm' && activeFriend && String(activeFriend.id) === String(fromId)) {
       typingText.textContent = `${fromUsername} yazıyor...`;
       clearTimeout(dmTypingTimer);
       dmTypingTimer = setTimeout(() => typingText.textContent = '', 1200);
@@ -512,8 +513,8 @@ function connectSocket() {
     }
   });
 
-  socket.on('reaction_added', ({ scope, messageId, emoji }) => {
-    addReactionToElement(scope, messageId, emoji);
+  socket.on('reaction_state', ({ scope, messageId, reactions }) => {
+    setReactionsOnElement(scope, messageId, reactions);
   });
 
   socket.on('friend_removed', () => {
@@ -1068,6 +1069,7 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
   div.appendChild(avatar);
   div.appendChild(bubble);
   messagesEl.appendChild(div);
+  loadReactionsForMessage(type, id);
   scrollToBottom();
 }
 
@@ -1179,7 +1181,7 @@ function addReactionPicker(bubble, scope, messageId) {
   const picker = document.createElement('div');
   picker.className = 'reaction-picker';
 
-  ['👍', '😂', '❤️', '🔥'].forEach((emoji) => {
+  ['👍', '😂', '❤️', '🔥', '😘'].forEach((emoji) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'message-action';
@@ -1196,38 +1198,57 @@ function addReactionPicker(bubble, scope, messageId) {
 
 async function sendReaction(scope, messageId, emoji) {
   try {
-    await api('/api/reactions', {
+    const data = await api('/api/reactions', {
       method: 'POST',
       body: JSON.stringify({ scope, messageId, emoji })
     });
+
+    if (data.reactions) {
+      setReactionsOnElement(scope, messageId, data.reactions);
+    }
   } catch (error) {
     addSystemMessage(error.message);
   }
 }
 
-function addReactionToElement(scope, messageId, emoji) {
+function setReactionsOnElement(scope, messageId, reactionState) {
   const el = document.querySelector(`.message[data-type="${scope}"][data-id="${messageId}"]`);
   if (!el) return;
 
-  let reactions = el.querySelector('.reactions');
+  const reactions = el.querySelector('.reactions');
   if (!reactions) return;
 
-  const existing = Array.from(reactions.querySelectorAll('.reaction-pill'))
-    .find(p => p.dataset.emoji === emoji);
+  reactions.innerHTML = '';
 
-  if (existing) {
-    const count = Number(existing.dataset.count || '1') + 1;
-    existing.dataset.count = String(count);
-    existing.textContent = `${emoji} ${count}`;
-    return;
-  }
+  (reactionState || []).forEach((reaction) => {
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = 'reaction-pill';
+    pill.dataset.emoji = reaction.emoji;
+    pill.dataset.users = JSON.stringify(reaction.users || []);
+    pill.textContent = `${reaction.emoji} ${reaction.count}`;
 
-  const pill = document.createElement('span');
-  pill.className = 'reaction-pill';
-  pill.dataset.emoji = emoji;
-  pill.dataset.count = '1';
-  pill.textContent = `${emoji} 1`;
-  reactions.appendChild(pill);
+    pill.onclick = (event) => {
+      event.stopPropagation();
+      showReactionUsers(reaction.emoji, reaction.users || []);
+    };
+
+    reactions.appendChild(pill);
+  });
+}
+
+async function loadReactionsForMessage(scope, messageId) {
+  if (!messageId) return;
+
+  try {
+    const data = await api(`/api/reactions/${scope}/${messageId}`);
+    setReactionsOnElement(scope, messageId, data.reactions || []);
+  } catch {}
+}
+
+function showReactionUsers(emoji, users) {
+  const names = users.map(user => user.username).join(', ');
+  alert(`${emoji} bırakanlar: ${names || 'Kimse yok'}`);
 }
 
 function openImageModal(src) {
@@ -1254,6 +1275,7 @@ function addSystemMessage(message) {
   div.className = 'message system';
   div.textContent = message;
   messagesEl.appendChild(div);
+  loadReactionsForMessage(type, id);
   scrollToBottom();
 }
 
