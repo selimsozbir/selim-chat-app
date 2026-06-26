@@ -2479,7 +2479,7 @@ function addGroupMessage(message) {
 /* 5ECROPOLIS EASTER EGGS */
 
 let fiveEggTimeout = null;
-const FIVE_EGG_COMMANDS = ['/serbia', '/limbo', '/vertex', '/rome', '/egypt', '/anitkabir', '/cat', '/reset', '/rift', '/5ecropolis'];
+const FIVE_EGG_COMMANDS = ['/serbia', '/limbo', '/vertex', '/rome', '/egypt', '/anitkabir', '/cat', '/reset', '/rift', '/5ecropolis', '/selim', '/xara', '/nico', '/yasin', '/jung', '/fetullah'];
 
 function getFiveEggLayer() {
   let layer = document.getElementById('fiveEggLayer');
@@ -2493,7 +2493,7 @@ function getFiveEggLayer() {
 }
 
 function clearFiveEggClasses() {
-  document.body.classList.remove('egg-serbia', 'egg-limbo', 'egg-vertex', 'egg-rome', 'egg-egypt', 'egg-anitkabir', 'egg-cat', 'egg-reset', 'egg-rift', 'egg-5ecropolis');
+  document.body.classList.remove('egg-serbia', 'egg-limbo', 'egg-vertex', 'egg-rome', 'egg-egypt', 'egg-anitkabir', 'egg-cat', 'egg-reset', 'egg-rift', 'egg-5ecropolis', 'egg-selim', 'egg-xara', 'egg-nico', 'egg-yasin', 'egg-jung', 'egg-fetullah');
   const layer = getFiveEggLayer();
   layer.innerHTML = '';
 }
@@ -2635,6 +2635,88 @@ function runFiveEgg(command, username = '') {
     return true;
   }
 
+
+
+  if (normalized === '/selim') {
+    document.body.classList.add('egg-selim');
+    layer.innerHTML = `
+      <div class="egg-selim-pixels"></div>
+      <div class="egg-selim-text">SELIM</div>
+      <div class="egg-selim-sub">red pixels scattered across the simulation</div>
+    `;
+    addSystemMessage(`🧩 Selim antivirüs tarafından kırmızı piksellere ayrıldı.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3900);
+    return true;
+  }
+
+  if (normalized === '/xara') {
+    document.body.classList.add('egg-xara');
+    layer.innerHTML = `
+      <div class="egg-xara-core"></div>
+      <div class="egg-xara-orbit egg-xara-orbit-1"></div>
+      <div class="egg-xara-orbit egg-xara-orbit-2"></div>
+      <div class="egg-xara-text">XARA</div>
+      <div class="egg-xara-sub">the reset button changed the genre</div>
+    `;
+    addSystemMessage(`✨ Xara sahneye girdi. Zaman değil, tür sıfırlandı.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4100);
+    return true;
+  }
+
+  if (normalized === '/nico') {
+    document.body.classList.add('egg-nico');
+    layer.innerHTML = `
+      <div class="egg-nico-trail"></div>
+      <div class="egg-nico-star egg-nico-star-1"></div>
+      <div class="egg-nico-star egg-nico-star-2"></div>
+      <div class="egg-nico-star egg-nico-star-3"></div>
+      <div class="egg-nico-text">NICO</div>
+      <div class="egg-nico-sub">crossing dimensions with cold-blooded calm</div>
+    `;
+    addSystemMessage(`❄️ Nico boyutlar arasında sessizce kaydı.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3900);
+    return true;
+  }
+
+  if (normalized === '/yasin') {
+    document.body.classList.add('egg-yasin');
+    layer.innerHTML = `
+      <div class="egg-yasin-petal egg-yasin-petal-1"></div>
+      <div class="egg-yasin-petal egg-yasin-petal-2"></div>
+      <div class="egg-yasin-petal egg-yasin-petal-3"></div>
+      <div class="egg-yasin-text">YASIN MENEKŞE</div>
+      <div class="egg-yasin-sub">violet signal spreading through the portal noise</div>
+    `;
+    addSystemMessage(`🟣 Yasin Menekşe sinyali yayıldı. Portal gürültüsü mora döndü.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4100);
+    return true;
+  }
+
+  if (normalized === '/jung') {
+    document.body.classList.add('egg-jung');
+    layer.innerHTML = `
+      <div class="egg-jung-wave"></div>
+      <div class="egg-jung-wave egg-jung-wave-2"></div>
+      <div class="egg-jung-text">JUNG BLAKE</div>
+      <div class="egg-jung-sub">bassline from another universe detected</div>
+    `;
+    addSystemMessage(`🎧 Jung Blake frekansı vurdu. Evren bass ile titriyor.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3900);
+    return true;
+  }
+
+  if (normalized === '/fetullah') {
+    document.body.classList.add('egg-fetullah');
+    layer.innerHTML = `
+      <div class="egg-fetullah-eye"></div>
+      <div class="egg-fetullah-rays"></div>
+      <div class="egg-fetullah-text">FETULLAH</div>
+      <div class="egg-fetullah-sub">oracle mode enabled · the simulation is preaching</div>
+    `;
+    addSystemMessage(`👁️ Fetullah ortaya çıktı. Simülasyon vahiy moduna geçti.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4200);
+    return true;
+  }
 
   return false;
 }
