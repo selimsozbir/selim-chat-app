@@ -1185,7 +1185,11 @@ function addRoomMessage(message) {
     reply_username: message.reply_username,
     reply_text: message.reply_text,
     time: message.time,
-    mine: user && message.username === user.username,
+    mine: user && (
+      Number(message.sender_id || message.user_id) === Number(user.id)
+      || String(message.username || '').toLowerCase() === String(user.username || '').toLowerCase()
+      || String(message.username || '').toLowerCase() === String(user.display_name || '').toLowerCase()
+    ),
     edited: Boolean(message.edited_at),
     deleted: Boolean(message.deleted_at)
   });
