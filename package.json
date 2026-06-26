@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "6.1.9",
-  "description": "Selim Chat v6.1.9 with clipboard images, Discord-like context menu and mobile fixes",
+  "version": "6.2.0",
+  "description": "Selim Chat v6.2.0 with improved reactions, reaction users, typing fixes and mobile notification cleanup",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
