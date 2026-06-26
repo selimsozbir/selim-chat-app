@@ -1618,3 +1618,138 @@ input::placeholder {
     font-size: 14px !important;
   }
 }
+
+
+/* =========================================================
+   v7.5.1 — Message visibility fix
+   v7.5.0 styled the whole message row like a bubble.
+   This restores the row layout and styles the real .msg-bubble.
+   ========================================================= */
+
+.message {
+  width: fit-content !important;
+  max-width: 78% !important;
+  display: grid !important;
+  grid-template-columns: 34px minmax(0, 1fr) !important;
+  column-gap: 9px !important;
+  align-self: flex-start !important;
+  padding: 0 !important;
+  margin: 8px 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  position: relative !important;
+}
+
+.message::before {
+  display: none !important;
+  content: none !important;
+}
+
+.message.mine {
+  align-self: flex-end !important;
+  grid-template-columns: minmax(0, 1fr) 34px !important;
+  margin-left: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.message.system {
+  width: auto !important;
+  max-width: 85% !important;
+  display: block !important;
+  align-self: center !important;
+  padding: 9px 13px !important;
+  margin: 8px auto !important;
+  background: rgba(139, 92, 246, 0.12) !important;
+  border: 1px dashed rgba(139, 92, 246, 0.32) !important;
+  border-radius: 999px !important;
+  color: #ddd6fe !important;
+  box-shadow: none !important;
+}
+
+.msg-avatar {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: 34px !important;
+  height: 34px !important;
+  align-self: end !important;
+  z-index: 2 !important;
+}
+
+.message.mine .msg-avatar {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+}
+
+.msg-bubble {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  padding: 11px 13px !important;
+  border-radius: 18px !important;
+  background: rgba(23, 23, 36, 0.88) !important;
+  border: 1px solid rgba(255,255,255,0.075) !important;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.18) !important;
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.message.mine .msg-bubble {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  background: linear-gradient(135deg, rgba(92, 54, 191, 0.88), rgba(132, 46, 151, 0.78)) !important;
+  border-color: rgba(236,72,153,0.24) !important;
+  box-shadow: 0 12px 30px rgba(139,92,246,0.18) !important;
+}
+
+.message .meta,
+.message .text,
+.message .reply-preview,
+.message .message-actions,
+.message .reactions,
+.message .read-status,
+.message .media,
+.message img,
+.message audio,
+.message a {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.message .meta {
+  display: flex !important;
+  gap: 8px !important;
+  margin-bottom: 5px !important;
+  font-size: 12px !important;
+  color: #d8d1e8 !important;
+  opacity: 0.95 !important;
+}
+
+.message .text {
+  display: block !important;
+  color: #f7f2ff !important;
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere !important;
+  min-height: 18px !important;
+}
+
+.message-content,
+.message-text {
+  color: #f7f2ff !important;
+}
+
+@media (max-width: 820px) {
+  .message {
+    max-width: 94% !important;
+  }
+
+  .msg-bubble {
+    border-radius: 16px !important;
+  }
+}
