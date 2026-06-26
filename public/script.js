@@ -95,6 +95,7 @@ let mode = 'login';
 let chatMode = 'room';
 let activeFriend = null;
 let activeGroup = null;
+let friends = [];
 let groups = [];
 let groupMembers = [];
 let selectedGroupFriendIds = new Set();
@@ -317,6 +318,13 @@ messageForm.addEventListener('submit', (event) => {
       return;
     }
     socket.emit('dm_message', { receiverId: activeFriend.id, text, type: 'text', replyToId: replyingTo?.id || null });
+    clearReply();
+  } else if (chatMode === 'group') {
+    if (!activeGroup) {
+      addSystemMessage('Önce bir grup seç.');
+      return;
+    }
+    socket.emit('group_message', { groupId: activeGroup.id, text, type: 'text', replyToId: replyingTo?.id || null });
     clearReply();
   } else {
     socket.emit('chat_message', { text, type: 'text', replyToId: replyingTo?.id || null });
@@ -996,14 +1004,17 @@ async function respondFriend(requestId, action) {
 async function loadFriends() {
   try {
     const data = await api('/api/friends');
+    friends = data.friends || [];
+    if (newGroupFriendsList) renderNewGroupFriends();
+
     friendsList.innerHTML = '';
 
-    if (data.friends.length === 0) {
+    if (friends.length === 0) {
       friendsList.innerHTML = '<div class="mini-item">Arkadaş yok.</div>';
       return;
     }
 
-    data.friends.forEach((friend) => {
+    friends.forEach((friend) => {
       const item = document.createElement('div');
       item.className = 'mini-item';
       item.innerHTML = `<div class="mini-left" data-profile-id="${friend.id}">${avatarHtml(friend.username, friend.avatar_url)}<div><strong>${escapeHtml(friend.username)}</strong><span>${formatPresence(friend)}</span></div></div>`;
@@ -2129,7 +2140,7 @@ function renderNewGroupFriends() {
   if (!newGroupFriendsList) return;
   newGroupFriendsList.innerHTML = '';
 
-  if (!friends.length) {
+  if (!Array.isArray(friends) || !friends.length) {
     newGroupFriendsList.innerHTML = '<div class="mini-item">Grup kurmak için önce arkadaş ekle.</div>';
     return;
   }
