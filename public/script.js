@@ -57,6 +57,14 @@ const messageSearchButton = document.getElementById('messageSearchButton');
 const messageSearchResults = document.getElementById('messageSearchResults');
 const myRoleText = document.getElementById('myRoleText');
 const adminMembersList = document.getElementById('adminMembersList');
+const mutedMembersList = document.getElementById('mutedMembersList');
+
+const globalAdminPanel = document.getElementById('globalAdminPanel');
+const refreshAdminButton = document.getElementById('refreshAdminButton');
+const adminUsersList = document.getElementById('adminUsersList');
+const ipBansList = document.getElementById('ipBansList');
+const ipBanInput = document.getElementById('ipBanInput');
+const ipBanButton = document.getElementById('ipBanButton');
 
 const profileModal = document.getElementById('profileModal');
 const profileCloseButton = document.getElementById('profileCloseButton');
@@ -90,6 +98,8 @@ let roomMembers = [];
 let mentionCandidates = [];
 let selectedMentionIndex = 0;
 let myRoomRole = null;
+let roomMutedUsers = [];
+let canOpenGlobalAdmin = false;
 
 const contextMenu = document.createElement('div');
 contextMenu.className = 'message-context-menu hidden';
@@ -231,6 +241,8 @@ profileModal.addEventListener('click', (event) => {
 });
 
 profileSaveBioButton.addEventListener('click', saveBio);
+refreshAdminButton.addEventListener('click', loadGlobalAdminPanel);
+ipBanButton.addEventListener('click', banIpFromInput);
 searchInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') searchUsers();
 });
@@ -489,12 +501,12 @@ async function startApp() {
   roomInput.value = currentRoom;
   connectSocket();
 
-  await Promise.allSettled([loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration()]);
+  await Promise.allSettled([refreshMe(), loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration(), loadGlobalAdminStatus()]);
 }
 
 function renderProfile() {
-  currentUsername.textContent = user.username;
-  avatarLetter.textContent = user.username.charAt(0).toUpperCase();
+  currentUsername.textContent = user.display_name || user.username;
+  avatarLetter.textContent = (user.display_name || user.username).charAt(0).toUpperCase();
 
   if (user.avatar_url) {
     avatarImg.src = user.avatar_url;
@@ -526,6 +538,12 @@ function connectSocket() {
   socket.on('room_role', ({ role }) => {
     myRoomRole = role;
     renderRole();
+  });
+
+  socket.on('global_banned', ({ reason }) => {
+    alert(reason || 'Bu hesap banlandı.');
+    localStorage.clear();
+    location.reload();
   });
 
   socket.on('room_kicked', ({ room }) => {
@@ -1428,6 +1446,206 @@ function fileToDataUrl(file) {
   });
 }
 
+async function refreshMe() {
+  try {
+    const data = await api('/api/me');
+    user = data.user;
+    localStorage.setItem('chat_user', JSON.stringify(user));
+    renderProfile();
+  } catch {}
+}
+
+function displayName(person) {
+  return person?.display_name || person?.username || 'Kullanıcı';
+}
+
+async function loadGlobalAdminStatus() {
+  try {
+    const data = await api('/api/admin/me');
+    canOpenGlobalAdmin = Boolean(data.canOpenAdmin);
+    globalAdminPanel.classList.toggle('hidden', !canOpenGlobalAdmin);
+
+    if (canOpenGlobalAdmin) {
+      await loadGlobalAdminPanel();
+    }
+  } catch {
+    globalAdminPanel.classList.add('hidden');
+  }
+}
+
+async function loadGlobalAdminPanel() {
+  if (!canOpenGlobalAdmin) return;
+
+  await Promise.allSettled([loadAdminUsers(), loadIpBans()]);
+}
+
+async function loadAdminUsers() {
+  try {
+    const data = await api('/api/admin/users');
+    adminUsersList.innerHTML = '';
+
+    if (!data.users.length) {
+      adminUsersList.innerHTML = '<div class="mini-item">Kullanıcı yok.</div>';
+      return;
+    }
+
+    data.users.forEach((u) => {
+      const item = document.createElement('div');
+      item.className = 'mini-item admin-user-item';
+
+      item.innerHTML = `
+        <div class="mini-left">
+          ${avatarHtml(displayName(u), u.avatar_url)}
+          <div>
+            <strong>${escapeHtml(displayName(u))} ${u.is_banned ? '🚫' : ''}</strong>
+            <span>@${escapeHtml(u.username)} • ${escapeHtml(u.global_role || 'user')}</span>
+            <span>IP: ${escapeHtml(u.last_ip || 'yok')}</span>
+            <span>${escapeHtml(u.last_user_agent || 'cihaz yok')}</span>
+            <span>${u.online ? 'Çevrimiçi' : formatPresence(u)}</span>
+          </div>
+        </div>
+      `;
+
+      const actions = document.createElement('div');
+      actions.className = 'mini-actions';
+
+      const nameBtn = document.createElement('button');
+      nameBtn.className = 'action-button';
+      nameBtn.textContent = 'Nick';
+      nameBtn.onclick = () => changeDisplayName(u);
+
+      const roleBtn = document.createElement('button');
+      roleBtn.className = 'action-button gray';
+      roleBtn.textContent = 'Rol';
+      roleBtn.onclick = () => changeGlobalRole(u);
+
+      const banBtn = document.createElement('button');
+      banBtn.className = `action-button ${u.is_banned ? 'gray' : 'red'}`;
+      banBtn.textContent = u.is_banned ? 'Ban kaldır' : 'Ban';
+      banBtn.onclick = () => toggleGlobalBan(u);
+
+      const ipBtn = document.createElement('button');
+      ipBtn.className = 'action-button red';
+      ipBtn.textContent = 'IP Ban';
+      ipBtn.onclick = () => banIp(u.last_ip);
+
+      actions.appendChild(nameBtn);
+      actions.appendChild(roleBtn);
+      actions.appendChild(banBtn);
+      actions.appendChild(ipBtn);
+      item.appendChild(actions);
+      adminUsersList.appendChild(item);
+    });
+  } catch (error) {
+    adminUsersList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+async function changeDisplayName(u) {
+  const displayNameValue = prompt('Yeni görünen ad:', displayName(u));
+  if (displayNameValue === null) return;
+
+  try {
+    await api(`/api/admin/users/${u.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ displayName: displayNameValue })
+    });
+    await loadAdminUsers();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function changeGlobalRole(u) {
+  const role = prompt('Rol yaz: owner / admin / mod / user', u.global_role || 'user');
+  if (role === null) return;
+
+  try {
+    await api(`/api/admin/users/${u.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ globalRole: role })
+    });
+    await loadAdminUsers();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function toggleGlobalBan(u) {
+  const reason = u.is_banned ? '' : prompt('Ban sebebi:', 'Kurallara aykırı davranış') || 'Banlandı.';
+
+  try {
+    await api(`/api/admin/users/${u.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isBanned: !u.is_banned, banReason: reason })
+    });
+    await loadAdminUsers();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function loadIpBans() {
+  try {
+    const data = await api('/api/admin/ip-bans');
+    ipBansList.innerHTML = '';
+
+    if (!data.bans.length) {
+      ipBansList.innerHTML = '<div class="mini-item">IP ban yok.</div>';
+      return;
+    }
+
+    data.bans.forEach((ban) => {
+      const item = document.createElement('div');
+      item.className = 'mini-item';
+      item.innerHTML = `<div><strong>${escapeHtml(ban.ip)}</strong><span>${escapeHtml(ban.reason || '')}</span></div>`;
+
+      const remove = document.createElement('button');
+      remove.className = 'action-button gray';
+      remove.textContent = 'Kaldır';
+      remove.onclick = () => removeIpBan(ban.id);
+
+      item.appendChild(remove);
+      ipBansList.appendChild(item);
+    });
+  } catch (error) {
+    ipBansList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+async function banIpFromInput() {
+  await banIp(ipBanInput.value.trim());
+  ipBanInput.value = '';
+}
+
+async function banIp(ip) {
+  if (!ip) {
+    addSystemMessage('IP yok.');
+    return;
+  }
+
+  const reason = prompt('IP ban sebebi:', 'IP ban') || 'IP ban';
+
+  try {
+    await api('/api/admin/ip-bans', {
+      method: 'POST',
+      body: JSON.stringify({ ip, reason })
+    });
+    await loadIpBans();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function removeIpBan(id) {
+  try {
+    await api(`/api/admin/ip-bans/${id}`, { method: 'DELETE' });
+    await loadIpBans();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
 async function loadRoomMembers() {
   try {
     const data = await api(`/api/room/${encodeURIComponent(currentRoom)}/members`);
@@ -1458,8 +1676,10 @@ async function loadModeration() {
   try {
     const data = await api(`/api/room/${encodeURIComponent(currentRoom)}/moderation`);
     myRoomRole = data.myRole || null;
+    roomMutedUsers = data.mutes || [];
     renderRole();
     renderAdminMembers();
+    renderMutedMembers();
   } catch {}
 }
 
@@ -1494,10 +1714,12 @@ function renderAdminMembers() {
         actions.appendChild(mod);
       }
 
+      const isMuted = roomMutedUsers.some((muted) => Number(muted.user_id) === Number(member.id));
+
       const mute = document.createElement('button');
       mute.className = 'action-button gray';
-      mute.textContent = 'Sustur';
-      mute.onclick = () => moderateUser(member.id, 'mute');
+      mute.textContent = isMuted ? 'Susturma aç' : 'Sustur';
+      mute.onclick = () => moderateUser(member.id, isMuted ? 'unmute' : 'mute');
 
       const kick = document.createElement('button');
       kick.className = 'action-button gray';
@@ -1515,6 +1737,36 @@ function renderAdminMembers() {
       item.appendChild(actions);
       adminMembersList.appendChild(item);
     });
+}
+
+function renderMutedMembers() {
+  if (!mutedMembersList) return;
+
+  mutedMembersList.innerHTML = '';
+
+  if (!['admin', 'mod'].includes(myRoomRole)) {
+    mutedMembersList.innerHTML = '<div class="mini-item">Yetkin yok.</div>';
+    return;
+  }
+
+  if (!roomMutedUsers.length) {
+    mutedMembersList.innerHTML = '<div class="mini-item">Susturulan yok.</div>';
+    return;
+  }
+
+  roomMutedUsers.forEach((muted) => {
+    const item = document.createElement('div');
+    item.className = 'mini-item';
+    item.innerHTML = `<div class="mini-left">${avatarHtml(muted.username, muted.avatar_url)}<div><strong>${escapeHtml(muted.username)}</strong><span>Susturuldu</span></div></div>`;
+
+    const unmute = document.createElement('button');
+    unmute.className = 'action-button';
+    unmute.textContent = 'Susturma aç';
+    unmute.onclick = () => moderateUser(muted.user_id, 'unmute');
+
+    item.appendChild(unmute);
+    mutedMembersList.appendChild(item);
+  });
 }
 
 async function moderateUser(userId, action) {
@@ -1568,7 +1820,7 @@ async function openProfile(userId) {
     const profile = data.profile;
 
     profileAvatar.innerHTML = avatarHtml(profile.username, profile.avatar_url, 'profile-avatar-inner');
-    profileUsername.textContent = profile.username;
+    profileUsername.textContent = displayName(profile);
     profileStatus.textContent = formatPresence(profile);
     profileBio.textContent = profile.bio || 'Bio yok.';
 
