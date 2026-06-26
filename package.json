@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
   "version": "1.0.0",
-  "description": "Real-time chat app with Express, Socket.IO and OpenAI bot",
+  "description": "Real-time chat app with Express, Socket.IO and Gemini bot",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
@@ -10,7 +10,7 @@
   "dependencies": {
     "express": "4.18.2",
     "socket.io": "4.7.5",
-    "openai": "4.104.0"
+    "@google/genai": "latest"
   },
   "engines": {
     "node": "20.x"
