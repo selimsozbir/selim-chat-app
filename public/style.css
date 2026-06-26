@@ -3877,3 +3877,57 @@ body.bot-compact-mode .bot-message .meta {
     max-width: 42px !important;
   }
 }
+
+
+/* =========================================================
+   v7.9.3 — iOS Mobile Input Zoom Fix
+   ========================================================= */
+
+@media (max-width: 760px) {
+  input,
+  textarea,
+  select,
+  button {
+    font-size: 16px !important;
+  }
+
+  #messageInput,
+  .message-form input,
+  #authForm input,
+  .settings-section input,
+  .settings-section textarea,
+  .settings-section select,
+  .room-row input,
+  #searchInput,
+  #messageSearchInput,
+  #newGroupNameInput {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .message-form input#messageInput {
+    height: 44px !important;
+    line-height: 44px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .message-form #attachButton,
+  .message-form #voiceButton,
+  .message-form button[type="submit"] {
+    font-size: 18px !important;
+  }
+
+  /* Ayarlar içindeki küçük yazılar 16px altına düşmesin; iPhone odaklanınca zoom yapmasın. */
+  .settings-card input,
+  .settings-card textarea,
+  .settings-card select,
+  .profile-card textarea {
+    font-size: 16px !important;
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
