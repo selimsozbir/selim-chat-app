@@ -1024,6 +1024,8 @@ function setChatMode(nextMode) {
     chatTitle.textContent = activeGroup ? `Grup: ${activeGroup.name}` : 'Grup seç';
     addSystemMessage('Grup için soldan grup seç veya yeni grup kur.');
   }
+
+  syncMobileHeader();
 }
 
 async function joinRoom(room) {
@@ -1342,6 +1344,7 @@ async function openDm(friend) {
   friendsPanel.classList.remove('hidden');
 
   chatTitle.textContent = `DM: ${friend.username}`;
+  syncMobileHeader();
   messagesEl.innerHTML = '';
   typingText.textContent = '';
 
@@ -2593,6 +2596,7 @@ async function openGroup(group) {
   activeFriend = null;
   setChatMode('group');
   chatTitle.textContent = `Grup: ${group.name}`;
+  syncMobileHeader();
   messagesEl.innerHTML = '';
   typingText.textContent = '';
 
