@@ -2479,7 +2479,7 @@ function addGroupMessage(message) {
 /* 5ECROPOLIS EASTER EGGS */
 
 let fiveEggTimeout = null;
-const FIVE_EGG_COMMANDS = ['/serbia', '/limbo', '/vertex', '/rome', '/egypt', '/anitkabir', '/cat', '/reset', '/rift', '/5ecropolis', '/selim', '/xara', '/nico', '/yasin', '/jung', '/fetullah'];
+const FIVE_EGG_COMMANDS = ['/serbia', '/limbo', '/vertex', '/rome', '/egypt', '/anitkabir', '/cat', '/reset', '/rift', '/5ecropolis', '/selim', '/xara', '/nico', '/yasin', '/jung', '/fetullah', '/blake', '/feiz', '/pnico', '/pyasin', '/ataturk'];
 
 function getFiveEggLayer() {
   let layer = document.getElementById('fiveEggLayer');
@@ -2493,7 +2493,7 @@ function getFiveEggLayer() {
 }
 
 function clearFiveEggClasses() {
-  document.body.classList.remove('egg-serbia', 'egg-limbo', 'egg-vertex', 'egg-rome', 'egg-egypt', 'egg-anitkabir', 'egg-cat', 'egg-reset', 'egg-rift', 'egg-5ecropolis', 'egg-selim', 'egg-xara', 'egg-nico', 'egg-yasin', 'egg-jung', 'egg-fetullah');
+  document.body.classList.remove('egg-serbia', 'egg-limbo', 'egg-vertex', 'egg-rome', 'egg-egypt', 'egg-anitkabir', 'egg-cat', 'egg-reset', 'egg-rift', 'egg-5ecropolis', 'egg-selim', 'egg-xara', 'egg-nico', 'egg-yasin', 'egg-jung', 'egg-fetullah', 'egg-blake', 'egg-feiz', 'egg-pnico', 'egg-pyasin', 'egg-ataturk');
   const layer = getFiveEggLayer();
   layer.innerHTML = '';
 }
@@ -2715,6 +2715,73 @@ function runFiveEgg(command, username = '') {
     `;
     addSystemMessage(`👁️ Fetullah ortaya çıktı. Simülasyon vahiy moduna geçti.`);
     fiveEggTimeout = setTimeout(clearFiveEggClasses, 4200);
+    return true;
+  }
+
+
+  if (normalized === '/blake') {
+    document.body.classList.add('egg-blake');
+    layer.innerHTML = `
+      <div class="egg-blake-grid"></div>
+      <div class="egg-blake-crown">♛</div>
+      <div class="egg-blake-text">YUNG BLAKE</div>
+      <div class="egg-blake-sub">underground frequency from the red universe</div>
+    `;
+    addSystemMessage(`♛ Yung Blake sahneye indi. Kırmızı evren trap frekansına geçti.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4100);
+    return true;
+  }
+
+  if (normalized === '/feiz') {
+    document.body.classList.add('egg-feiz');
+    layer.innerHTML = `
+      <div class="egg-feiz-bot">FEIZ</div>
+      <div class="egg-feiz-scan"></div>
+      <div class="egg-feiz-text">FEIZ ONLINE</div>
+      <div class="egg-feiz-sub">ai anomaly connected to the chat core</div>
+    `;
+    addSystemMessage(`🤖 feiz bağlandı. Chat çekirdeği yapay zekâ moduna geçti.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3900);
+    return true;
+  }
+
+  if (normalized === '/pnico') {
+    document.body.classList.add('egg-pnico');
+    layer.innerHTML = `
+      <div class="egg-parallel-split"></div>
+      <div class="egg-pnico-ghost egg-pnico-ghost-1">NICO</div>
+      <div class="egg-pnico-ghost egg-pnico-ghost-2">NICO</div>
+      <div class="egg-pnico-text">PARALLEL NICO</div>
+      <div class="egg-pnico-sub">same face · different universe</div>
+    `;
+    addSystemMessage(`🧊 Paralel Nico görüldü. Aynı kişi, başka frekans.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4100);
+    return true;
+  }
+
+  if (normalized === '/pyasin') {
+    document.body.classList.add('egg-pyasin');
+    layer.innerHTML = `
+      <div class="egg-pyasin-mirror"></div>
+      <div class="egg-pyasin-flower">✦</div>
+      <div class="egg-pyasin-text">PARALLEL YASIN MENEKŞE</div>
+      <div class="egg-pyasin-sub">violet signal inverted through the mirror dimension</div>
+    `;
+    addSystemMessage(`🟪 Paralel Yasin Menekşe aynadan geçti. Menekşe sinyali tersine döndü.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4300);
+    return true;
+  }
+
+  if (normalized === '/ataturk') {
+    document.body.classList.add('egg-ataturk');
+    layer.innerHTML = `
+      <div class="egg-ataturk-sun">☀</div>
+      <div class="egg-ataturk-line"></div>
+      <div class="egg-ataturk-text">ATATÜRK</div>
+      <div class="egg-ataturk-sub">cumhuriyet frekansı · saygı modu</div>
+    `;
+    addSystemMessage(`🇹🇷 Atatürk protokolü aktif. Simülasyon saygı moduna geçti.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4400);
     return true;
   }
 
