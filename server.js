@@ -793,7 +793,12 @@ app.delete('/api/avatar', authMiddleware, async (req, res) => {
 
 /* STORAGE UPLOAD */
 
+app.get('/api/upload-health', (req, res) => {
+  res.json({ ok: true, uploadRoute: true, storageEnabled: storageEnabled(), bucket: SUPABASE_BUCKET || null });
+});
+
 app.get('/api/storage-status', authMiddleware, async (req, res) => {
+  console.log('Storage status kontrolü geldi:', { userId: req.user.id, storageEnabled: storageEnabled(), bucket: SUPABASE_BUCKET });
   res.json({
     storageEnabled: storageEnabled(),
     hasSupabaseUrl: Boolean(SUPABASE_URL),
