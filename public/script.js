@@ -247,6 +247,15 @@ dmModeButton.addEventListener('click', () => {
   loadBlocked();
 });
 
+if (groupModeButton) {
+  groupModeButton.addEventListener('click', () => {
+    clearReply();
+    setChatMode('group');
+    loadGroups();
+    renderNewGroupFriends();
+  });
+}
+
 joinRoomButton.addEventListener('click', () => joinRoom(roomInput.value.trim() || 'genel'));
 searchButton.addEventListener('click', searchUsers);
 messageSearchButton.addEventListener('click', searchMessages);
@@ -260,11 +269,11 @@ profileModal.addEventListener('click', (event) => {
 });
 
 profileSaveBioButton.addEventListener('click', saveBio);
-createGroupButton.addEventListener('click', createGroup);
-changeGroupAvatarButton.addEventListener('click', () => groupAvatarInput.click());
-groupAvatarInput.addEventListener('change', changeGroupAvatar);
-removeGroupAvatarButton.addEventListener('click', removeGroupAvatar);
-leaveGroupButton.addEventListener('click', leaveGroup);
+if (createGroupButton) createGroupButton.addEventListener('click', createGroup);
+if (changeGroupAvatarButton) changeGroupAvatarButton.addEventListener('click', () => groupAvatarInput?.click());
+if (groupAvatarInput) groupAvatarInput.addEventListener('change', changeGroupAvatar);
+if (removeGroupAvatarButton) removeGroupAvatarButton.addEventListener('click', removeGroupAvatar);
+if (leaveGroupButton) leaveGroupButton.addEventListener('click', leaveGroup);
 refreshAdminButton.addEventListener('click', loadGlobalAdminPanel);
 ipBanButton.addEventListener('click', banIpFromInput);
 searchInput.addEventListener('keydown', (event) => {
@@ -772,23 +781,31 @@ function connectSocket() {
 function setChatMode(nextMode) {
   clearReply();
   chatMode = nextMode;
+
   roomModeButton.classList.toggle('active', chatMode === 'room');
   dmModeButton.classList.toggle('active', chatMode === 'dm');
-  groupModeButton.classList.toggle('active', chatMode === 'group');
+  if (groupModeButton) groupModeButton.classList.toggle('active', chatMode === 'group');
+
   roomPanel.classList.toggle('hidden', chatMode !== 'room');
   friendsPanel.classList.toggle('hidden', chatMode !== 'dm');
-  groupsPanel.classList.toggle('hidden', chatMode !== 'group');
+  if (groupsPanel) groupsPanel.classList.toggle('hidden', chatMode !== 'group');
 
   messagesEl.innerHTML = '';
   typingText.textContent = '';
 
   if (chatMode === 'room') {
     activeFriend = null;
+    activeGroup = null;
     chatTitle.textContent = `# ${currentRoom}`;
     loadOldRoomMessages(currentRoom);
-  } else {
+  } else if (chatMode === 'dm') {
+    activeGroup = null;
     chatTitle.textContent = activeFriend ? `DM: ${activeFriend.username}` : 'DM seç';
     addSystemMessage('DM için soldan arkadaş seç.');
+  } else if (chatMode === 'group') {
+    activeFriend = null;
+    chatTitle.textContent = activeGroup ? `Grup: ${activeGroup.name}` : 'Grup seç';
+    addSystemMessage('Grup için soldan grup seç veya yeni grup kur.');
   }
 }
 
@@ -800,8 +817,10 @@ async function joinRoom(room) {
   chatMode = 'room';
   roomModeButton.classList.add('active');
   dmModeButton.classList.remove('active');
+  if (groupModeButton) groupModeButton.classList.remove('active');
   roomPanel.classList.remove('hidden');
   friendsPanel.classList.add('hidden');
+  if (groupsPanel) groupsPanel.classList.add('hidden');
 
   roomInput.value = currentRoom;
   chatTitle.textContent = `# ${currentRoom}`;
@@ -2089,6 +2108,7 @@ async function loadGroups() {
 }
 
 function renderGroups() {
+  if (!groupsList) return;
   groupsList.innerHTML = '';
 
   if (!groups.length) {
@@ -2106,6 +2126,7 @@ function renderGroups() {
 }
 
 function renderNewGroupFriends() {
+  if (!newGroupFriendsList) return;
   newGroupFriendsList.innerHTML = '';
 
   if (!friends.length) {
@@ -2156,6 +2177,10 @@ async function createGroup() {
 }
 
 async function openGroup(group) {
+  if (!groupsPanel) {
+    addSystemMessage('Grup paneli HTML içinde yok. public/index.html dosyasını da güncelle.');
+    return;
+  }
   activeGroup = group;
   activeFriend = null;
   setChatMode('group');
@@ -2187,6 +2212,7 @@ async function loadGroupDetails(groupId) {
     const data = await api(`/api/groups/${groupId}`);
     activeGroup = data.group;
     groupMembers = data.members || [];
+    if (!groupDetailsBox) return;
     groupDetailsBox.classList.remove('hidden');
 
     activeGroupInfo.innerHTML = `<div class="mini-item"><div class="mini-left">${avatarHtml(activeGroup.name, activeGroup.avatar_url)}<div><strong>${escapeHtml(activeGroup.name)}</strong><span>${activeGroup.member_count} üye • rolün: ${activeGroup.my_role}</span></div></div></div>`;
