@@ -52,6 +52,23 @@ const notificationBadge = document.getElementById('notificationBadge');
 const enableNotificationsButton = document.getElementById('enableNotificationsButton');
 const clearNotificationsButton = document.getElementById('clearNotificationsButton');
 
+const messageSearchInput = document.getElementById('messageSearchInput');
+const messageSearchButton = document.getElementById('messageSearchButton');
+const messageSearchResults = document.getElementById('messageSearchResults');
+const myRoleText = document.getElementById('myRoleText');
+const adminMembersList = document.getElementById('adminMembersList');
+
+const profileModal = document.getElementById('profileModal');
+const profileCloseButton = document.getElementById('profileCloseButton');
+const profileAvatar = document.getElementById('profileAvatar');
+const profileUsername = document.getElementById('profileUsername');
+const profileStatus = document.getElementById('profileStatus');
+const profileBio = document.getElementById('profileBio');
+const profileBioInput = document.getElementById('profileBioInput');
+const profileSaveBioButton = document.getElementById('profileSaveBioButton');
+
+const mentionPopup = document.getElementById('mentionPopup');
+
 let mode = 'login';
 let chatMode = 'room';
 let activeFriend = null;
@@ -69,6 +86,10 @@ let isRecording = false;
 let contextTarget = null;
 let longPressTimer = null;
 let replyingTo = null;
+let roomMembers = [];
+let mentionCandidates = [];
+let selectedMentionIndex = 0;
+let myRoomRole = null;
 
 const contextMenu = document.createElement('div');
 contextMenu.className = 'message-context-menu hidden';
@@ -199,8 +220,44 @@ dmModeButton.addEventListener('click', () => {
 
 joinRoomButton.addEventListener('click', () => joinRoom(roomInput.value.trim() || 'genel'));
 searchButton.addEventListener('click', searchUsers);
+messageSearchButton.addEventListener('click', searchMessages);
+messageSearchInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') searchMessages();
+});
+
+profileCloseButton.addEventListener('click', closeProfile);
+profileModal.addEventListener('click', (event) => {
+  if (event.target === profileModal) closeProfile();
+});
+
+profileSaveBioButton.addEventListener('click', saveBio);
 searchInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') searchUsers();
+});
+
+messageInput.addEventListener('keydown', (event) => {
+  if (mentionPopup.classList.contains('hidden')) return;
+
+  if (event.key === 'Tab' || event.key === 'Enter') {
+    event.preventDefault();
+    applyMention(selectedMentionIndex);
+  }
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    selectedMentionIndex = Math.min(selectedMentionIndex + 1, mentionCandidates.length - 1);
+    renderMentionPopup();
+  }
+
+  if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    selectedMentionIndex = Math.max(selectedMentionIndex - 1, 0);
+    renderMentionPopup();
+  }
+
+  if (event.key === 'Escape') {
+    hideMentionPopup();
+  }
 });
 
 messageForm.addEventListener('submit', (event) => {
@@ -226,6 +283,7 @@ messageForm.addEventListener('submit', (event) => {
 });
 
 messageInput.addEventListener('input', () => {
+  updateMentionSuggestions();
   if (!socket) return;
 
   if (chatMode === 'dm' && activeFriend) {
@@ -431,7 +489,7 @@ async function startApp() {
   roomInput.value = currentRoom;
   connectSocket();
 
-  await Promise.allSettled([loadFriends(), loadRequests(), loadBlocked(), loadNotifications()]);
+  await Promise.allSettled([loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration()]);
 }
 
 function renderProfile() {
@@ -464,6 +522,25 @@ function connectSocket() {
   });
 
   socket.on('system_message', addSystemMessage);
+
+  socket.on('room_role', ({ role }) => {
+    myRoomRole = role;
+    renderRole();
+  });
+
+  socket.on('room_kicked', ({ room }) => {
+    if (room === currentRoom) {
+      addSystemMessage('Bu odadan atıldın.');
+      joinRoom('genel');
+    }
+  });
+
+  socket.on('room_banned', ({ room }) => {
+    if (room === currentRoom) {
+      addSystemMessage('Bu odadan banlandın.');
+      joinRoom('genel');
+    }
+  });
   socket.on('chat_message', (message) => {
     if (chatMode !== 'room') return;
     if (!message.room || message.room === currentRoom) addRoomMessage(message);
@@ -598,6 +675,7 @@ async function joinRoom(room) {
   typingText.textContent = '';
 
   await loadOldRoomMessages(currentRoom);
+  await Promise.allSettled([loadRoomMembers(), loadModeration()]);
   if (socket && socket.connected) socket.emit('join', { room: currentRoom });
 }
 
@@ -668,7 +746,8 @@ async function searchUsers() {
     data.users.forEach((u) => {
       const item = document.createElement('div');
       item.className = 'mini-item';
-      item.innerHTML = `<div class="mini-left">${avatarHtml(u.username, u.avatar_url)}<div><strong>${escapeHtml(u.username)}</strong><span>ID: ${u.id}</span></div></div>`;
+      item.innerHTML = `<div class="mini-left">${avatarHtml(u.username, u.avatar_url)}<div><strong>${escapeHtml(u.username)}</strong><span>${formatPresence(u)}</span></div></div>`;
+      item.querySelector('.mini-left').onclick = () => openProfile(u.id);
 
       const actions = document.createElement('div');
       actions.className = 'mini-actions';
@@ -770,7 +849,8 @@ async function loadFriends() {
     data.friends.forEach((friend) => {
       const item = document.createElement('div');
       item.className = 'mini-item';
-      item.innerHTML = `<div class="mini-left">${avatarHtml(friend.username, friend.avatar_url)}<div><strong>${escapeHtml(friend.username)}</strong><span>DM aç</span></div></div>`;
+      item.innerHTML = `<div class="mini-left" data-profile-id="${friend.id}">${avatarHtml(friend.username, friend.avatar_url)}<div><strong>${escapeHtml(friend.username)}</strong><span>${formatPresence(friend)}</span></div></div>`;
+      item.querySelector('.mini-left').onclick = () => openProfile(friend.id);
 
       const actions = document.createElement('div');
       actions.className = 'mini-actions';
@@ -1007,6 +1087,9 @@ function renderUsers(users) {
     li.textContent = username;
     usersList.appendChild(li);
   });
+
+  loadRoomMembers();
+  loadModeration();
 }
 
 function addMessage({ type, id, username, avatar_url, text, message_type, file_name, file_mime, file_data, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read }) {
@@ -1343,6 +1426,268 @@ function fileToDataUrl(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+async function loadRoomMembers() {
+  try {
+    const data = await api(`/api/room/${encodeURIComponent(currentRoom)}/members`);
+    roomMembers = data.members || [];
+    renderOnlineUsersDetailed();
+    renderAdminMembers();
+  } catch {}
+}
+
+function renderOnlineUsersDetailed() {
+  if (!roomMembers.length) return;
+
+  usersList.innerHTML = '';
+  roomMembers.forEach((member) => {
+    const li = document.createElement('li');
+    li.className = 'user-row';
+    li.innerHTML = `${avatarHtml(member.username, member.avatar_url)}<div><strong>${escapeHtml(member.username)}</strong><span>${member.role ? member.role + ' • ' : ''}${formatPresence(member)}</span></div>`;
+    li.onclick = () => openProfile(member.id);
+    usersList.appendChild(li);
+  });
+}
+
+function renderRole() {
+  myRoleText.textContent = `Rol: ${myRoomRole || 'üye'}`;
+}
+
+async function loadModeration() {
+  try {
+    const data = await api(`/api/room/${encodeURIComponent(currentRoom)}/moderation`);
+    myRoomRole = data.myRole || null;
+    renderRole();
+    renderAdminMembers();
+  } catch {}
+}
+
+function renderAdminMembers() {
+  adminMembersList.innerHTML = '';
+
+  if (!['admin', 'mod'].includes(myRoomRole)) {
+    adminMembersList.innerHTML = '<div class="mini-item">Yetkin yok.</div>';
+    return;
+  }
+
+  if (!roomMembers.length) {
+    adminMembersList.innerHTML = '<div class="mini-item">Online üye yok.</div>';
+    return;
+  }
+
+  roomMembers
+    .filter((member) => member.id !== user.id)
+    .forEach((member) => {
+      const item = document.createElement('div');
+      item.className = 'mini-item';
+      item.innerHTML = `<div class="mini-left">${avatarHtml(member.username, member.avatar_url)}<div><strong>${escapeHtml(member.username)}</strong><span>${member.role || 'üye'}</span></div></div>`;
+
+      const actions = document.createElement('div');
+      actions.className = 'mini-actions';
+
+      if (myRoomRole === 'admin') {
+        const mod = document.createElement('button');
+        mod.className = 'action-button';
+        mod.textContent = member.role === 'mod' ? 'Mod al' : 'Mod yap';
+        mod.onclick = () => moderateUser(member.id, member.role === 'mod' ? 'unmod' : 'mod');
+        actions.appendChild(mod);
+      }
+
+      const mute = document.createElement('button');
+      mute.className = 'action-button gray';
+      mute.textContent = 'Sustur';
+      mute.onclick = () => moderateUser(member.id, 'mute');
+
+      const kick = document.createElement('button');
+      kick.className = 'action-button gray';
+      kick.textContent = 'At';
+      kick.onclick = () => moderateUser(member.id, 'kick');
+
+      const ban = document.createElement('button');
+      ban.className = 'action-button red';
+      ban.textContent = 'Ban';
+      ban.onclick = () => moderateUser(member.id, 'ban');
+
+      actions.appendChild(mute);
+      actions.appendChild(kick);
+      actions.appendChild(ban);
+      item.appendChild(actions);
+      adminMembersList.appendChild(item);
+    });
+}
+
+async function moderateUser(userId, action) {
+  try {
+    const data = await api(`/api/room/${encodeURIComponent(currentRoom)}/moderate`, {
+      method: 'POST',
+      body: JSON.stringify({ userId, action })
+    });
+    addSystemMessage(data.message);
+    await Promise.allSettled([loadRoomMembers(), loadModeration()]);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function searchMessages() {
+  const q = messageSearchInput.value.trim();
+  messageSearchResults.innerHTML = '';
+
+  if (q.length < 2) {
+    messageSearchResults.innerHTML = '<div class="mini-item">En az 2 karakter yaz.</div>';
+    return;
+  }
+
+  try {
+    const url = chatMode === 'dm' && activeFriend
+      ? `/api/search/messages?scope=dm&friendId=${activeFriend.id}&q=${encodeURIComponent(q)}`
+      : `/api/search/messages?scope=room&room=${encodeURIComponent(currentRoom)}&q=${encodeURIComponent(q)}`;
+
+    const data = await api(url);
+
+    if (!data.results.length) {
+      messageSearchResults.innerHTML = '<div class="mini-item">Sonuç yok.</div>';
+      return;
+    }
+
+    data.results.forEach((result) => {
+      const item = document.createElement('div');
+      item.className = 'mini-item';
+      item.innerHTML = `<div><strong>${escapeHtml(result.username)}</strong><span>${escapeHtml(result.text)}</span></div>`;
+      messageSearchResults.appendChild(item);
+    });
+  } catch (error) {
+    messageSearchResults.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+async function openProfile(userId) {
+  try {
+    const data = await api(`/api/profile/${userId}`);
+    const profile = data.profile;
+
+    profileAvatar.innerHTML = avatarHtml(profile.username, profile.avatar_url, 'profile-avatar-inner');
+    profileUsername.textContent = profile.username;
+    profileStatus.textContent = formatPresence(profile);
+    profileBio.textContent = profile.bio || 'Bio yok.';
+
+    const isMe = profile.id === user.id;
+    profileBioInput.classList.toggle('hidden', !isMe);
+    profileSaveBioButton.classList.toggle('hidden', !isMe);
+
+    if (isMe) profileBioInput.value = profile.bio || '';
+
+    profileModal.classList.remove('hidden');
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+function closeProfile() {
+  profileModal.classList.add('hidden');
+}
+
+async function saveBio() {
+  try {
+    const data = await api('/api/profile/bio', {
+      method: 'POST',
+      body: JSON.stringify({ bio: profileBioInput.value })
+    });
+
+    user = data.user;
+    localStorage.setItem('chat_user', JSON.stringify(user));
+    profileBio.textContent = user.bio || 'Bio yok.';
+    addSystemMessage('Bio güncellendi.');
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+function updateMentionSuggestions() {
+  if (chatMode !== 'room') {
+    hideMentionPopup();
+    return;
+  }
+
+  const value = messageInput.value;
+  const cursor = messageInput.selectionStart;
+  const beforeCursor = value.slice(0, cursor);
+  const match = beforeCursor.match(/(^|\s)@([a-zA-Z0-9_ğüşöçıİĞÜŞÖÇ.\-]*)$/);
+
+  if (!match) {
+    hideMentionPopup();
+    return;
+  }
+
+  const query = match[2].toLowerCase();
+  const base = roomMembers.filter((member) => member.id !== user.id);
+  mentionCandidates = [
+    { username: 'everyone', avatar_url: null },
+    ...base
+  ].filter((member) => member.username.toLowerCase().includes(query)).slice(0, 6);
+
+  selectedMentionIndex = 0;
+
+  if (mentionCandidates.length === 0) {
+    hideMentionPopup();
+    return;
+  }
+
+  renderMentionPopup();
+}
+
+function renderMentionPopup() {
+  mentionPopup.innerHTML = '';
+
+  mentionCandidates.forEach((member, index) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = `mention-item ${index === selectedMentionIndex ? 'active' : ''}`;
+    item.innerHTML = `${avatarHtml(member.username, member.avatar_url)}<span>@${escapeHtml(member.username)}</span>`;
+    item.onclick = () => applyMention(index);
+    mentionPopup.appendChild(item);
+  });
+
+  const rect = messageInput.getBoundingClientRect();
+  mentionPopup.style.left = `${rect.left}px`;
+  mentionPopup.style.bottom = `${window.innerHeight - rect.top + 8}px`;
+  mentionPopup.classList.remove('hidden');
+}
+
+function applyMention(index) {
+  const member = mentionCandidates[index];
+  if (!member) return;
+
+  const value = messageInput.value;
+  const cursor = messageInput.selectionStart;
+  const beforeCursor = value.slice(0, cursor);
+  const afterCursor = value.slice(cursor);
+  const replaced = beforeCursor.replace(/(^|\s)@([a-zA-Z0-9_ğüşöçıİĞÜŞÖÇ.\-]*)$/, `$1@${member.username} `);
+
+  messageInput.value = replaced + afterCursor;
+  const newCursor = replaced.length;
+  messageInput.setSelectionRange(newCursor, newCursor);
+  hideMentionPopup();
+  messageInput.focus();
+}
+
+function hideMentionPopup() {
+  mentionPopup.classList.add('hidden');
+  mentionCandidates = [];
+}
+
+function formatPresence(profile) {
+  if (profile.online) return 'Çevrimiçi';
+  if (!profile.last_seen) return 'Son görülme yok';
+
+  const date = new Date(profile.last_seen);
+  return `Son görülme: ${date.toLocaleString('tr-TR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })}`;
 }
 
 function addSystemMessage(message) {
