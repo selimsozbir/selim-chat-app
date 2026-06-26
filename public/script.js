@@ -2479,7 +2479,7 @@ function addGroupMessage(message) {
 /* 5ECROPOLIS EASTER EGGS */
 
 let fiveEggTimeout = null;
-const FIVE_EGG_COMMANDS = ['/serbia', '/limbo', '/vertex', '/rome'];
+const FIVE_EGG_COMMANDS = ['/serbia', '/limbo', '/vertex', '/rome', '/egypt', '/anitkabir', '/cat', '/reset', '/rift', '/5ecropolis'];
 
 function getFiveEggLayer() {
   let layer = document.getElementById('fiveEggLayer');
@@ -2493,7 +2493,7 @@ function getFiveEggLayer() {
 }
 
 function clearFiveEggClasses() {
-  document.body.classList.remove('egg-serbia', 'egg-limbo', 'egg-vertex', 'egg-rome');
+  document.body.classList.remove('egg-serbia', 'egg-limbo', 'egg-vertex', 'egg-rome', 'egg-egypt', 'egg-anitkabir', 'egg-cat', 'egg-reset', 'egg-rift', 'egg-5ecropolis');
   const layer = getFiveEggLayer();
   layer.innerHTML = '';
 }
@@ -2555,6 +2555,86 @@ function runFiveEgg(command, username = '') {
     fiveEggTimeout = setTimeout(clearFiveEggClasses, 4200);
     return true;
   }
+
+
+  if (normalized === '/egypt') {
+    document.body.classList.add('egg-egypt');
+    layer.innerHTML = `
+      <div class="egg-sand"></div>
+      <div class="egg-egypt-sun"></div>
+      <div class="egg-pyramid egg-pyramid-left"></div>
+      <div class="egg-pyramid egg-pyramid-right"></div>
+      <div class="egg-egypt-text">EGYPT DESERT</div>
+      <div class="egg-egypt-sub">the monument rises from the sand</div>
+    `;
+    addSystemMessage(`𓂀 ${username ? username + ' ' : ''}Mısır çölünü yükledi. Kumlar Anıtkabir'in gölgesini saklıyor...`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4300);
+    return true;
+  }
+
+  if (normalized === '/anitkabir') {
+    document.body.classList.add('egg-anitkabir');
+    layer.innerHTML = `
+      <div class="egg-anitkabir-horizon"></div>
+      <div class="egg-anitkabir-pillars"></div>
+      <div class="egg-anitkabir-text">ANITKABIR RISING</div>
+      <div class="egg-anitkabir-sub">dimension memory restored</div>
+    `;
+    addSystemMessage(`🇹🇷 Anıtkabir boyut hafızasından yükseldi. Simülasyon saygı moduna geçti.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4400);
+    return true;
+  }
+
+  if (normalized === '/cat') {
+    document.body.classList.add('egg-cat');
+    layer.innerHTML = `
+      <div class="egg-cat-pack">
+        <span>🐈</span><span>🐈‍⬛</span><span>🐈</span><span>🐈‍⬛</span><span>🐈</span>
+      </div>
+      <div class="egg-cat-text">THE CATS ARE WATCHING</div>
+      <div class="egg-cat-sub">kaçış reddedildi · simülasyona geri dön</div>
+    `;
+    addSystemMessage(`🐈 Kediler devreye girdi. Kaçış yolu kapandı.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3800);
+    return true;
+  }
+
+  if (normalized === '/reset') {
+    document.body.classList.add('egg-reset');
+    layer.innerHTML = `
+      <div class="egg-reset-button">RESET</div>
+      <div class="egg-reset-text">GENRE CHANGED</div>
+      <div class="egg-reset-sub">dramadan absürt bilimkurguya geçildi</div>
+    `;
+    addSystemMessage(`⏱️ Sıfırlama düğmesine basıldı. Evren tür değiştirdi.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3600);
+    return true;
+  }
+
+  if (normalized === '/rift') {
+    document.body.classList.add('egg-rift');
+    layer.innerHTML = `
+      <div class="egg-rift-line"></div>
+      <div class="egg-rift-text">RED RIFT</div>
+      <div class="egg-rift-sub">parallel universe bleeding through</div>
+    `;
+    addSystemMessage(`🩸 Kırmızı yarık açıldı. Paralel evren sızıyor...`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3800);
+    return true;
+  }
+
+  if (normalized === '/5ecropolis') {
+    document.body.classList.add('egg-5ecropolis');
+    layer.innerHTML = `
+      <div class="egg-five-logo">5</div>
+      <div class="egg-five-text">5ECROPOLIS</div>
+      <div class="egg-five-sub">all universes reserved</div>
+    `;
+    addSystemMessage(`Ⅴ 5ECROPOLIS protokolü aktif. Tüm evrenler senkronize ediliyor.`);
+    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4400);
+    return true;
+  }
+
 
   return false;
 }
