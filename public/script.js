@@ -337,6 +337,10 @@ async function sendFileMessage(file) {
     return;
   }
 
+  if (!file) {
+    throw new Error('Dosya seçilmedi.');
+  }
+
   if (file.size > 25_000_000) {
     throw new Error('Dosya çok büyük. 25 MB altı dosya seç.');
   }
@@ -354,38 +358,46 @@ async function sendFileMessage(file) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 70000);
 
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`
-      },
-      body: formData,
-      signal: controller.signal
-    }).catch((error) => {
+    let response;
+    try {
+      response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData,
+        signal: controller.signal
+      });
+    } finally {
       clearTimeout(timeoutId);
-      throw error;
-    });
-
-    clearTimeout(timeoutId);
+    }
 
     addSystemMessage(`Upload cevabı geldi: HTTP ${response.status}`);
 
     const rawText = await response.text();
     let data = {};
+
     try {
       data = rawText ? JSON.parse(rawText) : {};
     } catch {
-      throw new Error(`Upload JSON cevabı okunamadı. HTTP ${response.status}: ${rawText.slice(0, 120)}`);
+      throw new Error(`Upload cevabı okunamadı. HTTP ${response.status}: ${rawText.slice(0, 120)}`);
     }
 
-    if (!response.ok) throw new Error(data.error || `Dosya yüklenemedi. HTTP ${response.status}`);
+    if (!response.ok) {
+      throw new Error(data.error || `Dosya yüklenemedi. HTTP ${response.status}`);
+    }
 
     const uploaded = data.file;
+    if (!uploaded || !uploaded.fileUrl || !uploaded.type) {
+      throw new Error('Upload cevabı eksik geldi.');
+    }
+
     addSystemMessage('Dosya yüklendi, mesaj gönderiliyor...');
 
+    const uploadedType = uploaded.type;
     const payload = {
-      text: uploaded.type === 'image' ? 'Fotoğraf' : uploaded.type === 'audio' ? 'Ses dosyası' : uploaded.fileName,
-      type: uploaded.type,
+      text: uploadedType === 'image' ? 'Fotoğraf' : uploadedType === 'audio' ? 'Ses dosyası' : uploaded.fileName,
+      type: uploadedType,
       fileName: uploaded.fileName,
       fileMime: uploaded.fileMime,
       fileData: uploaded.fileUrl,
@@ -398,16 +410,32 @@ async function sendFileMessage(file) {
         addSystemMessage('Önce bir arkadaş seç.');
         return;
       }
-      socket.emit('dm_message', { receiverId: activeFriend.id, ...payload, replyToId: replyingTo?.id || null });
+
+      socket.emit('dm_message', {
+        receiverId: activeFriend.id,
+        ...payload,
+        replyToId: replyingTo?.id || null
+      });
+
       clearReply();
     } else {
-      socket.emit('chat_message', { ...payload, replyToId: replyingTo?.id || null });
+      socket.emit('chat_message', {
+        ...payload,
+        replyToId: replyingTo?.id || null
+      });
+
       clearReply();
     }
+  } catch (error) {
+    addSystemMessage(error.name === 'AbortError'
+      ? 'Yükleme zaman aşımına uğradı.'
+      : error.message);
+    console.error('Upload client error:', error);
   } finally {
     isUploadingFile = false;
     attachButton.disabled = false;
     voiceButton.disabled = false;
+    fileInput.value = '';
   }
 }
 
