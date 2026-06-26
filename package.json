@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.4.5",
-  "description": "Selim Chat v7.4.5 group member count fix",
+  "version": "7.5.0",
+  "description": "Selim Chat v7.5.0 cyber UI update with modern panels, bubbles and mobile polish",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
