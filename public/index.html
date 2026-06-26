@@ -62,6 +62,21 @@
             <h3>Online</h3>
             <ul id="usersList"></ul>
           </div>
+
+          <div class="search-panel">
+            <h3>Mesaj Ara</h3>
+            <div class="room-row">
+              <input id="messageSearchInput" type="text" placeholder="Mesaj ara..." />
+              <button id="messageSearchButton">Ara</button>
+            </div>
+            <div id="messageSearchResults" class="mini-list"></div>
+          </div>
+
+          <div class="admin-panel">
+            <h3>Admin / Mod</h3>
+            <div id="myRoleText" class="role-text">Rol: üye</div>
+            <div id="adminMembersList" class="mini-list"></div>
+          </div>
         </div>
 
         <div id="friendsPanel" class="hidden">
@@ -128,6 +143,20 @@
       </main>
     </section>
   </div>
+
+  <div id="profileModal" class="profile-modal hidden">
+    <div class="profile-card">
+      <button id="profileCloseButton" class="profile-close" type="button">×</button>
+      <div id="profileAvatar" class="profile-avatar"></div>
+      <h2 id="profileUsername"></h2>
+      <p id="profileStatus"></p>
+      <p id="profileBio"></p>
+      <textarea id="profileBioInput" class="hidden" maxlength="160" placeholder="Bio yaz..."></textarea>
+      <button id="profileSaveBioButton" class="small-button hidden" type="button">Bio Kaydet</button>
+    </div>
+  </div>
+
+  <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
