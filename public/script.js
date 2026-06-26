@@ -14,6 +14,7 @@ const logoutButton = document.getElementById('logoutButton');
 const avatarInput = document.getElementById('avatarInput');
 const avatarImg = document.getElementById('avatarImg');
 const avatarLetter = document.getElementById('avatarLetter');
+const removeAvatarButton = document.getElementById('removeAvatarButton');
 
 const roomModeButton = document.getElementById('roomModeButton');
 const dmModeButton = document.getElementById('dmModeButton');
@@ -41,6 +42,7 @@ const friendsList = document.getElementById('friendsList');
 const notificationsList = document.getElementById('notificationsList');
 const notificationBadge = document.getElementById('notificationBadge');
 const enableNotificationsButton = document.getElementById('enableNotificationsButton');
+const clearNotificationsButton = document.getElementById('clearNotificationsButton');
 
 let mode = 'login';
 let chatMode = 'room';
@@ -156,6 +158,29 @@ avatarInput.addEventListener('change', async () => {
     localStorage.setItem('chat_user', JSON.stringify(user));
     renderProfile();
     addSystemMessage('Profil fotoğrafı güncellendi.');
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+});
+
+removeAvatarButton.addEventListener('click', async () => {
+  try {
+    const data = await api('/api/avatar', { method: 'DELETE' });
+    user = data.user;
+    localStorage.setItem('chat_user', JSON.stringify(user));
+    renderProfile();
+    addSystemMessage('Profil fotoğrafı kaldırıldı.');
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+});
+
+clearNotificationsButton.addEventListener('click', async () => {
+  try {
+    await api('/api/notifications', { method: 'DELETE' });
+    notificationsList.innerHTML = '<div class="mini-item">Bildirim yok.</div>';
+    unreadNotifications = 0;
+    updateBadge();
   } catch (error) {
     addSystemMessage(error.message);
   }
@@ -329,6 +354,7 @@ async function loadOldRoomMessages(room) {
     data.messages.forEach((message) => {
       addRoomMessage({
         username: message.username,
+        avatar_url: message.avatar_url,
         text: message.text,
         time: formatTime(message.created_at)
       });
@@ -346,6 +372,14 @@ function addRoomMessage(message) {
     time: message.time,
     mine: user && message.username === user.username
   });
+}
+
+function avatarHtml(username, avatarUrl, className = 'mini-avatar') {
+  if (avatarUrl) {
+    return `<img class="${className}" src="${avatarUrl}" alt="">`;
+  }
+
+  return `<div class="${className}">${escapeHtml(String(username || '?').charAt(0).toUpperCase())}</div>`;
 }
 
 async function searchUsers() {
@@ -367,7 +401,7 @@ async function searchUsers() {
     data.users.forEach((u) => {
       const item = document.createElement('div');
       item.className = 'mini-item';
-      item.innerHTML = `<div><strong>${escapeHtml(u.username)}</strong><span>ID: ${u.id}</span></div>`;
+      item.innerHTML = `<div class="mini-left">${avatarHtml(u.username, u.avatar_url)}<div><strong>${escapeHtml(u.username)}</strong><span>ID: ${u.id}</span></div></div>`;
 
       const btn = document.createElement('button');
       btn.className = 'action-button';
@@ -407,9 +441,10 @@ async function loadRequests() {
     data.requests.forEach((request) => {
       const item = document.createElement('div');
       item.className = 'mini-item';
-      item.innerHTML = `<div><strong>${escapeHtml(request.username)}</strong><span>Arkadaş isteği</span></div>`;
+      item.innerHTML = `<div class="mini-left">${avatarHtml(request.username, request.avatar_url)}<div><strong>${escapeHtml(request.username)}</strong><span>Arkadaş isteği</span></div></div>`;
 
       const actions = document.createElement('div');
+      actions.className = 'mini-actions';
 
       const accept = document.createElement('button');
       accept.className = 'action-button';
@@ -458,7 +493,7 @@ async function loadFriends() {
     data.friends.forEach((friend) => {
       const item = document.createElement('div');
       item.className = 'mini-item';
-      item.innerHTML = `<div><strong>${escapeHtml(friend.username)}</strong><span>DM aç</span></div>`;
+      item.innerHTML = `<div class="mini-left">${avatarHtml(friend.username, friend.avatar_url)}<div><strong>${escapeHtml(friend.username)}</strong><span>DM aç</span></div></div>`;
 
       const btn = document.createElement('button');
       btn.className = 'action-button';
@@ -498,6 +533,7 @@ async function openDm(friend) {
 function addDmMessage(message) {
   addMessage({
     username: message.sender_username || (message.sender_id === user.id ? user.username : 'Arkadaş'),
+    avatar_url: message.sender_avatar_url || (message.sender_id === user.id ? user.avatar_url : null),
     text: message.text,
     time: message.time || formatTime(message.created_at),
     mine: message.sender_id === user.id
@@ -528,11 +564,29 @@ function addNotificationToList(notification, isNew) {
   const item = document.createElement('div');
   item.className = 'mini-item';
   item.innerHTML = `<div><strong>${escapeHtml(notificationTitle(notification))}</strong><span>${escapeHtml(notificationText(notification))}</span></div>`;
+
+  if (notification.id) {
+    const del = document.createElement('button');
+    del.className = 'action-button notification-delete';
+    del.textContent = 'Sil';
+    del.onclick = () => deleteNotification(notification.id, item);
+    item.appendChild(del);
+  }
+
   notificationsList.prepend(item);
 
   if (isNew) {
     unreadNotifications += 1;
     updateBadge();
+  }
+}
+
+async function deleteNotification(id, element) {
+  try {
+    await api(`/api/notifications/${id}`, { method: 'DELETE' });
+    element.remove();
+  } catch (error) {
+    addSystemMessage(error.message);
   }
 }
 
@@ -564,9 +618,22 @@ function renderUsers(users) {
   });
 }
 
-function addMessage({ username, text, time, mine }) {
+function addMessage({ username, avatar_url, text, time, mine }) {
   const div = document.createElement('div');
   div.className = `message ${mine ? 'mine' : ''}`;
+
+  const avatar = document.createElement(avatar_url ? 'img' : 'div');
+  avatar.className = 'msg-avatar';
+
+  if (avatar_url) {
+    avatar.src = avatar_url;
+    avatar.alt = username;
+  } else {
+    avatar.textContent = String(username || '?').charAt(0).toUpperCase();
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
 
   const meta = document.createElement('div');
   meta.className = 'meta';
@@ -576,8 +643,11 @@ function addMessage({ username, text, time, mine }) {
   body.className = 'text';
   body.textContent = text;
 
-  div.appendChild(meta);
-  div.appendChild(body);
+  bubble.appendChild(meta);
+  bubble.appendChild(body);
+
+  div.appendChild(avatar);
+  div.appendChild(bubble);
   messagesEl.appendChild(div);
   scrollToBottom();
 }
