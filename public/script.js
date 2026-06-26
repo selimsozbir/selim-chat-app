@@ -315,7 +315,7 @@ fileInput.addEventListener('change', async () => {
   try {
     await sendFileMessage(file);
   } catch (error) {
-    addSystemMessage(error.name === 'AbortError' ? 'Yükleme zaman aşımına uğradı. Storage ayarlarını kontrol et.' : error.message);
+    addSystemMessage(error.message);
   } finally {
     fileInput.value = '';
   }
@@ -365,12 +365,11 @@ async function sendFileMessage(file) {
     clearTimeout(timeoutId);
 
     const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Dosya yüklenemedi.');
-    }
+    if (!response.ok) throw new Error(data.error || 'Dosya yüklenemedi.');
 
     const uploaded = data.file;
+    addSystemMessage('Dosya yüklendi, mesaj gönderiliyor...');
+
     const payload = {
       text: uploaded.type === 'image' ? 'Fotoğraf' : uploaded.type === 'audio' ? 'Ses dosyası' : uploaded.fileName,
       type: uploaded.type,
