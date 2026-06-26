@@ -6412,3 +6412,93 @@ body {
     height: 34px;
   }
 }
+
+
+/* =========================================================
+   v8.4.2 — Shards Casino + 1 Shard Test Market
+   ========================================================= */
+
+.gamify-tabs {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+
+.casino-note {
+  margin: 0 0 10px;
+  color: #fbbf24;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.casino-card {
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.07);
+  background:
+    radial-gradient(circle at top left, rgba(251,191,36,.12), transparent 32%),
+    rgba(24,24,31,.78);
+  margin-bottom: 10px;
+}
+
+.casino-card h4 {
+  margin: 0 0 10px;
+  color: #fff;
+}
+
+.casino-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.casino-row input {
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: #09090f;
+  color: #fff;
+}
+
+.casino-result,
+.blackjack-table {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(0,0,0,.24);
+  border: 1px solid rgba(255,255,255,.05);
+  color: #e5e7eb;
+  font-size: 13px;
+}
+
+.slot-reels {
+  font-size: 28px;
+  letter-spacing: .12em;
+  margin-bottom: 6px;
+}
+
+.casino-result strong,
+.casino-result span,
+.blackjack-table div {
+  display: block;
+  margin-top: 4px;
+}
+
+.casino-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.casino-actions button:disabled,
+.quest-claim:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+  .gamify-tabs {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
