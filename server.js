@@ -405,16 +405,22 @@ async function initDatabase() {
     );
   `);
 
-  const ownerCount = await pool.query(`SELECT id FROM users WHERE global_role = 'owner' LIMIT 1`);
-  if (ownerCount.rows.length === 0) {
-    const preferred = await pool.query('SELECT id FROM users WHERE LOWER(username) = $1 LIMIT 1', [OWNER_USERNAME]);
-    if (preferred.rows.length > 0) {
-      await pool.query(`UPDATE users SET global_role = 'owner' WHERE id = $1`, [preferred.rows[0].id]);
-    } else {
+  const preferred = await pool.query('SELECT id FROM users WHERE LOWER(username) = $1 LIMIT 1', [OWNER_USERNAME]);
+
+  if (preferred.rows.length > 0) {
+    await pool.query(`UPDATE users SET global_role = 'user' WHERE global_role = 'owner' AND id <> $1`, [preferred.rows[0].id]);
+    await pool.query(`UPDATE users SET global_role = 'owner' WHERE id = $1`, [preferred.rows[0].id]);
+    console.log(`Owner senkronlandı: ${OWNER_USERNAME}`);
+  } else {
+    const ownerCount = await pool.query(`SELECT id FROM users WHERE global_role = 'owner' LIMIT 1`);
+    if (ownerCount.rows.length === 0) {
       await pool.query(
         `UPDATE users SET global_role = 'owner'
          WHERE id = (SELECT id FROM users ORDER BY created_at ASC LIMIT 1)`
       );
+      console.log('Owner otomatik en eski kullanıcıya verildi.');
+    } else {
+      console.log(`OWNER_USERNAME bulunamadı: ${OWNER_USERNAME}`);
     }
   }
 
