@@ -793,13 +793,34 @@ app.delete('/api/avatar', authMiddleware, async (req, res) => {
 
 /* STORAGE UPLOAD */
 
+app.get('/api/storage-status', authMiddleware, async (req, res) => {
+  res.json({
+    storageEnabled: storageEnabled(),
+    hasSupabaseUrl: Boolean(SUPABASE_URL),
+    hasServiceKey: Boolean(SUPABASE_SERVICE_ROLE_KEY),
+    bucket: SUPABASE_BUCKET || null,
+    supabaseUrlPreview: SUPABASE_URL ? `${SUPABASE_URL.slice(0, 24)}...` : null
+  });
+});
+
 app.post('/api/upload', authMiddleware, upload.single('file'), async (req, res) => {
   try {
+    console.log('Upload isteği geldi:', {
+      userId: req.user.id,
+      fileName: req.file?.originalname,
+      mime: req.file?.mimetype,
+      size: req.file?.size,
+      storageEnabled: storageEnabled(),
+      bucket: SUPABASE_BUCKET
+    });
+
     const uploaded = await uploadToSupabaseStorage(req.file, req.user.id);
 
     let type = 'file';
     if (uploaded.mime.startsWith('image/')) type = 'image';
     if (uploaded.mime.startsWith('audio/')) type = 'audio';
+
+    console.log('Upload başarılı:', uploaded.path);
 
     res.json({
       ok: true,
