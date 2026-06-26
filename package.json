@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.3.2",
-  "description": "Selim Chat v8.3.2 fullhd layout polish",
+  "version": "8.4.0",
+  "description": "Selim Chat v8.4.0 XP market daily quests leaderboard and cosmetics",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
