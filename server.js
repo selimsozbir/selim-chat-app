@@ -21,11 +21,12 @@ const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY |
 const SUPABASE_BUCKET = String(process.env.SUPABASE_BUCKET || 'chat-uploads');
 
 const AI_BOT_ENABLED = String(process.env.AI_BOT_ENABLED || 'false').toLowerCase() === 'true';
-const AI_BOT_NAME = cleanBotName(process.env.AI_BOT_NAME || 'Feiz');
+const AI_BOT_NAME = cleanBotName(process.env.AI_BOT_NAME || 'feiz');
 const AI_BOT_USERNAME = cleanBotUsername(AI_BOT_NAME);
 const GROQ_API_KEY = String(process.env.GROQ_API_KEY || '');
 const GROQ_MODEL = String(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile');
 const AI_BOT_COOLDOWN_MS = Number(process.env.AI_BOT_COOLDOWN_MS || 10000);
+const AI_BOT_RULES = String(process.env.AI_BOT_RULES || '').trim().slice(0, 2000);
 
 app.set('trust proxy', true);
 
@@ -156,12 +157,12 @@ function cleanText(value, maxLength) {
 }
 
 function cleanBotName(value) {
-  return String(value || 'SelimBot').trim().replace(/\s+/g, ' ').slice(0, 40) || 'SelimBot';
+  return String(value || 'feiz').trim().replace(/\s+/g, ' ').slice(0, 40) || 'feiz';
 }
 
 function cleanBotUsername(value) {
-  const raw = String(value || 'SelimBot').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 24);
-  return raw || 'selimbot';
+  const raw = String(value || 'feiz').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 24);
+  return raw || 'feiz';
 }
 
 function botMentioned(text) {
@@ -411,7 +412,7 @@ async function ensureAiBotUser() {
       `INSERT INTO users (username, password_hash, display_name, bio, global_role)
        VALUES ($1, $2, $3, $4, 'user')
        RETURNING id, username, display_name, avatar_url`,
-      [AI_BOT_USERNAME, passwordHash, AI_BOT_NAME, 'Ben Selim Chat içindeki yapay zeka botuyum. @bot yazarak beni çağırabilirsin.']
+      [AI_BOT_USERNAME, passwordHash, AI_BOT_NAME, 'Ben Selim Chat içindeki yapay zeka botuyum. @feiz veya @bot yazarak beni çağırabilirsin.']
     );
   } else if (result.rows[0].display_name !== AI_BOT_NAME) {
     result = await pool.query(
@@ -463,8 +464,9 @@ async function askGroq(prompt, context = {}) {
     'Kullanıcı Türkçe konuşuyorsa Türkçe cevap ver.',
     'Gereksiz uzun yazma; genelde 1-6 cümle yeter.',
     'Kod istenirse okunabilir kod ver.',
-    'Tehlikeli, gizli anahtar, şifre veya kötüye kullanım isteklerine yardımcı olma.'
-  ].join(' ');
+    'Tehlikeli, gizli anahtar, şifre veya kötüye kullanım isteklerine yardımcı olma.',
+    AI_BOT_RULES ? `Ek bot kuralları: ${AI_BOT_RULES}` : ''
+  ].filter(Boolean).join(' ');
 
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -511,7 +513,7 @@ async function maybeHandleAiBot({ scope, text, senderId, senderUsername, room, g
 
   const prompt = extractBotPrompt(text);
   if (!prompt) {
-    const helpText = `Beni şöyle çağır: @bot oyun fikri ver`;
+    const helpText = `Beni şöyle çağır: @feiz oyun fikri ver`;
     await sendAiBotMessage({ scope, text: helpText, targetUserId: senderId, room, groupId });
     return;
   }
