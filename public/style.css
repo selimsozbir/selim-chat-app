@@ -5931,3 +5931,125 @@ body {
     border-radius: 14px;
   }
 }
+
+
+/* =========================================================
+   v8.3.2 — FullHD Layout Return / Wider Desktop Canvas
+   ========================================================= */
+
+:root {
+  --app-shell: 100vw;
+  --chat-shell: none;
+}
+
+body {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(139,92,246,.08), transparent 22%),
+    radial-gradient(circle at 88% 12%, rgba(236,72,153,.07), transparent 20%),
+    linear-gradient(180deg, #06070d 0%, #070811 100%);
+}
+
+.chat-screen {
+  max-width: none !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+.sidebar {
+  width: 355px !important;
+  min-width: 355px !important;
+  padding: 14px !important;
+}
+
+.chat-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.chat-header {
+  padding: 14px 24px !important;
+}
+
+.chat-content-shell {
+  width: 100%;
+  max-width: none;
+}
+
+.messages {
+  max-width: none !important;
+  width: 100% !important;
+  padding: 18px 26px 12px !important;
+  gap: 8px !important;
+}
+
+.message {
+  max-width: min(820px, 72%) !important;
+}
+
+.msg-bubble {
+  border-radius: 20px 20px 20px 10px !important;
+}
+
+.message.mine .msg-bubble {
+  border-radius: 20px 20px 10px 20px !important;
+}
+
+.typing {
+  max-width: none !important;
+  width: 100% !important;
+  padding: 0 28px 8px !important;
+}
+
+.composer-shell {
+  padding: 0 18px 16px !important;
+}
+
+.message-form {
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+.scroll-bottom-button {
+  right: 20px !important;
+}
+
+@media (min-width: 1600px) {
+  .sidebar {
+    width: 370px !important;
+    min-width: 370px !important;
+  }
+
+  .messages {
+    padding: 20px 34px 12px !important;
+  }
+
+  .message {
+    max-width: min(920px, 70%) !important;
+  }
+
+  .message-form {
+    padding: 12px 14px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .chat-screen {
+    width: 100% !important;
+  }
+
+  .sidebar {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .messages {
+    padding: 12px 10px 10px !important;
+  }
+
+  .message {
+    max-width: 90% !important;
+  }
+}
