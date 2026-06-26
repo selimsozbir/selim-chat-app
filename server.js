@@ -10,20 +10,24 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
+// Gemini API client
 let gemini = null;
 
 if (process.env.GEMINI_API_KEY) {
   gemini = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
   });
+
   console.log('GEMINI_API_KEY VAR MI: EVET');
 } else {
   console.log('GEMINI_API_KEY VAR MI: HAYIR');
   console.log('Gemini bot devre dışı. Render Environment kısmına GEMINI_API_KEY ekle.');
 }
 
+// Public klasörünü yayınla
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Online kullanıcılar
 const onlineUsers = new Map();
 
 function nowTime() {
@@ -66,16 +70,21 @@ async function answerWithGemini(room, userQuestion) {
     io.to(room).emit('typing', 'Gemini Bot');
 
     const prompt = `
-Sen bir mesajlaşma uygulamasındaki Türkçe konuşan yardımcı botsun.
-Kısa, net ve samimi cevap ver.
-Tehlikeli, yasa dışı veya zararlı şeylerde yardımcı olma.
+Sen bir mesajlaşma uygulamasında çalışan Türkçe yardımcı botsun.
+
+Kurallar:
+- Kısa, net ve samimi cevap ver.
+- Gereksiz uzun yazma.
+- Kullanıcı Türkçe yazarsa Türkçe cevap ver.
+- Tehlikeli, yasa dışı veya zararlı şeylerde yardımcı olma.
+- Sohbet ortamına uygun doğal cevap ver.
 
 Kullanıcının mesajı:
 ${userQuestion}
 `;
 
     const response = await gemini.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.5-flash-lite',
       contents: prompt
     });
 
@@ -85,16 +94,29 @@ ${userQuestion}
 
     sendBotMessage(room, botText);
   } catch (error) {
-    console.error('Gemini bot hatası:', error);
+    console.error('Gemini bot hatası detayı:', {
+      name: error?.name,
+      message: error?.message,
+      status: error?.status,
+      code: error?.code,
+      stack: error?.stack
+    });
 
-    let errorMessage = 'Bot şu an cevap veremedi. Gemini API key, limit veya Render loglarını kontrol et.';
+    let errorMessage =
+      'Bot şu an cevap veremedi. Gemini API key, limit veya Render loglarını kontrol et.';
 
-    if (error?.message?.includes('API key')) {
+    const msg = String(error?.message || '').toLowerCase();
+
+    if (msg.includes('api key') || msg.includes('apikey') || msg.includes('invalid')) {
       errorMessage = 'Gemini API key yanlış veya eksik görünüyor.';
     }
 
-    if (error?.message?.includes('quota') || error?.message?.includes('429')) {
+    if (msg.includes('quota') || msg.includes('429') || msg.includes('limit')) {
       errorMessage = 'Gemini ücretsiz limitine takılmış olabilir. Biraz bekleyip tekrar dene.';
+    }
+
+    if (msg.includes('model') || msg.includes('404')) {
+      errorMessage = 'Gemini modeli bulunamadı. server.js içinde model adını kontrol et.';
     }
 
     sendBotMessage(room, errorMessage);
@@ -116,8 +138,15 @@ io.on('connection', (socket) => {
       room: cleanRoom
     });
 
-    socket.emit('system_message', `Hoş geldin ${cleanUsername}. Oda: ${cleanRoom}`);
-    socket.to(cleanRoom).emit('system_message', `${cleanUsername} odaya katıldı.`);
+    socket.emit(
+      'system_message',
+      `Hoş geldin ${cleanUsername}. Oda: ${cleanRoom}`
+    );
+
+    socket.to(cleanRoom).emit(
+      'system_message',
+      `${cleanUsername} odaya katıldı.`
+    );
 
     updateRoomUsers(cleanRoom);
   });
@@ -160,7 +189,11 @@ io.on('connection', (socket) => {
     onlineUsers.delete(socket.id);
 
     if (user) {
-      socket.to(user.room).emit('system_message', `${user.username} çıktı.`);
+      socket.to(user.room).emit(
+        'system_message',
+        `${user.username} çıktı.`
+      );
+
       updateRoomUsers(user.room);
     }
   });
