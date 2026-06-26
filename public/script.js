@@ -350,8 +350,6 @@ async function sendFileMessage(file) {
   voiceButton.disabled = true;
 
   try {
-    addSystemMessage('Dosya storage’a yükleniyor...');
-
     const formData = new FormData();
     formData.append('file', file);
 
@@ -372,8 +370,6 @@ async function sendFileMessage(file) {
       clearTimeout(timeoutId);
     }
 
-    addSystemMessage(`Upload cevabı geldi: HTTP ${response.status}`);
-
     const rawText = await response.text();
     let data = {};
 
@@ -391,8 +387,6 @@ async function sendFileMessage(file) {
     if (!uploaded || !uploaded.fileUrl || !uploaded.type) {
       throw new Error('Upload cevabı eksik geldi.');
     }
-
-    addSystemMessage('Dosya yüklendi, mesaj gönderiliyor...');
 
     const uploadedType = uploaded.type;
     const payload = {
