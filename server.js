@@ -88,6 +88,43 @@ async function isBlockedBetween(userA, userB) {
   return result.rows.length > 0;
 }
 
+async function getRoomRole(room, userId) {
+  const result = await pool.query(
+    'SELECT role FROM room_roles WHERE room = $1 AND user_id = $2',
+    [room, userId]
+  );
+  return result.rows[0]?.role || null;
+}
+
+function canModerate(role) {
+  return role === 'admin' || role === 'mod';
+}
+
+async function ensureRoomHasAdmin(room, userId) {
+  const result = await pool.query('SELECT id FROM room_roles WHERE room = $1 AND role = $2 LIMIT 1', [room, 'admin']);
+  if (result.rows.length === 0) {
+    await pool.query(
+      `INSERT INTO room_roles (room, user_id, role)
+       VALUES ($1, $2, 'admin')
+       ON CONFLICT (room, user_id) DO UPDATE SET role = 'admin'`,
+      [room, userId]
+    );
+    return 'admin';
+  }
+
+  return await getRoomRole(room, userId);
+}
+
+async function isRoomBanned(room, userId) {
+  const result = await pool.query('SELECT id FROM room_bans WHERE room = $1 AND user_id = $2', [room, userId]);
+  return result.rows.length > 0;
+}
+
+async function isRoomMuted(room, userId) {
+  const result = await pool.query('SELECT id FROM room_mutes WHERE room = $1 AND user_id = $2', [room, userId]);
+  return result.rows.length > 0;
+}
+
 async function areFriends(userA, userB) {
   if (await isBlockedBetween(userA, userB)) return false;
 
@@ -209,6 +246,9 @@ async function initDatabase() {
     );
   `);
 
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS blocked_users (
       id SERIAL PRIMARY KEY,
@@ -238,6 +278,39 @@ async function initDatabase() {
 
   await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to_id INTEGER`);
   await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS reply_to_id INTEGER`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_roles (
+      id SERIAL PRIMARY KEY,
+      room VARCHAR(50) NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      role VARCHAR(20) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (room, user_id)
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_bans (
+      id SERIAL PRIMARY KEY,
+      room VARCHAR(50) NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      banned_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (room, user_id)
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_mutes (
+      id SERIAL PRIMARY KEY,
+      room VARCHAR(50) NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      muted_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (room, user_id)
+    );
+  `);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS message_reactions (
@@ -306,9 +379,40 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.get('/api/me', authMiddleware, async (req, res) => {
-  const result = await pool.query('SELECT id, username, avatar_url FROM users WHERE id = $1', [req.user.id]);
+  const result = await pool.query('SELECT id, username, avatar_url, bio, last_seen FROM users WHERE id = $1', [req.user.id]);
   if (result.rows.length === 0) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
-  res.json({ user: result.rows[0] });
+  res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
+});
+
+app.get('/api/profile/:id', authMiddleware, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Geçersiz kullanıcı.' });
+
+  const result = await pool.query(
+    `SELECT id, username, avatar_url, bio, created_at, last_seen
+     FROM users WHERE id = $1`,
+    [id]
+  );
+
+  if (result.rows.length === 0) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+
+  const profile = result.rows[0];
+  res.json({
+    profile: {
+      ...profile,
+      online: userSockets.has(String(id))
+    }
+  });
+});
+
+app.post('/api/profile/bio', authMiddleware, async (req, res) => {
+  const bio = cleanText(req.body.bio, 160);
+  const result = await pool.query(
+    'UPDATE users SET bio = $1 WHERE id = $2 RETURNING id, username, avatar_url, bio, last_seen',
+    [bio, req.user.id]
+  );
+
+  res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
 });
 
 /* PROFILE */
@@ -375,7 +479,7 @@ app.get('/api/users/search', authMiddleware, async (req, res) => {
   if (q.length < 2) return res.json({ users: [] });
 
   const result = await pool.query(
-    `SELECT u.id, u.username, u.avatar_url
+    `SELECT u.id, u.username, u.avatar_url, u.last_seen
      FROM users u
      WHERE LOWER(u.username) LIKE LOWER($1)
      AND u.id <> $2
@@ -390,6 +494,71 @@ app.get('/api/users/search', authMiddleware, async (req, res) => {
   );
 
   res.json({ users: result.rows });
+});
+
+app.get('/api/room/:room/members', authMiddleware, async (req, res) => {
+  const room = cleanText(req.params.room, 50).toLowerCase() || 'genel';
+
+  const socketUsers = Array.from(onlineUsers.values())
+    .filter((u) => u.room === room);
+
+  const ids = Array.from(new Set(socketUsers.map((u) => u.id)));
+
+  if (ids.length === 0) return res.json({ members: [] });
+
+  const result = await pool.query(
+    `SELECT u.id, u.username, u.avatar_url, u.bio, u.last_seen, rr.role
+     FROM users u
+     LEFT JOIN room_roles rr ON rr.room = $1 AND rr.user_id = u.id
+     WHERE u.id = ANY($2::int[])
+     ORDER BY u.username ASC`,
+    [room, ids]
+  );
+
+  res.json({
+    members: result.rows.map((u) => ({ ...u, online: userSockets.has(String(u.id)) }))
+  });
+});
+
+app.get('/api/search/messages', authMiddleware, async (req, res) => {
+  const q = cleanText(req.query.q, 80);
+  const scope = String(req.query.scope || 'room');
+
+  if (q.length < 2) return res.json({ results: [] });
+
+  if (scope === 'dm') {
+    const friendId = Number(req.query.friendId);
+    if (!Number.isInteger(friendId)) return res.status(400).json({ error: 'Geçersiz DM.' });
+
+    const ok = await areFriends(req.user.id, friendId);
+    if (!ok) return res.status(403).json({ error: 'Bu kullanıcıyla arama yapamazsın.' });
+
+    const result = await pool.query(
+      `SELECT dm.id, dm.text, dm.created_at, dm.sender_id, u.username
+       FROM dm_messages dm
+       JOIN users u ON u.id = dm.sender_id
+       WHERE dm.deleted_at IS NULL
+       AND dm.text ILIKE $1
+       AND ((dm.sender_id = $2 AND dm.receiver_id = $3) OR (dm.sender_id = $3 AND dm.receiver_id = $2))
+       ORDER BY dm.created_at DESC
+       LIMIT 20`,
+      [`%${q}%`, req.user.id, friendId]
+    );
+
+    return res.json({ results: result.rows });
+  }
+
+  const room = cleanText(req.query.room, 50).toLowerCase() || 'genel';
+  const result = await pool.query(
+    `SELECT id, text, username, created_at
+     FROM messages
+     WHERE room = $1 AND deleted_at IS NULL AND text ILIKE $2
+     ORDER BY created_at DESC
+     LIMIT 20`,
+    [room, `%${q}%`]
+  );
+
+  res.json({ results: result.rows });
 });
 
 app.get('/api/friends', authMiddleware, async (req, res) => {
@@ -572,6 +741,96 @@ app.delete('/api/block/:userId', authMiddleware, async (req, res) => {
 
   await pool.query('DELETE FROM blocked_users WHERE blocker_id = $1 AND blocked_id = $2', [req.user.id, userId]);
   res.json({ ok: true, message: 'Engel kaldırıldı.' });
+});
+
+/* ROOM MODERATION */
+
+app.get('/api/room/:room/moderation', authMiddleware, async (req, res) => {
+  const room = cleanText(req.params.room, 50).toLowerCase() || 'genel';
+  const myRole = await getRoomRole(room, req.user.id);
+
+  const roles = await pool.query(
+    `SELECT rr.user_id, rr.role, u.username, u.avatar_url
+     FROM room_roles rr
+     JOIN users u ON u.id = rr.user_id
+     WHERE rr.room = $1
+     ORDER BY rr.role ASC, u.username ASC`,
+    [room]
+  );
+
+  const bans = await pool.query(
+    `SELECT rb.user_id, u.username, u.avatar_url, rb.created_at
+     FROM room_bans rb
+     JOIN users u ON u.id = rb.user_id
+     WHERE rb.room = $1
+     ORDER BY rb.created_at DESC`,
+    [room]
+  );
+
+  const mutes = await pool.query(
+    `SELECT rm.user_id, u.username, u.avatar_url, rm.created_at
+     FROM room_mutes rm
+     JOIN users u ON u.id = rm.user_id
+     WHERE rm.room = $1
+     ORDER BY rm.created_at DESC`,
+    [room]
+  );
+
+  res.json({ myRole, roles: roles.rows, bans: bans.rows, mutes: mutes.rows });
+});
+
+app.post('/api/room/:room/moderate', authMiddleware, async (req, res) => {
+  const room = cleanText(req.params.room, 50).toLowerCase() || 'genel';
+  const action = String(req.body.action || '');
+  const targetId = Number(req.body.userId);
+
+  if (!Number.isInteger(targetId)) return res.status(400).json({ error: 'Geçersiz kullanıcı.' });
+  if (targetId === req.user.id) return res.status(400).json({ error: 'Kendine işlem yapamazsın.' });
+
+  const myRole = await getRoomRole(room, req.user.id);
+  if (!canModerate(myRole)) return res.status(403).json({ error: 'Yetkin yok.' });
+
+  const targetRole = await getRoomRole(room, targetId);
+  if (targetRole === 'admin' && myRole !== 'admin') return res.status(403).json({ error: 'Admin üzerinde işlem yapamazsın.' });
+
+  if (action === 'mod') {
+    if (myRole !== 'admin') return res.status(403).json({ error: 'Sadece admin mod yapabilir.' });
+    await pool.query(
+      `INSERT INTO room_roles (room, user_id, role)
+       VALUES ($1, $2, 'mod')
+       ON CONFLICT (room, user_id) DO UPDATE SET role = 'mod'`,
+      [room, targetId]
+    );
+  } else if (action === 'unmod') {
+    if (myRole !== 'admin') return res.status(403).json({ error: 'Sadece admin modu alabilir.' });
+    await pool.query(`DELETE FROM room_roles WHERE room = $1 AND user_id = $2 AND role = 'mod'`, [room, targetId]);
+  } else if (action === 'mute') {
+    await pool.query(
+      `INSERT INTO room_mutes (room, user_id, muted_by)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (room, user_id) DO NOTHING`,
+      [room, targetId, req.user.id]
+    );
+  } else if (action === 'unmute') {
+    await pool.query('DELETE FROM room_mutes WHERE room = $1 AND user_id = $2', [room, targetId]);
+  } else if (action === 'ban') {
+    await pool.query(
+      `INSERT INTO room_bans (room, user_id, banned_by)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (room, user_id) DO NOTHING`,
+      [room, targetId, req.user.id]
+    );
+    await pool.query('DELETE FROM room_mutes WHERE room = $1 AND user_id = $2', [room, targetId]);
+    emitToUser(targetId, 'room_banned', { room });
+  } else if (action === 'unban') {
+    await pool.query('DELETE FROM room_bans WHERE room = $1 AND user_id = $2', [room, targetId]);
+  } else if (action === 'kick') {
+    emitToUser(targetId, 'room_kicked', { room });
+  } else {
+    return res.status(400).json({ error: 'Geçersiz işlem.' });
+  }
+
+  res.json({ ok: true, message: 'İşlem yapıldı.' });
 });
 
 /* DM */
@@ -774,11 +1033,19 @@ io.on('connection', (socket) => {
   socket.on('join', async ({ room }) => {
     const cleanRoom = cleanText(room, 50).toLowerCase() || 'genel';
 
+    if (await isRoomBanned(cleanRoom, socket.user.id)) {
+      socket.emit('system_message', 'Bu odadan banlandın.');
+      return;
+    }
+
+    const role = await ensureRoomHasAdmin(cleanRoom, socket.user.id);
+
     if (socket.data.room) socket.leave(socket.data.room);
     socket.data.room = cleanRoom;
     socket.join(cleanRoom);
 
     onlineUsers.set(socket.id, { id: socket.user.id, username: socket.user.username, room: cleanRoom });
+    socket.emit('room_role', { room: cleanRoom, role });
     socket.emit('system_message', `Hoş geldin ${socket.user.username}. Oda: ${cleanRoom}`);
     socket.to(cleanRoom).emit('system_message', `${socket.user.username} odaya katıldı.`);
     updateRoomUsers(cleanRoom);
@@ -805,6 +1072,17 @@ io.on('connection', (socket) => {
       }
 
       const room = socket.data.room;
+
+      if (await isRoomBanned(room, socket.user.id)) {
+        socket.emit('system_message', 'Bu odadan banlandın.');
+        return;
+      }
+
+      if (await isRoomMuted(room, socket.user.id)) {
+        socket.emit('system_message', 'Bu odada susturuldun.');
+        return;
+      }
+
       let replyToId = Number(payload.replyToId);
       if (!Number.isInteger(replyToId)) replyToId = null;
 
@@ -889,12 +1167,19 @@ io.on('connection', (socket) => {
       const id = Number(messageId);
       if (!Number.isInteger(id)) return;
 
+      const msgCheck = await pool.query('SELECT room, user_id FROM messages WHERE id = $1', [id]);
+      if (msgCheck.rows.length === 0) return;
+
+      const role = await getRoomRole(msgCheck.rows[0].room, socket.user.id);
+      const canDelete = msgCheck.rows[0].user_id === socket.user.id || canModerate(role);
+      if (!canDelete) return;
+
       const result = await pool.query(
         `UPDATE messages
          SET text = 'Bu mesaj silindi.', deleted_at = CURRENT_TIMESTAMP
-         WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+         WHERE id = $1 AND deleted_at IS NULL
          RETURNING id, room, text, deleted_at`,
-        [id, socket.user.id]
+        [id]
       );
 
       if (result.rows.length === 0) return;
@@ -1063,7 +1348,8 @@ io.on('connection', (socket) => {
     socket.to(socket.data.room).emit('typing', socket.user.username);
   });
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
+    await pool.query('UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE id = $1', [socket.user.id]);
     const user = onlineUsers.get(socket.id);
     onlineUsers.delete(socket.id);
     removeSocketForUser(socket.user.id, socket.id);
