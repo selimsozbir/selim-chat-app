@@ -76,6 +76,8 @@
             <h3>Admin / Mod</h3>
             <div id="myRoleText" class="role-text">Rol: üye</div>
             <div id="adminMembersList" class="mini-list"></div>
+            <h3>Susturulanlar</h3>
+            <div id="mutedMembersList" class="mini-list"></div>
           </div>
         </div>
 
@@ -109,6 +111,18 @@
           <h3>Bildirimler <span id="notificationBadge"></span></h3>
           <button id="clearNotificationsButton" class="small-button">Bildirimleri temizle</button>
           <div id="notificationsList" class="mini-list"></div>
+        </div>
+
+        <div id="globalAdminPanel" class="global-admin-panel hidden">
+          <h3>Site Admin</h3>
+          <button id="refreshAdminButton" class="small-button">Paneli yenile</button>
+          <div class="room-row">
+            <input id="ipBanInput" type="text" placeholder="IP ban" />
+            <button id="ipBanButton">Ban</button>
+          </div>
+          <div id="adminUsersList" class="mini-list"></div>
+          <h3>IP Banları</h3>
+          <div id="ipBansList" class="mini-list"></div>
         </div>
       </aside>
 
