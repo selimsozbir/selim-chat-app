@@ -111,6 +111,9 @@
         <div id="typingText" class="typing"></div>
 
         <form id="messageForm" class="message-form">
+          <button id="attachButton" type="button" title="Dosya gönder">📎</button>
+          <button id="voiceButton" type="button" title="Sesli mesaj">🎙️</button>
+          <input id="fileInput" type="file" accept="image/*,audio/*,.pdf,.txt,.zip,.rar,.doc,.docx" hidden />
           <input id="messageInput" type="text" placeholder="Mesaj yaz..." maxlength="1000" autocomplete="off" />
           <button type="submit">Gönder</button>
         </form>
