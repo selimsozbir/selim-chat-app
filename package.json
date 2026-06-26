@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.2.9",
-  "description": "Selim Chat v7.2.9 storage URL messages fix",
+  "version": "7.3.0",
+  "description": "Selim Chat v7.3.0 clean upload UI without debug system messages",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
