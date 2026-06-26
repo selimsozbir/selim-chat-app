@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.4.1",
-  "description": "Selim Chat v8.4.1 fixes gamify tabs easter eggs and adds emoji panel",
+  "version": "8.4.2",
+  "description": "Selim Chat v8.4.2 casino shard games and 1 shard market test prices",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
