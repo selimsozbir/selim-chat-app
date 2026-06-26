@@ -2044,7 +2044,6 @@ function addSystemMessage(message) {
   div.className = 'message system';
   div.textContent = message;
   messagesEl.appendChild(div);
-  loadReactionsForMessage(type, id);
   scrollToBottom();
 }
 
