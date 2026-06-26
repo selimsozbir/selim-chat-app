@@ -507,6 +507,47 @@ async function initDatabase() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS group_chats (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(80) NOT NULL,
+      avatar_url TEXT,
+      owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS group_members (
+      id SERIAL PRIMARY KEY,
+      group_id INTEGER REFERENCES group_chats(id) ON DELETE CASCADE,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      role VARCHAR(20) DEFAULT 'member',
+      joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (group_id, user_id)
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS group_messages (
+      id SERIAL PRIMARY KEY,
+      group_id INTEGER REFERENCES group_chats(id) ON DELETE CASCADE,
+      sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      text TEXT NOT NULL,
+      message_type VARCHAR(20) DEFAULT 'text',
+      file_name TEXT,
+      file_mime TEXT,
+      file_data TEXT,
+      file_path TEXT,
+      file_size INTEGER,
+      reply_to_id INTEGER,
+      edited_at TIMESTAMP,
+      deleted_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS message_reactions (
       id SERIAL PRIMARY KEY,
       message_scope VARCHAR(10) NOT NULL,
@@ -1137,6 +1178,275 @@ app.delete('/api/block/:userId', authMiddleware, async (req, res) => {
   await pool.query('DELETE FROM blocked_users WHERE blocker_id = $1 AND blocked_id = $2', [req.user.id, userId]);
   res.json({ ok: true, message: 'Engel kaldırıldı.' });
 });
+
+
+/* GROUP DM HELPERS */
+
+async function getGroupMember(groupId, userId) {
+  const result = await pool.query(
+    `SELECT gm.role, gc.owner_id
+     FROM group_members gm
+     JOIN group_chats gc ON gc.id = gm.group_id
+     WHERE gm.group_id = $1 AND gm.user_id = $2`,
+    [groupId, userId]
+  );
+
+  if (result.rows.length === 0) return null;
+  const row = result.rows[0];
+
+  return {
+    role: row.owner_id === userId ? 'owner' : row.role,
+    owner_id: row.owner_id
+  };
+}
+
+function canManageGroup(role) {
+  return role === 'owner' || role === 'admin';
+}
+
+async function emitGroupToMembers(groupId, eventName, payload) {
+  const members = await pool.query('SELECT user_id FROM group_members WHERE group_id = $1', [groupId]);
+  for (const member of members.rows) {
+    emitToUser(member.user_id, eventName, payload);
+  }
+}
+
+async function getGroupSummary(groupId, userId) {
+  const result = await pool.query(
+    `SELECT gc.id, gc.name, gc.avatar_url, gc.owner_id, gm.role,
+            COUNT(gm2.user_id)::int AS member_count
+     FROM group_chats gc
+     JOIN group_members gm ON gm.group_id = gc.id AND gm.user_id = $2
+     JOIN group_members gm2 ON gm2.group_id = gc.id
+     WHERE gc.id = $1
+     GROUP BY gc.id, gm.role`,
+    [groupId, userId]
+  );
+
+  if (result.rows.length === 0) return null;
+
+  const group = result.rows[0];
+  group.my_role = group.owner_id === userId ? 'owner' : group.role;
+  return group;
+}
+
+
+
+/* GROUP DM */
+
+app.get('/api/groups', authMiddleware, async (req, res) => {
+  const result = await pool.query(
+    `SELECT gc.id, gc.name, gc.avatar_url, gc.owner_id, gm.role,
+            COUNT(gm2.user_id)::int AS member_count,
+            MAX(gmsg.created_at) AS last_message_at
+     FROM group_chats gc
+     JOIN group_members gm ON gm.group_id = gc.id AND gm.user_id = $1
+     JOIN group_members gm2 ON gm2.group_id = gc.id
+     LEFT JOIN group_messages gmsg ON gmsg.group_id = gc.id
+     GROUP BY gc.id, gm.role
+     ORDER BY COALESCE(MAX(gmsg.created_at), gc.created_at) DESC`,
+    [req.user.id]
+  );
+
+  res.json({
+    groups: result.rows.map((g) => ({
+      ...g,
+      my_role: g.owner_id === req.user.id ? 'owner' : g.role
+    }))
+  });
+});
+
+app.post('/api/groups', authMiddleware, async (req, res) => {
+  const name = cleanText(req.body.name, 80);
+  const memberIds = Array.isArray(req.body.memberIds) ? req.body.memberIds.map(Number).filter(Number.isInteger) : [];
+
+  if (name.length < 2) return res.status(400).json({ error: 'Grup adı en az 2 karakter olmalı.' });
+
+  const uniqueMemberIds = Array.from(new Set([req.user.id, ...memberIds])).slice(0, 30);
+
+  for (const memberId of uniqueMemberIds) {
+    if (memberId !== req.user.id) {
+      const ok = await areFriends(req.user.id, memberId);
+      if (!ok) return res.status(403).json({ error: 'Gruba sadece arkadaşlarını ekleyebilirsin.' });
+    }
+  }
+
+  const created = await pool.query(
+    `INSERT INTO group_chats (name, owner_id)
+     VALUES ($1, $2)
+     RETURNING id, name, avatar_url, owner_id, created_at`,
+    [name, req.user.id]
+  );
+
+  const group = created.rows[0];
+
+  for (const memberId of uniqueMemberIds) {
+    await pool.query(
+      `INSERT INTO group_members (group_id, user_id, role)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (group_id, user_id) DO NOTHING`,
+      [group.id, memberId, memberId === req.user.id ? 'owner' : 'member']
+    );
+  }
+
+  await emitGroupToMembers(group.id, 'group_updated', { groupId: group.id });
+
+  res.json({ group: await getGroupSummary(group.id, req.user.id) });
+});
+
+app.get('/api/groups/:groupId', authMiddleware, async (req, res) => {
+  const groupId = Number(req.params.groupId);
+  if (!Number.isInteger(groupId)) return res.status(400).json({ error: 'Geçersiz grup.' });
+
+  const group = await getGroupSummary(groupId, req.user.id);
+  if (!group) return res.status(404).json({ error: 'Grup bulunamadı.' });
+
+  const members = await pool.query(
+    `SELECT u.id, u.username, u.display_name, u.avatar_url, u.last_seen, gm.role, gc.owner_id
+     FROM group_members gm
+     JOIN users u ON u.id = gm.user_id
+     JOIN group_chats gc ON gc.id = gm.group_id
+     WHERE gm.group_id = $1
+     ORDER BY CASE WHEN u.id = gc.owner_id THEN 0 WHEN gm.role = 'admin' THEN 1 ELSE 2 END, u.username ASC`,
+    [groupId]
+  );
+
+  res.json({
+    group,
+    members: members.rows.map((m) => ({
+      ...m,
+      role: m.owner_id === m.id ? 'owner' : m.role,
+      online: userSockets.has(String(m.id))
+    }))
+  });
+});
+
+app.get('/api/groups/:groupId/messages', authMiddleware, async (req, res) => {
+  const groupId = Number(req.params.groupId);
+  if (!Number.isInteger(groupId)) return res.status(400).json({ error: 'Geçersiz grup.' });
+
+  const member = await getGroupMember(groupId, req.user.id);
+  if (!member) return res.status(403).json({ error: 'Bu grupta değilsin.' });
+
+  const result = await pool.query(
+    `SELECT gm.id, gm.group_id, gm.sender_id, gm.text, gm.message_type,
+            gm.file_name, gm.file_mime, gm.file_data, gm.file_path, gm.file_size,
+            gm.reply_to_id, gm.edited_at, gm.deleted_at, gm.created_at,
+            u.username, u.display_name, u.avatar_url,
+            rgm.text AS reply_text,
+            ru.username AS reply_username,
+            ru.display_name AS reply_display_name
+     FROM group_messages gm
+     JOIN users u ON u.id = gm.sender_id
+     LEFT JOIN group_messages rgm ON rgm.id = gm.reply_to_id
+     LEFT JOIN users ru ON ru.id = rgm.sender_id
+     WHERE gm.group_id = $1
+     ORDER BY gm.created_at DESC
+     LIMIT 50`,
+    [groupId]
+  );
+
+  res.json({ messages: result.rows.reverse() });
+});
+
+app.post('/api/groups/:groupId/avatar', authMiddleware, async (req, res) => {
+  const groupId = Number(req.params.groupId);
+  const avatarUrl = cleanText(req.body.avatar_url, 200000);
+
+  if (!Number.isInteger(groupId)) return res.status(400).json({ error: 'Geçersiz grup.' });
+  if (!avatarUrl.startsWith('data:image/') && !avatarUrl.startsWith('http')) {
+    return res.status(400).json({ error: 'Geçersiz grup fotoğrafı.' });
+  }
+
+  const member = await getGroupMember(groupId, req.user.id);
+  if (!member || !canManageGroup(member.role)) return res.status(403).json({ error: 'Yetkin yok.' });
+
+  const result = await pool.query(
+    `UPDATE group_chats SET avatar_url = $1 WHERE id = $2 RETURNING id, name, avatar_url, owner_id`,
+    [avatarUrl, groupId]
+  );
+
+  await emitGroupToMembers(groupId, 'group_updated', { groupId });
+  res.json({ group: result.rows[0] });
+});
+
+app.delete('/api/groups/:groupId/avatar', authMiddleware, async (req, res) => {
+  const groupId = Number(req.params.groupId);
+  if (!Number.isInteger(groupId)) return res.status(400).json({ error: 'Geçersiz grup.' });
+
+  const member = await getGroupMember(groupId, req.user.id);
+  if (!member || !canManageGroup(member.role)) return res.status(403).json({ error: 'Yetkin yok.' });
+
+  await pool.query(`UPDATE group_chats SET avatar_url = NULL WHERE id = $1`, [groupId]);
+  await emitGroupToMembers(groupId, 'group_updated', { groupId });
+  res.json({ ok: true });
+});
+
+app.post('/api/groups/:groupId/members', authMiddleware, async (req, res) => {
+  const groupId = Number(req.params.groupId);
+  const userId = Number(req.body.userId);
+
+  if (!Number.isInteger(groupId) || !Number.isInteger(userId)) return res.status(400).json({ error: 'Geçersiz istek.' });
+
+  const member = await getGroupMember(groupId, req.user.id);
+  if (!member || !canManageGroup(member.role)) return res.status(403).json({ error: 'Yetkin yok.' });
+
+  const ok = await areFriends(req.user.id, userId);
+  if (!ok) return res.status(403).json({ error: 'Sadece arkadaşını ekleyebilirsin.' });
+
+  await pool.query(
+    `INSERT INTO group_members (group_id, user_id, role)
+     VALUES ($1, $2, 'member')
+     ON CONFLICT (group_id, user_id) DO NOTHING`,
+    [groupId, userId]
+  );
+
+  await emitGroupToMembers(groupId, 'group_updated', { groupId });
+  emitToUser(userId, 'group_updated', { groupId });
+  res.json({ ok: true });
+});
+
+app.patch('/api/groups/:groupId/members/:userId', authMiddleware, async (req, res) => {
+  const groupId = Number(req.params.groupId);
+  const userId = Number(req.params.userId);
+  const role = String(req.body.role || '');
+
+  if (!Number.isInteger(groupId) || !Number.isInteger(userId)) return res.status(400).json({ error: 'Geçersiz istek.' });
+  if (!['admin', 'member'].includes(role)) return res.status(400).json({ error: 'Geçersiz rol.' });
+
+  const member = await getGroupMember(groupId, req.user.id);
+  if (!member || member.role !== 'owner') return res.status(403).json({ error: 'Sadece grup sahibi admin yapabilir.' });
+
+  const group = await pool.query('SELECT owner_id FROM group_chats WHERE id = $1', [groupId]);
+  if (group.rows[0]?.owner_id === userId) return res.status(400).json({ error: 'Grup sahibinin rolü değişmez.' });
+
+  await pool.query('UPDATE group_members SET role = $1 WHERE group_id = $2 AND user_id = $3', [role, groupId, userId]);
+  await emitGroupToMembers(groupId, 'group_updated', { groupId });
+  res.json({ ok: true });
+});
+
+app.delete('/api/groups/:groupId/members/:userId', authMiddleware, async (req, res) => {
+  const groupId = Number(req.params.groupId);
+  const userId = Number(req.params.userId);
+
+  if (!Number.isInteger(groupId) || !Number.isInteger(userId)) return res.status(400).json({ error: 'Geçersiz istek.' });
+
+  const actor = await getGroupMember(groupId, req.user.id);
+  if (!actor) return res.status(403).json({ error: 'Bu grupta değilsin.' });
+
+  const group = await pool.query('SELECT owner_id FROM group_chats WHERE id = $1', [groupId]);
+  const ownerId = group.rows[0]?.owner_id;
+
+  if (userId === ownerId) return res.status(400).json({ error: 'Grup sahibi gruptan çıkarılamaz.' });
+
+  if (userId !== req.user.id && !canManageGroup(actor.role)) return res.status(403).json({ error: 'Yetkin yok.' });
+
+  await pool.query('DELETE FROM group_members WHERE group_id = $1 AND user_id = $2', [groupId, userId]);
+  await emitGroupToMembers(groupId, 'group_updated', { groupId });
+  emitToUser(userId, 'group_removed', { groupId });
+  res.json({ ok: true });
+});
+
 
 /* ROOM MODERATION */
 
@@ -1772,6 +2082,142 @@ io.on('connection', (socket) => {
     if (!socket.data.room) return;
     socket.to(socket.data.room).emit('typing', socket.user.username);
   });
+
+
+  socket.on('group_join', async ({ groupId }) => {
+    const id = Number(groupId);
+    if (!Number.isInteger(id)) return;
+
+    const member = await getGroupMember(id, socket.user.id);
+    if (!member) return;
+
+    socket.join(`group:${id}`);
+  });
+
+  socket.on('group_message', async (payload) => {
+    try {
+      const groupId = Number(payload?.groupId);
+      if (!Number.isInteger(groupId)) return;
+
+      const member = await getGroupMember(groupId, socket.user.id);
+      if (!member) {
+        socket.emit('notification', { type: 'error', payload: { message: 'Bu grupta değilsin.' } });
+        return;
+      }
+
+      const type = cleanText(payload?.type || 'text', 20);
+      const allowedTypes = ['text', 'image', 'file', 'audio'];
+      const messageType = allowedTypes.includes(type) ? type : 'text';
+
+      const cleanMessage = cleanText(payload?.text || '', 1000);
+      const fileName = cleanText(payload?.fileName || '', 200) || null;
+      const fileMime = cleanText(payload?.fileMime || '', 100) || null;
+      const fileData = String(payload?.fileData || '');
+      const filePath = cleanText(payload?.filePath || '', 500) || null;
+      const fileSize = Number(payload?.fileSize) || null;
+
+      if (messageType === 'text' && !cleanMessage) return;
+      if (messageType !== 'text' && !fileData) return;
+
+      let replyToId = Number(payload?.replyToId);
+      if (!Number.isInteger(replyToId)) replyToId = null;
+
+      let replyInfo = null;
+      if (replyToId) {
+        const replyResult = await pool.query(
+          `SELECT gm.id, gm.text, u.username, u.display_name
+           FROM group_messages gm
+           JOIN users u ON u.id = gm.sender_id
+           WHERE gm.id = $1 AND gm.group_id = $2`,
+          [replyToId, groupId]
+        );
+
+        if (replyResult.rows.length > 0) {
+          replyInfo = replyResult.rows[0];
+        } else {
+          replyToId = null;
+        }
+      }
+
+      const saved = await pool.query(
+        `INSERT INTO group_messages (group_id, sender_id, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING id, group_id, sender_id, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, edited_at, deleted_at, created_at`,
+        [groupId, socket.user.id, cleanMessage, messageType, fileName, fileMime, fileData || null, filePath, fileSize, replyToId]
+      );
+
+      const avatarResult = await pool.query('SELECT username, display_name, avatar_url FROM users WHERE id = $1', [socket.user.id]);
+      const sender = avatarResult.rows[0];
+
+      const msg = {
+        ...saved.rows[0],
+        username: sender?.display_name || sender?.username || socket.user.username,
+        avatar_url: sender?.avatar_url,
+        reply_username: replyInfo?.display_name || replyInfo?.username || null,
+        reply_text: replyInfo?.text || null,
+        time: nowTime()
+      };
+
+      await emitGroupToMembers(groupId, 'group_message', msg);
+
+      const members = await pool.query('SELECT user_id FROM group_members WHERE group_id = $1 AND user_id <> $2', [groupId, socket.user.id]);
+      for (const row of members.rows) {
+        await createNotification(row.user_id, 'group_dm', {
+          groupId,
+          fromId: socket.user.id,
+          fromUsername: sender?.display_name || sender?.username || socket.user.username,
+          text: cleanMessage || fileName || 'Dosya'
+        });
+      }
+    } catch (error) {
+      console.error('Grup mesaj hatası:', error);
+    }
+  });
+
+  socket.on('group_message_edit', async ({ id, groupId, text }) => {
+    const messageId = Number(id);
+    const group = Number(groupId);
+    const cleanNewText = cleanText(text, 1000);
+    if (!Number.isInteger(messageId) || !Number.isInteger(group) || !cleanNewText) return;
+
+    const result = await pool.query(
+      `UPDATE group_messages
+       SET text = $1, edited_at = CURRENT_TIMESTAMP
+       WHERE id = $2 AND group_id = $3 AND sender_id = $4 AND deleted_at IS NULL
+       RETURNING id, group_id, text, edited_at`,
+      [cleanNewText, messageId, group, socket.user.id]
+    );
+
+    if (result.rows.length === 0) return;
+    await emitGroupToMembers(group, 'group_message_updated', result.rows[0]);
+  });
+
+  socket.on('group_message_delete', async ({ id, groupId }) => {
+    const messageId = Number(id);
+    const group = Number(groupId);
+    if (!Number.isInteger(messageId) || !Number.isInteger(group)) return;
+
+    const member = await getGroupMember(group, socket.user.id);
+    if (!member) return;
+
+    const msgCheck = await pool.query('SELECT sender_id FROM group_messages WHERE id = $1 AND group_id = $2', [messageId, group]);
+    if (msgCheck.rows.length === 0) return;
+
+    const canDelete = msgCheck.rows[0].sender_id === socket.user.id || canManageGroup(member.role);
+    if (!canDelete) return;
+
+    const result = await pool.query(
+      `UPDATE group_messages
+       SET text = 'Bu mesaj silindi.', deleted_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND group_id = $2 AND deleted_at IS NULL
+       RETURNING id, group_id, text, deleted_at`,
+      [messageId, group]
+    );
+
+    if (result.rows.length === 0) return;
+    await emitGroupToMembers(group, 'group_message_deleted', result.rows[0]);
+  });
+
 
   socket.on('disconnect', async () => {
     await pool.query('UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE id = $1', [socket.user.id]);
