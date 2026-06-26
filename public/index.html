@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Selim Chat v7.8.0</title>
-  <link rel="stylesheet" href="style.css?v=780" />
+  <title>Selim Chat v7.8.1</title>
+  <link rel="stylesheet" href="style.css?v=781" />
 </head>
 <body>
   <div class="app">
@@ -242,6 +242,12 @@
             <option value="neon">Neon / Cyber</option>
             <option value="dark">Koyu</option>
             <option value="light">Açık</option>
+            <option value="vertex">VERTEX Kırmızı</option>
+            <option value="serbia">Serbia Portal</option>
+            <option value="limbo">Limbo</option>
+            <option value="rome">Rome Altın</option>
+            <option value="egypt">Egypt Çöl</option>
+            <option value="five">5ECROPOLIS</option>
           </select>
 
           <label class="settings-check">
@@ -258,6 +264,126 @@
           <p id="settingsLocalStatus" class="settings-status"></p>
         </section>
 
+
+        <section class="settings-section">
+          <h3>Sohbet Görünümü</h3>
+
+          <label for="settingsFontSizeSelect">Yazı boyutu</label>
+          <select id="settingsFontSizeSelect">
+            <option value="normal">Normal</option>
+            <option value="small">Küçük</option>
+            <option value="large">Büyük</option>
+          </select>
+
+          <label class="settings-check">
+            <input id="settingsEnterSendToggle" type="checkbox" />
+            <span>Enter ile gönder</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsShowAvatarsToggle" type="checkbox" />
+            <span>Mesaj avatarlarını göster</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsShowTimesToggle" type="checkbox" />
+            <span>Mesaj saatlerini göster</span>
+          </label>
+        </section>
+
+        <section class="settings-section">
+          <h3>Bildirim Detayı</h3>
+
+          <label class="settings-check">
+            <input id="settingsNotifyDmToggle" type="checkbox" />
+            <span>DM bildirimleri</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsNotifyGroupToggle" type="checkbox" />
+            <span>Grup bildirimleri</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsNotifyMentionToggle" type="checkbox" />
+            <span>Etiket / @everyone bildirimleri</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsNotifyFriendToggle" type="checkbox" />
+            <span>Arkadaşlık bildirimleri</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsNotificationSoundToggle" type="checkbox" />
+            <span>Bildirim sesi</span>
+          </label>
+        </section>
+
+        <section class="settings-section">
+          <h3>Easter Egg Ayarları</h3>
+
+          <label class="settings-check">
+            <input id="settingsEggsToggle" type="checkbox" />
+            <span>Easter egg efektleri açık</span>
+          </label>
+
+          <label for="settingsEggIntensitySelect">Efekt yoğunluğu</label>
+          <select id="settingsEggIntensitySelect">
+            <option value="low">Düşük</option>
+            <option value="normal">Normal</option>
+            <option value="high">Yüksek</option>
+          </select>
+
+          <label class="settings-check">
+            <input id="settingsEggSoundToggle" type="checkbox" />
+            <span>Easter egg ses efekti</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsEggOwnOnlyToggle" type="checkbox" />
+            <span>Sadece kendi yazdığım komutlarda efekt göster</span>
+          </label>
+        </section>
+
+        <section class="settings-section">
+          <h3>feiz Bot Ayarları</h3>
+
+          <label class="settings-check">
+            <input id="settingsBotHideToggle" type="checkbox" />
+            <span>Bot mesajlarını gizle</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsBotHighlightToggle" type="checkbox" />
+            <span>Bot mesajlarını özel renkle göster</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsBotCompactToggle" type="checkbox" />
+            <span>Bot mesajlarını kompakt göster</span>
+          </label>
+        </section>
+
+        <section class="settings-section">
+          <h3>Dil</h3>
+
+          <label for="settingsLanguageSelect">Tercih edilen dil</label>
+          <select id="settingsLanguageSelect">
+            <option value="tr">Türkçe</option>
+            <option value="en">English</option>
+          </select>
+
+          <p class="settings-muted">Şimdilik ana arayüz Türkçe kalır; bu ayar bot/gelecek arayüz için saklanır.</p>
+        </section>
+
+        <section class="settings-section">
+          <h3>Hızlı İşlemler</h3>
+          <button id="settingsClearLocalButton" class="small-button" type="button">Bu cihazdaki görünüm ayarlarını sıfırla</button>
+          <button id="settingsLogoutFromPanelButton" class="small-button danger" type="button">Bu cihazdan çıkış yap</button>
+          <p class="settings-muted">Tüm cihazlardan çıkış için ileride sunucu taraflı oturum sistemi ekleyebiliriz.</p>
+        </section>
+
         <section class="settings-section">
           <h3>Bildirim</h3>
           <p class="settings-muted">Tarayıcı bildirimi açarsan DM, mention ve grup bildirimleri daha net gelir.</p>
@@ -272,6 +398,6 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=780"></script>
+  <script src="script.js?v=781"></script>
 </body>
 </html>
