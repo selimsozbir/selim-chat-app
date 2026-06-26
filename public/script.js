@@ -267,14 +267,18 @@ authForm.addEventListener('submit', async (event) => {
   }
 });
 
-logoutButton.addEventListener('click', () => {
-  localStorage.clear();
+function logout() {
+  // Sadece hesap oturumunu kapat; tema/ayar localStorage değerleri kalsın.
+  localStorage.removeItem('chat_token');
+  localStorage.removeItem('chat_user');
   token = null;
   user = null;
   if (socket) socket.disconnect();
   chatScreen.classList.add('hidden');
   authScreen.classList.remove('hidden');
-});
+}
+
+logoutButton.addEventListener('click', logout);
 
 cancelReplyButton.addEventListener('click', clearReply);
 
