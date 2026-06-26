@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v8.0.0</title>
-  <link rel="stylesheet" href="style.css?v=800" />
+  <title>Selim Chat v8.0.1</title>
+  <link rel="stylesheet" href="style.css?v=801" />
 </head>
 <body>
   <div class="app">
@@ -212,7 +212,7 @@
       <div class="profile-main-v2">
         <div id="profileAvatar" class="profile-avatar profile-avatar-v2"></div>
         <div class="profile-identity-v2">
-          <h2 id="profileUsername"></h2>
+          <div class="profile-name-row"><h2 id="profileUsername"></h2><span id="profileRoleBadge" class="profile-role-badge hidden">USER</span></div>
           <p id="profileStatus"></p>
           <p id="profileBio"></p>
         </div>
@@ -251,7 +251,11 @@
         <textarea id="profileBioInput" maxlength="160" placeholder="Bio yaz..."></textarea>
 
         <label for="profileCoverInput">Profil kapağı</label>
-        <input id="profileCoverInput" type="file" accept="image/*" />
+        <label for="profileCoverInput" class="profile-file-label">
+            <span>Kapak görseli seç</span>
+            <small id="profileCoverFileName">Dosya seçilmedi</small>
+          </label>
+          <input id="profileCoverInput" class="hidden" type="file" accept="image/*" />
 
         <div class="profile-edit-row">
           <label for="profileColorInput">Tema rengi</label>
@@ -492,6 +496,6 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=800"></script>
+  <script src="script.js?v=801"></script>
 </body>
 </html>
