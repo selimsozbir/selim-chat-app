@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Selim Chat v7.8.2</title>
-  <link rel="stylesheet" href="style.css?v=782" />
+  <title>Selim Chat v7.9.0</title>
+  <link rel="stylesheet" href="style.css?v=790" />
 </head>
 <body>
   <div class="app">
@@ -29,6 +29,15 @@
     </section>
 
     <section id="chatScreen" class="chat-screen hidden">
+      <div id="mobileBackdrop" class="mobile-backdrop hidden"></div>
+      <div id="mobileTopBar" class="mobile-topbar">
+        <button id="mobileMenuButton" class="mobile-icon-button" type="button">☰</button>
+        <div class="mobile-title-wrap">
+          <strong id="mobileTitle"># genel</strong>
+          <span id="mobileStatus">Bağlanıyor...</span>
+        </div>
+        <button id="mobileSettingsButton" class="mobile-icon-button" type="button">⚙</button>
+      </div>
       <aside class="sidebar">
         <div class="profile-box">
           <label class="avatar-wrap" title="Profil fotoğrafı değiştir">
@@ -181,6 +190,13 @@
           <input id="messageInput" type="text" placeholder="Mesaj yaz..." maxlength="1000" autocomplete="off" />
           <button type="submit">Gönder</button>
         </form>
+
+        <nav id="mobileBottomNav" class="mobile-bottom-nav">
+          <button id="mobileRoomButton" class="mobile-nav-item active" type="button">🏠<span>Oda</span></button>
+          <button id="mobileDmButton" class="mobile-nav-item" type="button">💬<span>DM</span></button>
+          <button id="mobileGroupButton" class="mobile-nav-item" type="button">👥<span>Grup</span></button>
+          <button id="mobilePanelButton" class="mobile-nav-item" type="button">📋<span>Panel</span></button>
+        </nav>
       </main>
     </section>
   </div>
@@ -398,6 +414,6 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=782"></script>
+  <script src="script.js?v=790"></script>
 </body>
 </html>
