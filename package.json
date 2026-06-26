@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.7.3",
-  "description": "Selim Chat v7.7.3 expanded 5ECROPOLIS easter egg commands",
+  "version": "7.7.4",
+  "description": "Selim Chat v7.7.4 with 5ECROPOLIS character easter eggs",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
