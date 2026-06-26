@@ -11,7 +11,7 @@
     <section id="authScreen" class="auth-screen">
       <div class="auth-card">
         <h1>Selim Chat</h1>
-        <p>Hesabınla giriş yap veya yeni hesap oluştur.</p>
+        <p>Giriş yap veya yeni hesap oluştur.</p>
 
         <div class="tabs">
           <button id="loginTab" class="tab active">Giriş</button>
@@ -31,42 +31,75 @@
     <section id="chatScreen" class="chat-screen hidden">
       <aside class="sidebar">
         <div class="profile-box">
-          <div id="avatarPreview" class="avatar">?</div>
+          <label class="avatar-wrap" title="Profil fotoğrafı değiştir">
+            <img id="avatarImg" class="avatar-img hidden" alt="Avatar" />
+            <div id="avatarLetter" class="avatar">?</div>
+            <input id="avatarInput" type="file" accept="image/*" hidden />
+          </label>
+
           <div>
             <strong id="currentUsername">Kullanıcı</strong>
             <button id="logoutButton" class="small-button">Çıkış</button>
           </div>
         </div>
 
-        <div class="room-box">
-          <label>Oda</label>
-          <div class="room-row">
-            <input id="roomInput" type="text" value="genel" maxlength="50" />
-            <button id="joinRoomButton">Gir</button>
+        <div class="nav-buttons">
+          <button id="roomModeButton" class="nav active">Oda</button>
+          <button id="dmModeButton" class="nav">DM</button>
+        </div>
+
+        <div id="roomPanel">
+          <div class="room-box">
+            <label>Oda</label>
+            <div class="room-row">
+              <input id="roomInput" type="text" value="genel" maxlength="50" />
+              <button id="joinRoomButton">Gir</button>
+            </div>
+          </div>
+
+          <div class="users-box">
+            <h3>Online</h3>
+            <ul id="usersList"></ul>
           </div>
         </div>
 
-        <div class="users-box">
-          <h3>Online</h3>
-          <ul id="usersList"></ul>
+        <div id="friendsPanel" class="hidden">
+          <div class="search-box">
+            <label>Arkadaş ara</label>
+            <div class="room-row">
+              <input id="searchInput" type="text" placeholder="Kullanıcı adı" />
+              <button id="searchButton">Ara</button>
+            </div>
+            <div id="searchResults" class="mini-list"></div>
+          </div>
+
+          <div class="requests-box">
+            <h3>İstekler</h3>
+            <div id="requestsList" class="mini-list"></div>
+          </div>
+
+          <div class="friends-box">
+            <h3>Arkadaşlar</h3>
+            <div id="friendsList" class="mini-list"></div>
+          </div>
         </div>
 
-        <div class="coming-soon">
-          <h3>Sonraki özellikler</h3>
-          <p>Arkadaş ekleme, DM, profil fotoğrafı ve bildirim sistemi sıradaki aşamada eklenecek.</p>
+        <div class="notifications-box">
+          <h3>Bildirimler <span id="notificationBadge"></span></h3>
+          <div id="notificationsList" class="mini-list"></div>
         </div>
       </aside>
 
       <main class="chat-main">
         <header class="chat-header">
           <div>
-            <h2 id="roomTitle"># genel</h2>
+            <h2 id="chatTitle"># genel</h2>
             <span id="statusText">Bağlanıyor...</span>
           </div>
+          <button id="enableNotificationsButton" class="small-button">Bildirim aç</button>
         </header>
 
         <div id="messages" class="messages"></div>
-
         <div id="typingText" class="typing"></div>
 
         <form id="messageForm" class="message-form">
