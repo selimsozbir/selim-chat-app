@@ -99,6 +99,7 @@ let friends = [];
 let groups = [];
 let groupMembers = [];
 let selectedGroupFriendIds = new Set();
+document.body.dataset.chatMode = chatMode;
 
 let socket = null;
 let token = localStorage.getItem('chat_token');
@@ -843,6 +844,7 @@ function connectSocket() {
 function setChatMode(nextMode) {
   clearReply();
   chatMode = nextMode;
+  document.body.dataset.chatMode = chatMode;
 
   roomModeButton.classList.toggle('active', chatMode === 'room');
   dmModeButton.classList.toggle('active', chatMode === 'dm');
