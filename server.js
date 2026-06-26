@@ -316,21 +316,88 @@ async function rewardUserActivity(userId, xpAmount = 5, shardAmount = 1) {
 
 
 const MARKET_ITEMS = [
-  { id: 'bubble_vertex', type: 'bubble', name: 'VERTEX Bubble', icon: '🔴', rarity: 'epic', price: 500, description: 'Mesaj balonuna kırmızı glitch havası verir.' },
-  { id: 'bubble_limbo', type: 'bubble', name: 'Limbo Bubble', icon: '⚫', rarity: 'rare', price: 350, description: 'Karanlık, minimal Limbo mesaj stili.' },
-  { id: 'bubble_ice', type: 'bubble', name: 'Nico Ice Bubble', icon: '🧊', rarity: 'rare', price: 420, description: 'Soğuk mavi buz mesaj efekti.' },
-  { id: 'bubble_gold', type: 'bubble', name: 'Rome Gold Bubble', icon: '🏛️', rarity: 'epic', price: 650, description: 'Altın Roma mesaj balonu.' },
-  { id: 'bubble_serbia', type: 'bubble', name: 'Serbia Portal Bubble', icon: '🇷🇸', rarity: 'epic', price: 700, description: 'Mor portal mesaj balonu.' },
+  { id: 'bubble_vertex', type: 'bubble', name: 'VERTEX Bubble', icon: '🔴', rarity: 'epic', price: 1, description: 'Mesaj balonuna kırmızı glitch havası verir.' },
+  { id: 'bubble_limbo', type: 'bubble', name: 'Limbo Bubble', icon: '⚫', rarity: 'rare', price: 1, description: 'Karanlık, minimal Limbo mesaj stili.' },
+  { id: 'bubble_ice', type: 'bubble', name: 'Nico Ice Bubble', icon: '🧊', rarity: 'rare', price: 1, description: 'Soğuk mavi buz mesaj efekti.' },
+  { id: 'bubble_gold', type: 'bubble', name: 'Rome Gold Bubble', icon: '🏛️', rarity: 'epic', price: 1, description: 'Altın Roma mesaj balonu.' },
+  { id: 'bubble_serbia', type: 'bubble', name: 'Serbia Portal Bubble', icon: '🇷🇸', rarity: 'epic', price: 1, description: 'Mor portal mesaj balonu.' },
 
-  { id: 'frame_vertex', type: 'frame', name: 'VERTEX Frame', icon: '🟥', rarity: 'epic', price: 800, description: 'Profil fotoğrafına kırmızı VERTEX çerçevesi.' },
-  { id: 'frame_limbo', type: 'frame', name: 'Limbo Frame', icon: '⬛', rarity: 'rare', price: 450, description: 'Karanlık Limbo profil çerçevesi.' },
-  { id: 'frame_five', type: 'frame', name: '5ECROPOLIS Frame', icon: '5️⃣', rarity: 'legendary', price: 1500, description: 'Özel 5ECROPOLIS profil çerçevesi.' },
-  { id: 'frame_ataturk', type: 'frame', name: 'Respect Frame', icon: '🇹🇷', rarity: 'legendary', price: 1800, description: 'Saygı protokolü profil çerçevesi.' },
+  { id: 'frame_vertex', type: 'frame', name: 'VERTEX Frame', icon: '🟥', rarity: 'epic', price: 1, description: 'Profil fotoğrafına kırmızı VERTEX çerçevesi.' },
+  { id: 'frame_limbo', type: 'frame', name: 'Limbo Frame', icon: '⬛', rarity: 'rare', price: 1, description: 'Karanlık Limbo profil çerçevesi.' },
+  { id: 'frame_five', type: 'frame', name: '5ECROPOLIS Frame', icon: '5️⃣', rarity: 'legendary', price: 1, description: 'Özel 5ECROPOLIS profil çerçevesi.' },
+  { id: 'frame_ataturk', type: 'frame', name: 'Respect Frame', icon: '🇹🇷', rarity: 'legendary', price: 1, description: 'Saygı protokolü profil çerçevesi.' },
 
-  { id: 'name_glitch', type: 'name', name: 'Glitch Name', icon: '⚡', rarity: 'rare', price: 500, description: 'İsme hafif glitch efekti.' },
-  { id: 'name_neon', type: 'name', name: 'Neon Name', icon: '💜', rarity: 'epic', price: 850, description: 'İsme neon mor parlama verir.' },
-  { id: 'name_legend', type: 'name', name: 'Legend Name', icon: '👑', rarity: 'legendary', price: 2000, description: 'İsme legendary altın efekt verir.' }
+  { id: 'name_glitch', type: 'name', name: 'Glitch Name', icon: '⚡', rarity: 'rare', price: 1, description: 'İsme hafif glitch efekti.' },
+  { id: 'name_neon', type: 'name', name: 'Neon Name', icon: '💜', rarity: 'epic', price: 1, description: 'İsme neon mor parlama verir.' },
+  { id: 'name_legend', type: 'name', name: 'Legend Name', icon: '👑', rarity: 'legendary', price: 1, description: 'İsme legendary altın efekt verir.' }
 ];
+
+
+const casinoSessions = new Map();
+
+const CARD_SUITS = ['♠', '♥', '♦', '♣'];
+const CARD_RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+function drawCard() {
+  const rank = CARD_RANKS[Math.floor(Math.random() * CARD_RANKS.length)];
+  const suit = CARD_SUITS[Math.floor(Math.random() * CARD_SUITS.length)];
+  return { rank, suit };
+}
+
+function handValue(hand) {
+  let total = 0;
+  let aces = 0;
+
+  for (const card of hand) {
+    if (card.rank === 'A') {
+      aces += 1;
+      total += 11;
+    } else if (['J', 'Q', 'K'].includes(card.rank)) {
+      total += 10;
+    } else {
+      total += Number(card.rank);
+    }
+  }
+
+  while (total > 21 && aces > 0) {
+    total -= 10;
+    aces -= 1;
+  }
+
+  return total;
+}
+
+function cleanBet(value) {
+  const bet = Math.floor(Number(value) || 0);
+  return Math.max(1, Math.min(1000, bet));
+}
+
+async function getShardBalance(userId) {
+  const result = await pool.query('SELECT shards FROM users WHERE id = $1', [userId]);
+  return Number(result.rows[0]?.shards || 0);
+}
+
+async function addShards(userId, amount) {
+  const result = await pool.query(
+    'UPDATE users SET shards = GREATEST(0, COALESCE(shards, 0) + $1) WHERE id = $2 RETURNING shards',
+    [amount, userId]
+  );
+  return Number(result.rows[0]?.shards || 0);
+}
+
+function publicBlackjackSession(session, revealDealer = false) {
+  return {
+    bet: session.bet,
+    player: session.player,
+    dealer: revealDealer ? session.dealer : [session.dealer[0], { rank: '?', suit: '?' }],
+    player_value: handValue(session.player),
+    dealer_value: revealDealer ? handValue(session.dealer) : null,
+    status: session.status,
+    result: session.result || '',
+    payout: session.payout || 0
+  };
+}
+
 
 function getMarketItem(itemId) {
   return MARKET_ITEMS.find((item) => item.id === itemId) || null;
@@ -2196,6 +2263,134 @@ app.post('/api/market/equip', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Market equip error:', error);
     res.status(500).json({ error: 'Ürün kuşanılamadı.' });
+  }
+});
+
+
+
+app.post('/api/casino/slot', authMiddleware, async (req, res) => {
+  try {
+    const bet = cleanBet(req.body.bet);
+    const balance = await getShardBalance(req.user.id);
+    if (balance < bet) return res.status(400).json({ error: 'Yetersiz Shards.' });
+
+    const symbols = ['🍒', '🍋', '🔔', '💎', '7️⃣', '5️⃣', '🔴'];
+    const reels = [
+      symbols[Math.floor(Math.random() * symbols.length)],
+      symbols[Math.floor(Math.random() * symbols.length)],
+      symbols[Math.floor(Math.random() * symbols.length)]
+    ];
+
+    let multiplier = 0;
+    let result = 'Kaybettin';
+
+    if (reels[0] === reels[1] && reels[1] === reels[2]) {
+      multiplier = reels[0] === '5️⃣' ? 12 : reels[0] === '7️⃣' ? 8 : reels[0] === '💎' ? 6 : 4;
+      result = 'Büyük kazanç!';
+    } else if (reels[0] === reels[1] || reels[1] === reels[2] || reels[0] === reels[2]) {
+      multiplier = 2;
+      result = 'Küçük kazanç!';
+    }
+
+    const payout = bet * multiplier;
+    const net = payout - bet;
+    const shards = await addShards(req.user.id, net);
+
+    res.json({ game: 'slot', bet, reels, multiplier, payout, net, result, shards });
+  } catch (error) {
+    console.error('Slot error:', error);
+    res.status(500).json({ error: 'Slot çevrilemedi.' });
+  }
+});
+
+app.post('/api/casino/blackjack/start', authMiddleware, async (req, res) => {
+  try {
+    const bet = cleanBet(req.body.bet);
+    const balance = await getShardBalance(req.user.id);
+    if (balance < bet) return res.status(400).json({ error: 'Yetersiz Shards.' });
+
+    await addShards(req.user.id, -bet);
+
+    const session = {
+      bet,
+      player: [drawCard(), drawCard()],
+      dealer: [drawCard(), drawCard()],
+      status: 'playing',
+      result: '',
+      payout: 0,
+      createdAt: Date.now()
+    };
+
+    if (handValue(session.player) === 21) {
+      session.status = 'finished';
+      session.result = 'Blackjack!';
+      session.payout = bet * 3;
+      await addShards(req.user.id, session.payout);
+    } else {
+      casinoSessions.set(req.user.id, session);
+    }
+
+    const shards = await getShardBalance(req.user.id);
+    res.json({ session: publicBlackjackSession(session, session.status === 'finished'), shards });
+  } catch (error) {
+    console.error('Blackjack start error:', error);
+    res.status(500).json({ error: 'Blackjack başlatılamadı.' });
+  }
+});
+
+app.post('/api/casino/blackjack/hit', authMiddleware, async (req, res) => {
+  try {
+    const session = casinoSessions.get(req.user.id);
+    if (!session || session.status !== 'playing') return res.status(400).json({ error: 'Aktif blackjack oyunu yok.' });
+
+    session.player.push(drawCard());
+
+    if (handValue(session.player) > 21) {
+      session.status = 'finished';
+      session.result = 'Bust! Kaybettin.';
+      session.payout = 0;
+      casinoSessions.delete(req.user.id);
+    }
+
+    const shards = await getShardBalance(req.user.id);
+    res.json({ session: publicBlackjackSession(session, session.status === 'finished'), shards });
+  } catch (error) {
+    console.error('Blackjack hit error:', error);
+    res.status(500).json({ error: 'Kart çekilemedi.' });
+  }
+});
+
+app.post('/api/casino/blackjack/stand', authMiddleware, async (req, res) => {
+  try {
+    const session = casinoSessions.get(req.user.id);
+    if (!session || session.status !== 'playing') return res.status(400).json({ error: 'Aktif blackjack oyunu yok.' });
+
+    while (handValue(session.dealer) < 17) session.dealer.push(drawCard());
+
+    const playerValue = handValue(session.player);
+    const dealerValue = handValue(session.dealer);
+
+    session.status = 'finished';
+
+    if (dealerValue > 21 || playerValue > dealerValue) {
+      session.result = 'Kazandın!';
+      session.payout = session.bet * 2;
+    } else if (playerValue === dealerValue) {
+      session.result = 'Berabere.';
+      session.payout = session.bet;
+    } else {
+      session.result = 'Kaybettin.';
+      session.payout = 0;
+    }
+
+    if (session.payout > 0) await addShards(req.user.id, session.payout);
+    casinoSessions.delete(req.user.id);
+
+    const shards = await getShardBalance(req.user.id);
+    res.json({ session: publicBlackjackSession(session, true), shards });
+  } catch (error) {
+    console.error('Blackjack stand error:', error);
+    res.status(500).json({ error: 'Blackjack bitirilemedi.' });
   }
 });
 
