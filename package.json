@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.4.3",
-  "description": "Selim Chat v7.4.3 group friends and message sending fix",
+  "version": "7.4.4",
+  "description": "Selim Chat v7.4.4 group live socket message fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
