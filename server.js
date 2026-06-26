@@ -967,6 +967,79 @@ app.post('/api/profile/bio', authMiddleware, async (req, res) => {
   res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
 });
 
+
+app.patch('/api/settings/profile', authMiddleware, async (req, res) => {
+  try {
+    const username = cleanText(req.body.username, 30);
+    const displayName = cleanText(req.body.displayName, 40);
+    const bio = cleanText(req.body.bio, 160);
+
+    if (!/^[a-zA-Z0-9_ğüşöçıİĞÜŞÖÇ.\-]{3,30}$/.test(username)) {
+      return res.status(400).json({ error: 'Kullanıcı adı 3-30 karakter olmalı. Boşluk kullanma; harf, sayı, _, . veya - kullan.' });
+    }
+
+    if (displayName && displayName.length < 2) {
+      return res.status(400).json({ error: 'Görünen ad en az 2 karakter olmalı.' });
+    }
+
+    const existing = await pool.query(
+      'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id <> $2',
+      [username, req.user.id]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Bu kullanıcı adı zaten alınmış.' });
+    }
+
+    const result = await pool.query(
+      `UPDATE users
+       SET username = $1,
+           display_name = $2,
+           bio = $3
+       WHERE id = $4
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen`,
+      [username, displayName || username, bio, req.user.id]
+    );
+
+    const user = {
+      ...result.rows[0],
+      online: userSockets.has(String(req.user.id))
+    };
+
+    res.json({ user, token: createToken(user), message: 'Ayarlar kaydedildi.' });
+  } catch (error) {
+    console.error('Profil ayarları hatası:', error);
+    res.status(500).json({ error: 'Profil ayarları kaydedilemedi.' });
+  }
+});
+
+app.post('/api/settings/password', authMiddleware, async (req, res) => {
+  try {
+    const currentPassword = String(req.body.currentPassword || '');
+    const newPassword = String(req.body.newPassword || '');
+
+    if (!currentPassword) return res.status(400).json({ error: 'Mevcut şifreni yaz.' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'Yeni şifre en az 6 karakter olmalı.' });
+    if (newPassword.length > 200) return res.status(400).json({ error: 'Yeni şifre çok uzun.' });
+    if (currentPassword === newPassword) return res.status(400).json({ error: 'Yeni şifre eski şifreyle aynı olamaz.' });
+
+    const result = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+
+    const ok = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
+    if (!ok) return res.status(400).json({ error: 'Mevcut şifre yanlış.' });
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, req.user.id]);
+
+    res.json({ ok: true, message: 'Şifre değiştirildi.' });
+  } catch (error) {
+    console.error('Şifre değiştirme hatası:', error);
+    res.status(500).json({ error: 'Şifre değiştirilemedi.' });
+  }
+});
+
+
 /* GLOBAL ADMIN */
 
 app.get('/api/admin/me', authMiddleware, async (req, res) => {
