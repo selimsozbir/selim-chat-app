@@ -9,7 +9,7 @@ const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, { maxHttpBufferSize: 12 * 1024 * 1024 });
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-this';
@@ -20,7 +20,7 @@ const pool = new Pool({
 });
 
 app.use(cors());
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const onlineUsers = new Map();
@@ -119,6 +119,40 @@ async function createNotification(userId, type, payload) {
   return notification;
 }
 
+function extractMentions(text) {
+  const matches = String(text || '').match(/@[a-zA-Z0-9_ğüşöçıİĞÜŞÖÇ.\-]+/g) || [];
+  return Array.from(new Set(matches.map((m) => m.slice(1).toLowerCase())));
+}
+
+async function notifyRoomMentions({ room, text, senderId, senderUsername }) {
+  const mentions = extractMentions(text);
+  if (mentions.length === 0) return;
+
+  const usersInRoom = Array.from(onlineUsers.values())
+    .filter((u) => u.room === room && u.id !== senderId);
+
+  const targetIds = new Set();
+
+  if (mentions.includes('everyone')) {
+    usersInRoom.forEach((u) => targetIds.add(u.id));
+  } else {
+    usersInRoom.forEach((u) => {
+      if (mentions.includes(String(u.username || '').toLowerCase())) {
+        targetIds.add(u.id);
+      }
+    });
+  }
+
+  for (const userId of targetIds) {
+    await createNotification(userId, mentions.includes('everyone') ? 'mention_everyone' : 'mention', {
+      room,
+      fromId: senderId,
+      fromUsername: senderUsername,
+      text: String(text || '').slice(0, 120)
+    });
+  }
+}
+
 async function initDatabase() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -201,6 +235,9 @@ async function initDatabase() {
   await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS file_name TEXT`);
   await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS file_mime TEXT`);
   await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS file_data TEXT`);
+
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to_id INTEGER`);
+  await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS reply_to_id INTEGER`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS message_reactions (
@@ -315,9 +352,13 @@ app.get('/api/messages/:room', authMiddleware, async (req, res) => {
 
   const result = await pool.query(
     `SELECT m.id, m.room, m.username, m.text, m.created_at, m.edited_at, m.deleted_at,
-            m.message_type, m.file_name, m.file_mime, m.file_data, u.avatar_url
+            m.message_type, m.file_name, m.file_mime, m.file_data, m.reply_to_id,
+            u.avatar_url,
+            rm.username AS reply_username,
+            rm.text AS reply_text
      FROM messages m
      LEFT JOIN users u ON u.id = m.user_id
+     LEFT JOIN messages rm ON rm.id = m.reply_to_id
      WHERE m.room = $1
      ORDER BY m.created_at DESC
      LIMIT 50`,
@@ -544,11 +585,15 @@ app.get('/api/dm/:friendId', authMiddleware, async (req, res) => {
 
   const result = await pool.query(
     `SELECT dm.id, dm.sender_id, dm.receiver_id, dm.text, dm.created_at, dm.edited_at, dm.deleted_at, dm.read_at,
-            dm.message_type, dm.file_name, dm.file_mime, dm.file_data,
+            dm.message_type, dm.file_name, dm.file_mime, dm.file_data, dm.reply_to_id,
             sender.username AS sender_username,
-            sender.avatar_url AS sender_avatar_url
+            sender.avatar_url AS sender_avatar_url,
+            rdm.text AS reply_text,
+            reply_sender.username AS reply_username
      FROM dm_messages dm
      JOIN users sender ON sender.id = dm.sender_id
+     LEFT JOIN dm_messages rdm ON rdm.id = dm.reply_to_id
+     LEFT JOIN users reply_sender ON reply_sender.id = rdm.sender_id
      WHERE (dm.sender_id = $1 AND dm.receiver_id = $2)
      OR (dm.sender_id = $2 AND dm.receiver_id = $1)
      ORDER BY dm.created_at DESC
@@ -760,11 +805,28 @@ io.on('connection', (socket) => {
       }
 
       const room = socket.data.room;
+      let replyToId = Number(payload.replyToId);
+      if (!Number.isInteger(replyToId)) replyToId = null;
+
+      let replyInfo = null;
+      if (replyToId) {
+        const replyResult = await pool.query(
+          `SELECT id, username, text FROM messages WHERE id = $1 AND room = $2`,
+          [replyToId, room]
+        );
+
+        if (replyResult.rows.length > 0) {
+          replyInfo = replyResult.rows[0];
+        } else {
+          replyToId = null;
+        }
+      }
+
       const saved = await pool.query(
-        `INSERT INTO messages (room, user_id, username, text, message_type, file_name, file_mime, file_data)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING id, room, username, text, created_at, edited_at, deleted_at, message_type, file_name, file_mime, file_data`,
-        [room, socket.user.id, socket.user.username, text, messageType, fileName, fileMime, fileData || null]
+        `INSERT INTO messages (room, user_id, username, text, message_type, file_name, file_mime, file_data, reply_to_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id, room, username, text, created_at, edited_at, deleted_at, message_type, file_name, file_mime, file_data, reply_to_id`,
+        [room, socket.user.id, socket.user.username, text, messageType, fileName, fileMime, fileData || null, replyToId]
       );
 
       const avatarResult = await pool.query('SELECT avatar_url FROM users WHERE id = $1', [socket.user.id]);
@@ -780,9 +842,19 @@ io.on('connection', (socket) => {
         file_name: msg.file_name,
         file_mime: msg.file_mime,
         file_data: msg.file_data,
+        reply_to_id: msg.reply_to_id,
+        reply_username: replyInfo?.username || null,
+        reply_text: replyInfo?.text || null,
         edited_at: msg.edited_at,
         deleted_at: msg.deleted_at,
         time: nowTime()
+      });
+
+      await notifyRoomMentions({
+        room,
+        text,
+        senderId: socket.user.id,
+        senderUsername: socket.user.username
       });
     } catch (error) {
       console.error('Mesaj kayıt hatası:', error);
@@ -876,11 +948,32 @@ io.on('connection', (socket) => {
         return;
       }
 
+      let replyToId = Number(payload?.replyToId);
+      if (!Number.isInteger(replyToId)) replyToId = null;
+
+      let replyInfo = null;
+      if (replyToId) {
+        const replyResult = await pool.query(
+          `SELECT dm.id, dm.text, u.username
+           FROM dm_messages dm
+           JOIN users u ON u.id = dm.sender_id
+           WHERE dm.id = $1
+           AND ((dm.sender_id = $2 AND dm.receiver_id = $3) OR (dm.sender_id = $3 AND dm.receiver_id = $2))`,
+          [replyToId, socket.user.id, targetId]
+        );
+
+        if (replyResult.rows.length > 0) {
+          replyInfo = replyResult.rows[0];
+        } else {
+          replyToId = null;
+        }
+      }
+
       const saved = await pool.query(
-        `INSERT INTO dm_messages (sender_id, receiver_id, text, message_type, file_name, file_mime, file_data)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id, sender_id, receiver_id, text, created_at, edited_at, deleted_at, read_at, message_type, file_name, file_mime, file_data`,
-        [socket.user.id, targetId, cleanMessage, messageType, fileName, fileMime, fileData || null]
+        `INSERT INTO dm_messages (sender_id, receiver_id, text, message_type, file_name, file_mime, file_data, reply_to_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id, sender_id, receiver_id, text, created_at, edited_at, deleted_at, read_at, message_type, file_name, file_mime, file_data, reply_to_id`,
+        [socket.user.id, targetId, cleanMessage, messageType, fileName, fileMime, fileData || null, replyToId]
       );
 
       const avatarResult = await pool.query('SELECT avatar_url FROM users WHERE id = $1', [socket.user.id]);
@@ -896,6 +989,9 @@ io.on('connection', (socket) => {
         file_name: saved.rows[0].file_name,
         file_mime: saved.rows[0].file_mime,
         file_data: saved.rows[0].file_data,
+        reply_to_id: saved.rows[0].reply_to_id,
+        reply_username: replyInfo?.username || null,
+        reply_text: replyInfo?.text || null,
         edited_at: saved.rows[0].edited_at,
         deleted_at: saved.rows[0].deleted_at,
         read_at: saved.rows[0].read_at,
