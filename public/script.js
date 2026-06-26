@@ -651,7 +651,11 @@ function connectSocket() {
 
   socket.on('connect', () => {
     statusText.textContent = 'Bağlandı';
-    joinRoom(currentRoom);
+    if (chatMode === 'group' && activeGroup) {
+      socket.emit('group_join', { groupId: activeGroup.id });
+    } else {
+      joinRoom(currentRoom);
+    }
   });
 
   socket.on('disconnect', () => statusText.textContent = 'Bağlantı koptu');
@@ -734,6 +738,56 @@ function connectSocket() {
         created_at: new Date().toISOString()
       }, true);
     }
+  });
+
+  socket.on('group_message', (message) => {
+    const sameGroup = chatMode === 'group' && activeGroup && Number(activeGroup.id) === Number(message.group_id);
+
+    if (sameGroup) {
+      addGroupMessage(message);
+      scrollToBottom();
+      return;
+    }
+
+    if (message.sender_id !== user.id) {
+      showBrowserNotification('Yeni Grup DM', `${message.username || 'Grup'}: ${message.text || message.file_name || 'Dosya'}`);
+      addNotificationToList({
+        type: 'group_dm',
+        payload: { fromUsername: message.username || 'Grup', text: message.text || message.file_name || 'Dosya', groupId: message.group_id },
+        created_at: new Date().toISOString()
+      }, true);
+    }
+
+    loadGroups();
+  });
+
+  socket.on('group_message_updated', (msg) => {
+    if (chatMode === 'group' && activeGroup && Number(activeGroup.id) === Number(msg.group_id)) {
+      updateMessageElement('group', msg.id, msg.text, true, false);
+    }
+  });
+
+  socket.on('group_message_deleted', (msg) => {
+    if (chatMode === 'group' && activeGroup && Number(activeGroup.id) === Number(msg.group_id)) {
+      updateMessageElement('group', msg.id, msg.text, false, true);
+    }
+  });
+
+  socket.on('group_updated', ({ groupId } = {}) => {
+    loadGroups();
+    if (activeGroup && (!groupId || Number(activeGroup.id) === Number(groupId))) {
+      loadGroupDetails(activeGroup.id);
+    }
+  });
+
+  socket.on('group_removed', ({ groupId } = {}) => {
+    if (activeGroup && Number(activeGroup.id) === Number(groupId)) {
+      activeGroup = null;
+      messagesEl.innerHTML = '';
+      chatTitle.textContent = 'Grup seç';
+      if (groupDetailsBox) groupDetailsBox.classList.add('hidden');
+    }
+    loadGroups();
   });
 
   socket.on('notification', (notification) => {
@@ -2199,7 +2253,7 @@ async function openGroup(group) {
   messagesEl.innerHTML = '';
   typingText.textContent = '';
 
-  socket.emit('group_join', { groupId: group.id });
+  if (socket && socket.connected) socket.emit('group_join', { groupId: group.id });
 
   await Promise.allSettled([
     loadGroupMessages(group.id),
