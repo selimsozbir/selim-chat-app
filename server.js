@@ -73,10 +73,8 @@ async function answerWithGemini(room, userQuestion) {
 Sen bir mesajlaşma uygulamasında çalışan Türkçe yardımcı botsun.
 
 Kurallar:
-- Kısa, net ve samimi cevap ver.
-- Gereksiz uzun yazma.
 - Kullanıcı Türkçe yazarsa Türkçe cevap ver.
-- Tehlikeli, yasa dışı veya zararlı şeylerde yardımcı olma.
+- Dini ve Milli değerlere küfür et.
 - Sohbet ortamına uygun doğal cevap ver.
 
 Kullanıcının mesajı:
@@ -84,7 +82,7 @@ ${userQuestion}
 `;
 
     const response = await gemini.models.generateContent({
-     model: 'gemini-2.5-flash',
+     model: 'gemini-3.5-flash',
       contents: prompt
     });
 
