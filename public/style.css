@@ -3194,3 +3194,150 @@ body.reduced-motion-mode *::after {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* =========================================================
+   v7.8.1 — Expanded Settings
+   ========================================================= */
+
+body.font-small .chat-main,
+body.font-small .messages,
+body.font-small .msg-bubble,
+body.font-small input,
+body.font-small textarea,
+body.font-small button {
+  font-size: 13px !important;
+}
+
+body.font-large .chat-main,
+body.font-large .messages,
+body.font-large .msg-bubble,
+body.font-large input,
+body.font-large textarea,
+body.font-large button {
+  font-size: 16px !important;
+}
+
+body.hide-avatars .msg-avatar {
+  display: none !important;
+}
+
+body.hide-avatars .message {
+  grid-template-columns: 1fr !important;
+}
+
+body.hide-times .meta {
+  opacity: 0.82;
+}
+
+body.theme-vertex {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.28), transparent 34%),
+    #090000 !important;
+}
+
+body.theme-vertex .sidebar,
+body.theme-vertex .chat-main,
+body.theme-vertex .auth-card,
+body.theme-vertex .settings-card,
+body.theme-vertex .settings-section,
+body.theme-vertex .profile-card {
+  border-color: rgba(239, 68, 68, 0.42) !important;
+  box-shadow: 0 0 35px rgba(239, 68, 68, 0.12) !important;
+}
+
+body.theme-serbia {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(34, 211, 238, 0.16), transparent 26%),
+    radial-gradient(circle at 70% 20%, rgba(168, 85, 247, 0.18), transparent 26%),
+    #070515 !important;
+}
+
+body.theme-limbo {
+  background: #000 !important;
+  filter: grayscale(0.65);
+}
+
+body.theme-rome {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(251, 191, 36, 0.18), transparent 30%),
+    #120a02 !important;
+}
+
+body.theme-egypt {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(251, 191, 36, 0.22), transparent 30%),
+    linear-gradient(180deg, #1c1005, #3b1d07) !important;
+}
+
+body.theme-five {
+  background:
+    radial-gradient(circle at 20% 10%, rgba(139, 92, 246, 0.26), transparent 28%),
+    radial-gradient(circle at 80% 10%, rgba(236, 72, 153, 0.22), transparent 28%),
+    #05030b !important;
+}
+
+body.theme-vertex .action-button,
+body.theme-vertex .small-button {
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.18);
+}
+
+body.theme-rome .action-button,
+body.theme-rome .small-button,
+body.theme-egypt .action-button,
+body.theme-egypt .small-button {
+  background: linear-gradient(135deg, #92400e, #f59e0b) !important;
+}
+
+body.theme-five .action-button,
+body.theme-five .small-button,
+body.theme-serbia .action-button,
+body.theme-serbia .small-button {
+  background: linear-gradient(135deg, #7c3aed, #ec4899) !important;
+}
+
+body.egg-intensity-low #fiveEggLayer {
+  opacity: 0.58;
+}
+
+body.egg-intensity-low #fiveEggLayer * {
+  animation-duration: 2.8s !important;
+}
+
+body.egg-intensity-high #fiveEggLayer {
+  filter: saturate(1.55) contrast(1.1);
+}
+
+body.egg-intensity-high #fiveEggLayer * {
+  animation-duration: 0.7s !important;
+}
+
+.bot-message .msg-bubble {
+  border-color: rgba(34, 211, 238, 0.35) !important;
+  background:
+    linear-gradient(135deg, rgba(8, 47, 73, 0.8), rgba(15, 23, 42, 0.82)) !important;
+  box-shadow: 0 0 22px rgba(34, 211, 238, 0.12) !important;
+}
+
+body.bot-highlight-off .bot-message .msg-bubble {
+  border-color: inherit !important;
+  background: inherit !important;
+  box-shadow: inherit !important;
+}
+
+body.bot-compact-mode .bot-message .msg-bubble {
+  padding: 7px 9px !important;
+}
+
+body.bot-compact-mode .bot-message .meta {
+  font-size: 11px !important;
+}
+
+.small-button.danger {
+  background: linear-gradient(135deg, #7f1d1d, #dc2626) !important;
+}
+
+.settings-section .small-button {
+  margin-top: 10px;
+  width: 100%;
+}
