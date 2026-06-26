@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "7.2.5",
-  "description": "Selim Chat v7.2.5 direct upload fix without blocking storage status check",
+  "version": "7.2.6",
+  "description": "Selim Chat v7.2.6 type variable fix for storage uploads",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
