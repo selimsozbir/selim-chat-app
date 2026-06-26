@@ -110,6 +110,26 @@ const settingsLocalStatus = document.getElementById('settingsLocalStatus');
 const settingsEnableNotificationsButton = document.getElementById('settingsEnableNotificationsButton');
 const settingsClearNotificationsButton = document.getElementById('settingsClearNotificationsButton');
 
+const settingsFontSizeSelect = document.getElementById('settingsFontSizeSelect');
+const settingsEnterSendToggle = document.getElementById('settingsEnterSendToggle');
+const settingsShowAvatarsToggle = document.getElementById('settingsShowAvatarsToggle');
+const settingsShowTimesToggle = document.getElementById('settingsShowTimesToggle');
+const settingsNotifyDmToggle = document.getElementById('settingsNotifyDmToggle');
+const settingsNotifyGroupToggle = document.getElementById('settingsNotifyGroupToggle');
+const settingsNotifyMentionToggle = document.getElementById('settingsNotifyMentionToggle');
+const settingsNotifyFriendToggle = document.getElementById('settingsNotifyFriendToggle');
+const settingsNotificationSoundToggle = document.getElementById('settingsNotificationSoundToggle');
+const settingsEggsToggle = document.getElementById('settingsEggsToggle');
+const settingsEggIntensitySelect = document.getElementById('settingsEggIntensitySelect');
+const settingsEggSoundToggle = document.getElementById('settingsEggSoundToggle');
+const settingsEggOwnOnlyToggle = document.getElementById('settingsEggOwnOnlyToggle');
+const settingsBotHideToggle = document.getElementById('settingsBotHideToggle');
+const settingsBotHighlightToggle = document.getElementById('settingsBotHighlightToggle');
+const settingsBotCompactToggle = document.getElementById('settingsBotCompactToggle');
+const settingsLanguageSelect = document.getElementById('settingsLanguageSelect');
+const settingsClearLocalButton = document.getElementById('settingsClearLocalButton');
+const settingsLogoutFromPanelButton = document.getElementById('settingsLogoutFromPanelButton');
+
 const mentionPopup = document.getElementById('mentionPopup');
 
 let mode = 'login';
@@ -303,6 +323,9 @@ if (settingsChangePasswordButton) settingsChangePasswordButton.addEventListener(
 if (settingsSaveLocalButton) settingsSaveLocalButton.addEventListener('click', saveLocalSettingsFromPanel);
 if (settingsEnableNotificationsButton) settingsEnableNotificationsButton.addEventListener('click', requestBrowserNotificationsFromSettings);
 if (settingsClearNotificationsButton) settingsClearNotificationsButton.addEventListener('click', clearNotificationsFromSettings);
+
+if (settingsClearLocalButton) settingsClearLocalButton.addEventListener('click', resetLocalSettingsFromPanel);
+if (settingsLogoutFromPanelButton) settingsLogoutFromPanelButton.addEventListener('click', logout);
 if (createGroupButton) createGroupButton.addEventListener('click', createGroup);
 if (changeGroupAvatarButton) changeGroupAvatarButton.addEventListener('click', () => groupAvatarInput?.click());
 if (groupAvatarInput) groupAvatarInput.addEventListener('change', changeGroupAvatar);
@@ -371,6 +394,22 @@ messageForm.addEventListener('submit', (event) => {
 
   messageInput.value = '';
   messageInput.focus();
+});
+
+messageInput.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter') return;
+
+  const settings = getLocalSettings();
+  if (!settings.enterSend && !event.ctrlKey && !event.metaKey) {
+    event.preventDefault();
+    addSystemMessage('Enter ile gönder kapalı. Göndermek için Ctrl+Enter kullan veya ayarlardan aç.');
+    return;
+  }
+
+  if (!settings.enterSend && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault();
+    messageForm.requestSubmit();
+  }
 });
 
 messageInput.addEventListener('input', () => {
@@ -657,16 +696,67 @@ function getLocalSettings() {
   return {
     theme: localStorage.getItem('chat_theme') || 'neon',
     compact: localStorage.getItem('chat_compact') === 'true',
-    reducedMotion: localStorage.getItem('chat_reduced_motion') === 'true'
+    reducedMotion: localStorage.getItem('chat_reduced_motion') === 'true',
+    fontSize: localStorage.getItem('chat_font_size') || 'normal',
+    enterSend: localStorage.getItem('chat_enter_send') !== 'false',
+    showAvatars: localStorage.getItem('chat_show_avatars') !== 'false',
+    showTimes: localStorage.getItem('chat_show_times') !== 'false',
+    notifyDm: localStorage.getItem('chat_notify_dm') !== 'false',
+    notifyGroup: localStorage.getItem('chat_notify_group') !== 'false',
+    notifyMention: localStorage.getItem('chat_notify_mention') !== 'false',
+    notifyFriend: localStorage.getItem('chat_notify_friend') !== 'false',
+    notificationSound: localStorage.getItem('chat_notification_sound') === 'true',
+    eggsEnabled: localStorage.getItem('chat_eggs_enabled') !== 'false',
+    eggIntensity: localStorage.getItem('chat_egg_intensity') || 'normal',
+    eggSound: localStorage.getItem('chat_egg_sound') === 'true',
+    eggOwnOnly: localStorage.getItem('chat_egg_own_only') === 'true',
+    botHide: localStorage.getItem('chat_bot_hide') === 'true',
+    botHighlight: localStorage.getItem('chat_bot_highlight') !== 'false',
+    botCompact: localStorage.getItem('chat_bot_compact') === 'true',
+    language: localStorage.getItem('chat_language') || 'tr'
   };
 }
 
 function applyLocalSettings() {
   const settings = getLocalSettings();
+
+  document.body.classList.remove(
+    'theme-light',
+    'theme-dark-simple',
+    'theme-vertex',
+    'theme-serbia',
+    'theme-limbo',
+    'theme-rome',
+    'theme-egypt',
+    'theme-five',
+    'font-small',
+    'font-large',
+    'hide-avatars',
+    'hide-times',
+    'egg-intensity-low',
+    'egg-intensity-high',
+    'bot-highlight-off',
+    'bot-compact-mode'
+  );
+
   document.body.classList.toggle('theme-light', settings.theme === 'light');
   document.body.classList.toggle('theme-dark-simple', settings.theme === 'dark');
+  document.body.classList.toggle('theme-vertex', settings.theme === 'vertex');
+  document.body.classList.toggle('theme-serbia', settings.theme === 'serbia');
+  document.body.classList.toggle('theme-limbo', settings.theme === 'limbo');
+  document.body.classList.toggle('theme-rome', settings.theme === 'rome');
+  document.body.classList.toggle('theme-egypt', settings.theme === 'egypt');
+  document.body.classList.toggle('theme-five', settings.theme === 'five');
   document.body.classList.toggle('compact-mode', settings.compact);
   document.body.classList.toggle('reduced-motion-mode', settings.reducedMotion);
+  document.body.classList.toggle('font-small', settings.fontSize === 'small');
+  document.body.classList.toggle('font-large', settings.fontSize === 'large');
+  document.body.classList.toggle('hide-avatars', !settings.showAvatars);
+  document.body.classList.toggle('hide-times', !settings.showTimes);
+  document.body.classList.toggle('egg-intensity-low', settings.eggIntensity === 'low');
+  document.body.classList.toggle('egg-intensity-high', settings.eggIntensity === 'high');
+  document.body.classList.toggle('bot-highlight-off', !settings.botHighlight);
+  document.body.classList.toggle('bot-compact-mode', settings.botCompact);
 }
 
 async function startApp() {
@@ -1380,8 +1470,14 @@ function renderUsers(users) {
 }
 
 function addMessage({ type, id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read }) {
+  const localSettings = getLocalSettings();
+  const normalizedUsername = String(username || '').toLowerCase();
+  const isBotMessage = ['feiz', 'selimbot', 'bot'].includes(normalizedUsername);
+
+  if (isBotMessage && localSettings.botHide) return;
+
   const div = document.createElement('div');
-  div.className = `message ${mine ? 'mine' : ''}`;
+  div.className = `message ${mine ? 'mine' : ''} ${isBotMessage ? 'bot-message' : ''}`;
   div.dataset.type = type;
   div.dataset.id = id;
 
@@ -1399,7 +1495,11 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
 
   const meta = document.createElement('div');
   meta.className = 'meta';
-  meta.textContent = `${username} • ${time || ''}${edited ? ' • düzenlendi' : ''}${deleted ? ' • silindi' : ''}`;
+  const metaParts = [username];
+  if (localSettings.showTimes && time) metaParts.push(time);
+  if (edited) metaParts.push('düzenlendi');
+  if (deleted) metaParts.push('silindi');
+  meta.textContent = metaParts.join(' • ');
 
   const body = document.createElement('div');
   body.className = 'text';
@@ -2106,6 +2206,23 @@ function openSettings() {
   settingsThemeSelect.value = localSettings.theme;
   settingsCompactToggle.checked = localSettings.compact;
   settingsReducedMotionToggle.checked = localSettings.reducedMotion;
+  settingsFontSizeSelect.value = localSettings.fontSize;
+  settingsEnterSendToggle.checked = localSettings.enterSend;
+  settingsShowAvatarsToggle.checked = localSettings.showAvatars;
+  settingsShowTimesToggle.checked = localSettings.showTimes;
+  settingsNotifyDmToggle.checked = localSettings.notifyDm;
+  settingsNotifyGroupToggle.checked = localSettings.notifyGroup;
+  settingsNotifyMentionToggle.checked = localSettings.notifyMention;
+  settingsNotifyFriendToggle.checked = localSettings.notifyFriend;
+  settingsNotificationSoundToggle.checked = localSettings.notificationSound;
+  settingsEggsToggle.checked = localSettings.eggsEnabled;
+  settingsEggIntensitySelect.value = localSettings.eggIntensity;
+  settingsEggSoundToggle.checked = localSettings.eggSound;
+  settingsEggOwnOnlyToggle.checked = localSettings.eggOwnOnly;
+  settingsBotHideToggle.checked = localSettings.botHide;
+  settingsBotHighlightToggle.checked = localSettings.botHighlight;
+  settingsBotCompactToggle.checked = localSettings.botCompact;
+  settingsLanguageSelect.value = localSettings.language;
 
   settingsProfileStatus.textContent = '';
   settingsPasswordStatus.textContent = '';
@@ -2182,8 +2299,54 @@ function saveLocalSettingsFromPanel() {
   localStorage.setItem('chat_theme', settingsThemeSelect.value);
   localStorage.setItem('chat_compact', String(settingsCompactToggle.checked));
   localStorage.setItem('chat_reduced_motion', String(settingsReducedMotionToggle.checked));
+  localStorage.setItem('chat_font_size', settingsFontSizeSelect.value);
+  localStorage.setItem('chat_enter_send', String(settingsEnterSendToggle.checked));
+  localStorage.setItem('chat_show_avatars', String(settingsShowAvatarsToggle.checked));
+  localStorage.setItem('chat_show_times', String(settingsShowTimesToggle.checked));
+  localStorage.setItem('chat_notify_dm', String(settingsNotifyDmToggle.checked));
+  localStorage.setItem('chat_notify_group', String(settingsNotifyGroupToggle.checked));
+  localStorage.setItem('chat_notify_mention', String(settingsNotifyMentionToggle.checked));
+  localStorage.setItem('chat_notify_friend', String(settingsNotifyFriendToggle.checked));
+  localStorage.setItem('chat_notification_sound', String(settingsNotificationSoundToggle.checked));
+  localStorage.setItem('chat_eggs_enabled', String(settingsEggsToggle.checked));
+  localStorage.setItem('chat_egg_intensity', settingsEggIntensitySelect.value);
+  localStorage.setItem('chat_egg_sound', String(settingsEggSoundToggle.checked));
+  localStorage.setItem('chat_egg_own_only', String(settingsEggOwnOnlyToggle.checked));
+  localStorage.setItem('chat_bot_hide', String(settingsBotHideToggle.checked));
+  localStorage.setItem('chat_bot_highlight', String(settingsBotHighlightToggle.checked));
+  localStorage.setItem('chat_bot_compact', String(settingsBotCompactToggle.checked));
+  localStorage.setItem('chat_language', settingsLanguageSelect.value);
   applyLocalSettings();
-  settingsLocalStatus.textContent = 'Görünüm kaydedildi.';
+  settingsLocalStatus.textContent = 'Tüm yerel ayarlar kaydedildi.';
+}
+
+function resetLocalSettingsFromPanel() {
+  [
+    'chat_theme',
+    'chat_compact',
+    'chat_reduced_motion',
+    'chat_font_size',
+    'chat_enter_send',
+    'chat_show_avatars',
+    'chat_show_times',
+    'chat_notify_dm',
+    'chat_notify_group',
+    'chat_notify_mention',
+    'chat_notify_friend',
+    'chat_notification_sound',
+    'chat_eggs_enabled',
+    'chat_egg_intensity',
+    'chat_egg_sound',
+    'chat_egg_own_only',
+    'chat_bot_hide',
+    'chat_bot_highlight',
+    'chat_bot_compact',
+    'chat_language'
+  ].forEach((key) => localStorage.removeItem(key));
+
+  applyLocalSettings();
+  openSettings();
+  addSystemMessage('Bu cihazdaki görünüm ve tercih ayarları sıfırlandı.');
 }
 
 async function requestBrowserNotificationsFromSettings() {
@@ -2667,8 +2830,13 @@ function normalizeFiveEggText(value) {
 }
 
 function runFiveEgg(command, username = '') {
+  const settings = getLocalSettings();
+  if (!settings.eggsEnabled) return false;
+
   const normalized = normalizeFiveEggText(command);
   const layer = getFiveEggLayer();
+
+  if (settings.eggSound) playUiBeep('egg');
 
   clearTimeout(fiveEggTimeout);
   clearFiveEggClasses();
@@ -2957,6 +3125,11 @@ function maybeRunFiveEggFromMessage(message) {
   if (!FIVE_EGG_COMMANDS.includes(command)) return false;
 
   const username = message?.username || message?.sender_username || message?.display_name || '';
+  if (getLocalSettings().eggOwnOnly) {
+    const myNames = [user?.username, user?.display_name].filter(Boolean).map((v) => String(v).toLowerCase());
+    if (!myNames.includes(String(username || '').toLowerCase())) return false;
+  }
+
   return runFiveEgg(command, username);
 }
 
@@ -2994,7 +3167,46 @@ function formatTime(dateString) {
   }
 }
 
+
+function playUiBeep(kind = 'notify') {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    const isEgg = kind === 'egg';
+    osc.type = isEgg ? 'sawtooth' : 'sine';
+    osc.frequency.value = isEgg ? 160 : 720;
+    gain.gain.value = isEgg ? 0.035 : 0.025;
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + (isEgg ? 0.22 : 0.12));
+    osc.stop(ctx.currentTime + (isEgg ? 0.24 : 0.14));
+  } catch {}
+}
+
+function notificationAllowed(title) {
+  const settings = getLocalSettings();
+  const t = String(title || '').toLowerCase();
+
+  if (t.includes('dm') && !t.includes('grup') && !settings.notifyDm) return false;
+  if ((t.includes('grup') || t.includes('group')) && !settings.notifyGroup) return false;
+  if ((t.includes('etiket') || t.includes('@everyone')) && !settings.notifyMention) return false;
+  if (t.includes('arkadaş') && !settings.notifyFriend) return false;
+
+  return true;
+}
+
+
 function showBrowserNotification(title, body) {
+  if (!notificationAllowed(title)) return;
+  if (getLocalSettings().notificationSound) playUiBeep('notify');
   if (!('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
   new Notification(title, { body });
