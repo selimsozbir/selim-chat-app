@@ -68,6 +68,6 @@ function updateRoomUsers(room) {
   io.to(room).emit('users', users);
 }
 
-server.listen(PORT, () => {
-  console.log(`Chat app çalışıyor: http://localhost:${PORT}`);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`Chat app çalışıyor. Port: ${PORT}`);
 });
