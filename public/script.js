@@ -15,6 +15,7 @@ const avatarInput = document.getElementById('avatarInput');
 const avatarImg = document.getElementById('avatarImg');
 const avatarLetter = document.getElementById('avatarLetter');
 const removeAvatarButton = document.getElementById('removeAvatarButton');
+const settingsButton = document.getElementById('settingsButton');
 
 const roomModeButton = document.getElementById('roomModeButton');
 const dmModeButton = document.getElementById('dmModeButton');
@@ -88,6 +89,26 @@ const profileStatus = document.getElementById('profileStatus');
 const profileBio = document.getElementById('profileBio');
 const profileBioInput = document.getElementById('profileBioInput');
 const profileSaveBioButton = document.getElementById('profileSaveBioButton');
+
+const settingsModal = document.getElementById('settingsModal');
+const settingsCloseButton = document.getElementById('settingsCloseButton');
+const settingsUsernameInput = document.getElementById('settingsUsernameInput');
+const settingsDisplayNameInput = document.getElementById('settingsDisplayNameInput');
+const settingsBioInput = document.getElementById('settingsBioInput');
+const settingsSaveProfileButton = document.getElementById('settingsSaveProfileButton');
+const settingsProfileStatus = document.getElementById('settingsProfileStatus');
+const settingsCurrentPasswordInput = document.getElementById('settingsCurrentPasswordInput');
+const settingsNewPasswordInput = document.getElementById('settingsNewPasswordInput');
+const settingsNewPasswordAgainInput = document.getElementById('settingsNewPasswordAgainInput');
+const settingsChangePasswordButton = document.getElementById('settingsChangePasswordButton');
+const settingsPasswordStatus = document.getElementById('settingsPasswordStatus');
+const settingsThemeSelect = document.getElementById('settingsThemeSelect');
+const settingsCompactToggle = document.getElementById('settingsCompactToggle');
+const settingsReducedMotionToggle = document.getElementById('settingsReducedMotionToggle');
+const settingsSaveLocalButton = document.getElementById('settingsSaveLocalButton');
+const settingsLocalStatus = document.getElementById('settingsLocalStatus');
+const settingsEnableNotificationsButton = document.getElementById('settingsEnableNotificationsButton');
+const settingsClearNotificationsButton = document.getElementById('settingsClearNotificationsButton');
 
 const mentionPopup = document.getElementById('mentionPopup');
 
@@ -271,6 +292,17 @@ profileModal.addEventListener('click', (event) => {
 });
 
 profileSaveBioButton.addEventListener('click', saveBio);
+
+if (settingsButton) settingsButton.addEventListener('click', openSettings);
+if (settingsCloseButton) settingsCloseButton.addEventListener('click', closeSettings);
+if (settingsModal) settingsModal.addEventListener('click', (event) => {
+  if (event.target === settingsModal) closeSettings();
+});
+if (settingsSaveProfileButton) settingsSaveProfileButton.addEventListener('click', saveSettingsProfile);
+if (settingsChangePasswordButton) settingsChangePasswordButton.addEventListener('click', changeSettingsPassword);
+if (settingsSaveLocalButton) settingsSaveLocalButton.addEventListener('click', saveLocalSettingsFromPanel);
+if (settingsEnableNotificationsButton) settingsEnableNotificationsButton.addEventListener('click', requestBrowserNotificationsFromSettings);
+if (settingsClearNotificationsButton) settingsClearNotificationsButton.addEventListener('click', clearNotificationsFromSettings);
 if (createGroupButton) createGroupButton.addEventListener('click', createGroup);
 if (changeGroupAvatarButton) changeGroupAvatarButton.addEventListener('click', () => groupAvatarInput?.click());
 if (groupAvatarInput) groupAvatarInput.addEventListener('change', changeGroupAvatar);
@@ -621,7 +653,24 @@ async function api(url, options = {}, withAuth = true) {
   return data;
 }
 
+function getLocalSettings() {
+  return {
+    theme: localStorage.getItem('chat_theme') || 'neon',
+    compact: localStorage.getItem('chat_compact') === 'true',
+    reducedMotion: localStorage.getItem('chat_reduced_motion') === 'true'
+  };
+}
+
+function applyLocalSettings() {
+  const settings = getLocalSettings();
+  document.body.classList.toggle('theme-light', settings.theme === 'light');
+  document.body.classList.toggle('theme-dark-simple', settings.theme === 'dark');
+  document.body.classList.toggle('compact-mode', settings.compact);
+  document.body.classList.toggle('reduced-motion-mode', settings.reducedMotion);
+}
+
 async function startApp() {
+  applyLocalSettings();
   if (!token || !user) {
     authScreen.classList.remove('hidden');
     chatScreen.classList.add('hidden');
@@ -2044,6 +2093,121 @@ async function searchMessages() {
     messageSearchResults.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
   }
 }
+
+
+function openSettings() {
+  if (!settingsModal || !user) return;
+
+  settingsUsernameInput.value = user.username || '';
+  settingsDisplayNameInput.value = user.display_name || user.username || '';
+  settingsBioInput.value = user.bio || '';
+
+  const localSettings = getLocalSettings();
+  settingsThemeSelect.value = localSettings.theme;
+  settingsCompactToggle.checked = localSettings.compact;
+  settingsReducedMotionToggle.checked = localSettings.reducedMotion;
+
+  settingsProfileStatus.textContent = '';
+  settingsPasswordStatus.textContent = '';
+  settingsLocalStatus.textContent = '';
+  settingsCurrentPasswordInput.value = '';
+  settingsNewPasswordInput.value = '';
+  settingsNewPasswordAgainInput.value = '';
+
+  settingsModal.classList.remove('hidden');
+}
+
+function closeSettings() {
+  settingsModal?.classList.add('hidden');
+}
+
+async function saveSettingsProfile() {
+  try {
+    settingsProfileStatus.textContent = 'Kaydediliyor...';
+
+    const data = await api('/api/settings/profile', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        username: settingsUsernameInput.value,
+        displayName: settingsDisplayNameInput.value,
+        bio: settingsBioInput.value
+      })
+    });
+
+    user = data.user;
+    token = data.token || token;
+    localStorage.setItem('chat_user', JSON.stringify(user));
+    localStorage.setItem('chat_token', token);
+
+    renderProfile();
+    settingsProfileStatus.textContent = 'Profil kaydedildi.';
+    addSystemMessage('Ayarlar güncellendi. Bağlantı yenileniyor...');
+
+    connectSocket();
+    await Promise.allSettled([loadFriends(), loadGroups(), loadRoomMembers(), loadGlobalAdminStatus()]);
+  } catch (error) {
+    settingsProfileStatus.textContent = error.message;
+  }
+}
+
+async function changeSettingsPassword() {
+  try {
+    const currentPassword = settingsCurrentPasswordInput.value;
+    const newPassword = settingsNewPasswordInput.value;
+    const newPasswordAgain = settingsNewPasswordAgainInput.value;
+
+    if (newPassword !== newPasswordAgain) {
+      settingsPasswordStatus.textContent = 'Yeni şifreler aynı değil.';
+      return;
+    }
+
+    settingsPasswordStatus.textContent = 'Değiştiriliyor...';
+
+    await api('/api/settings/password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+
+    settingsCurrentPasswordInput.value = '';
+    settingsNewPasswordInput.value = '';
+    settingsNewPasswordAgainInput.value = '';
+    settingsPasswordStatus.textContent = 'Şifre değiştirildi.';
+    addSystemMessage('Şifre başarıyla değiştirildi.');
+  } catch (error) {
+    settingsPasswordStatus.textContent = error.message;
+  }
+}
+
+function saveLocalSettingsFromPanel() {
+  localStorage.setItem('chat_theme', settingsThemeSelect.value);
+  localStorage.setItem('chat_compact', String(settingsCompactToggle.checked));
+  localStorage.setItem('chat_reduced_motion', String(settingsReducedMotionToggle.checked));
+  applyLocalSettings();
+  settingsLocalStatus.textContent = 'Görünüm kaydedildi.';
+}
+
+async function requestBrowserNotificationsFromSettings() {
+  if (!('Notification' in window)) {
+    addSystemMessage('Tarayıcın bildirim desteklemiyor.');
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+  addSystemMessage(permission === 'granted' ? 'Bildirimler açıldı.' : 'Bildirim izni verilmedi.');
+}
+
+async function clearNotificationsFromSettings() {
+  try {
+    await api('/api/notifications', { method: 'DELETE' });
+    notificationsList.innerHTML = '<div class="mini-item">Bildirim yok.</div>';
+    unreadNotifications = 0;
+    updateBadge();
+    addSystemMessage('Bildirimler temizlendi.');
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
 
 async function openProfile(userId) {
   try {
