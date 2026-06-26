@@ -62,6 +62,47 @@ let dmTypingTimer = null;
 let mediaRecorder = null;
 let recordedChunks = [];
 let isRecording = false;
+let contextTarget = null;
+let longPressTimer = null;
+
+const contextMenu = document.createElement('div');
+contextMenu.className = 'message-context-menu hidden';
+contextMenu.innerHTML = `
+  <button data-emoji="❤️">❤️</button>
+  <button data-emoji="👍">👍</button>
+  <button data-emoji="😂">😂</button>
+  <button data-emoji="🔥">🔥</button>
+  <button data-action="edit">Düzenle</button>
+  <button data-action="delete" class="danger">Sil</button>
+`;
+document.body.appendChild(contextMenu);
+
+contextMenu.addEventListener('click', (event) => {
+  event.stopPropagation();
+  const button = event.target.closest('button');
+  if (!button || !contextTarget) return;
+
+  if (button.dataset.emoji) {
+    sendReaction(contextTarget.type, contextTarget.id, button.dataset.emoji);
+    hideContextMenu();
+    return;
+  }
+
+  if (button.dataset.action === 'edit') {
+    editMessage(contextTarget.type, contextTarget.id, contextTarget.text);
+    hideContextMenu();
+    return;
+  }
+
+  if (button.dataset.action === 'delete') {
+    deleteMessage(contextTarget.type, contextTarget.id);
+    hideContextMenu();
+  }
+});
+
+document.addEventListener('click', () => hideContextMenu());
+document.addEventListener('scroll', () => hideContextMenu(), true);
+window.addEventListener('resize', () => hideContextMenu());
 
 const imageModal = document.createElement('div');
 imageModal.className = 'image-modal hidden';
@@ -272,6 +313,25 @@ function stopVoiceRecording() {
   voiceButton.textContent = '🎙️';
 }
 
+
+document.addEventListener('paste', async (event) => {
+  const items = Array.from(event.clipboardData?.items || []);
+  const fileItem = items.find(item => item.kind === 'file');
+
+  if (!fileItem) return;
+
+  const file = fileItem.getAsFile();
+  if (!file) return;
+
+  event.preventDefault();
+
+  try {
+    await sendFileMessage(file);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+});
+
 avatarInput.addEventListener('change', async () => {
   const file = avatarInput.files?.[0];
   if (!file) return;
@@ -381,7 +441,10 @@ function connectSocket() {
   });
 
   socket.on('system_message', addSystemMessage);
-  socket.on('chat_message', addRoomMessage);
+  socket.on('chat_message', (message) => {
+    if (chatMode !== 'room') return;
+    if (!message.room || message.room === currentRoom) addRoomMessage(message);
+  });
   socket.on('users', renderUsers);
 
   socket.on('room_message_updated', (msg) => updateMessageElement('room', msg.id, msg.text, true, false));
@@ -969,14 +1032,36 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
     bubble.appendChild(status);
   }
 
-  div.addEventListener('click', () => {
-    document.querySelectorAll('.message.active').forEach((message) => {
-      if (message !== div) message.classList.remove('active');
+  div.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    showContextMenu(event.clientX, event.clientY, {
+      type,
+      id,
+      text: body.textContent,
+      mine,
+      deleted
     });
-    div.classList.toggle('active');
   });
 
-  div.addEventListener('dblclick', () => {
+  div.addEventListener('touchstart', (event) => {
+    clearTimeout(longPressTimer);
+    longPressTimer = setTimeout(() => {
+      const touch = event.touches[0];
+      showContextMenu(touch.clientX, touch.clientY, {
+        type,
+        id,
+        text: body.textContent,
+        mine,
+        deleted
+      });
+    }, 550);
+  }, { passive: true });
+
+  div.addEventListener('touchend', () => clearTimeout(longPressTimer));
+  div.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+
+  div.addEventListener('dblclick', (event) => {
+    event.stopPropagation();
     sendReaction(type, id, '❤️');
   });
 
@@ -1021,6 +1106,34 @@ function deleteMessage(type, id) {
   } else {
     socket.emit('room_message_delete', { messageId: id });
   }
+}
+
+
+function showContextMenu(x, y, target) {
+  if (!target || !target.id || target.deleted) return;
+
+  contextTarget = target;
+
+  const editButton = contextMenu.querySelector('[data-action="edit"]');
+  const deleteButton = contextMenu.querySelector('[data-action="delete"]');
+
+  editButton.style.display = target.mine ? '' : 'none';
+  deleteButton.style.display = target.mine ? '' : 'none';
+
+  contextMenu.classList.remove('hidden');
+
+  const width = contextMenu.offsetWidth;
+  const height = contextMenu.offsetHeight;
+  const left = Math.min(x, window.innerWidth - width - 12);
+  const top = Math.min(y, window.innerHeight - height - 12);
+
+  contextMenu.style.left = `${Math.max(12, left)}px`;
+  contextMenu.style.top = `${Math.max(12, top)}px`;
+}
+
+function hideContextMenu() {
+  contextMenu.classList.add('hidden');
+  contextTarget = null;
 }
 
 function renderMedia({ message_type, file_name, file_mime, file_data }) {
