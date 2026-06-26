@@ -192,6 +192,28 @@ async function initDatabase() {
   await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
   await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMP`);
 
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS message_type VARCHAR(20) DEFAULT 'text'`);
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_name TEXT`);
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_mime TEXT`);
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_data TEXT`);
+
+  await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS message_type VARCHAR(20) DEFAULT 'text'`);
+  await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS file_name TEXT`);
+  await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS file_mime TEXT`);
+  await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS file_data TEXT`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS message_reactions (
+      id SERIAL PRIMARY KEY,
+      message_scope VARCHAR(10) NOT NULL,
+      message_id INTEGER NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      emoji VARCHAR(20) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (message_scope, message_id, user_id, emoji)
+    );
+  `);
+
   console.log('Database tabloları hazır.');
 }
 
@@ -292,7 +314,8 @@ app.get('/api/messages/:room', authMiddleware, async (req, res) => {
   const room = cleanText(req.params.room, 50).toLowerCase() || 'genel';
 
   const result = await pool.query(
-    `SELECT m.id, m.room, m.username, m.text, m.created_at, m.edited_at, m.deleted_at, u.avatar_url
+    `SELECT m.id, m.room, m.username, m.text, m.created_at, m.edited_at, m.deleted_at,
+            m.message_type, m.file_name, m.file_mime, m.file_data, u.avatar_url
      FROM messages m
      LEFT JOIN users u ON u.id = m.user_id
      WHERE m.room = $1
@@ -521,6 +544,7 @@ app.get('/api/dm/:friendId', authMiddleware, async (req, res) => {
 
   const result = await pool.query(
     `SELECT dm.id, dm.sender_id, dm.receiver_id, dm.text, dm.created_at, dm.edited_at, dm.deleted_at, dm.read_at,
+            dm.message_type, dm.file_name, dm.file_mime, dm.file_data,
             sender.username AS sender_username,
             sender.avatar_url AS sender_avatar_url
      FROM dm_messages dm
@@ -548,6 +572,97 @@ app.post('/api/dm/:friendId/read', authMiddleware, async (req, res) => {
 
   emitToUser(friendId, 'dm_read', { byId: req.user.id });
   res.json({ ok: true });
+});
+
+/* REACTIONS */
+
+app.post('/api/reactions', authMiddleware, async (req, res) => {
+  try {
+    const scope = String(req.body.scope || '');
+    const messageId = Number(req.body.messageId);
+    const emoji = cleanText(req.body.emoji, 20);
+
+    if (!['room', 'dm'].includes(scope)) return res.status(400).json({ error: 'Geçersiz mesaj tipi.' });
+    if (!Number.isInteger(messageId)) return res.status(400).json({ error: 'Geçersiz mesaj.' });
+    if (!emoji) return res.status(400).json({ error: 'Emoji yok.' });
+
+    if (scope === 'room') {
+      const msg = await pool.query('SELECT id, room FROM messages WHERE id = $1 AND deleted_at IS NULL', [messageId]);
+      if (msg.rows.length === 0) return res.status(404).json({ error: 'Mesaj bulunamadı.' });
+
+      await pool.query(
+        `INSERT INTO message_reactions (message_scope, message_id, user_id, emoji)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (message_scope, message_id, user_id, emoji) DO NOTHING`,
+        [scope, messageId, req.user.id, emoji]
+      );
+
+      io.to(msg.rows[0].room).emit('reaction_added', {
+        scope,
+        messageId,
+        emoji,
+        username: req.user.username
+      });
+
+      return res.json({ ok: true });
+    }
+
+    const msg = await pool.query(
+      `SELECT id, sender_id, receiver_id
+       FROM dm_messages
+       WHERE id = $1 AND deleted_at IS NULL
+       AND (sender_id = $2 OR receiver_id = $2)`,
+      [messageId, req.user.id]
+    );
+
+    if (msg.rows.length === 0) return res.status(404).json({ error: 'Mesaj bulunamadı.' });
+
+    await pool.query(
+      `INSERT INTO message_reactions (message_scope, message_id, user_id, emoji)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (message_scope, message_id, user_id, emoji) DO NOTHING`,
+      [scope, messageId, req.user.id, emoji]
+    );
+
+    emitToUser(msg.rows[0].sender_id, 'reaction_added', {
+      scope,
+      messageId,
+      emoji,
+      username: req.user.username
+    });
+
+    emitToUser(msg.rows[0].receiver_id, 'reaction_added', {
+      scope,
+      messageId,
+      emoji,
+      username: req.user.username
+    });
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Reaksiyon hatası:', error);
+    res.status(500).json({ error: 'Reaksiyon eklenemedi.' });
+  }
+});
+
+app.get('/api/reactions/:scope/:messageId', authMiddleware, async (req, res) => {
+  const scope = String(req.params.scope || '');
+  const messageId = Number(req.params.messageId);
+
+  if (!['room', 'dm'].includes(scope) || !Number.isInteger(messageId)) {
+    return res.status(400).json({ error: 'Geçersiz istek.' });
+  }
+
+  const result = await pool.query(
+    `SELECT emoji, COUNT(*)::int AS count
+     FROM message_reactions
+     WHERE message_scope = $1 AND message_id = $2
+     GROUP BY emoji
+     ORDER BY emoji ASC`,
+    [scope, messageId]
+  );
+
+  res.json({ reactions: result.rows });
 });
 
 /* NOTIFICATIONS */
@@ -615,15 +730,30 @@ io.on('connection', (socket) => {
 
   socket.on('chat_message', async (message) => {
     try {
-      const text = cleanText(message, 1000);
-      if (!text || !socket.data.room) return;
+      const payload = typeof message === 'object' && message !== null ? message : { text: message };
+      const type = cleanText(payload.type || 'text', 20);
+      const allowedTypes = ['text', 'image', 'file', 'audio'];
+      const messageType = allowedTypes.includes(type) ? type : 'text';
+
+      const text = cleanText(payload.text || '', 1000);
+      const fileName = cleanText(payload.fileName || '', 200) || null;
+      const fileMime = cleanText(payload.fileMime || '', 100) || null;
+      const fileData = String(payload.fileData || '');
+
+      if (!socket.data.room) return;
+      if (messageType === 'text' && !text) return;
+      if (messageType !== 'text' && !fileData.startsWith('data:')) return;
+      if (fileData.length > 3000000) {
+        socket.emit('system_message', 'Dosya çok büyük. Daha küçük dosya gönder.');
+        return;
+      }
 
       const room = socket.data.room;
       const saved = await pool.query(
-        `INSERT INTO messages (room, user_id, username, text)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, room, username, text, created_at, edited_at, deleted_at`,
-        [room, socket.user.id, socket.user.username, text]
+        `INSERT INTO messages (room, user_id, username, text, message_type, file_name, file_mime, file_data)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id, room, username, text, created_at, edited_at, deleted_at, message_type, file_name, file_mime, file_data`,
+        [room, socket.user.id, socket.user.username, text, messageType, fileName, fileMime, fileData || null]
       );
 
       const avatarResult = await pool.query('SELECT avatar_url FROM users WHERE id = $1', [socket.user.id]);
@@ -634,6 +764,10 @@ io.on('connection', (socket) => {
         username: msg.username,
         avatar_url: avatarResult.rows[0]?.avatar_url || null,
         text: msg.text,
+        message_type: msg.message_type,
+        file_name: msg.file_name,
+        file_mime: msg.file_mime,
+        file_data: msg.file_data,
         edited_at: msg.edited_at,
         deleted_at: msg.deleted_at,
         time: nowTime()
@@ -699,12 +833,26 @@ io.on('connection', (socket) => {
     emitToUser(targetId, 'dm_typing', { fromId: socket.user.id, fromUsername: socket.user.username });
   });
 
-  socket.on('dm_message', async ({ receiverId, text }) => {
+  socket.on('dm_message', async (payload) => {
     try {
-      const cleanMessage = cleanText(text, 1000);
+      const receiverId = payload?.receiverId;
+      const type = cleanText(payload?.type || 'text', 20);
+      const allowedTypes = ['text', 'image', 'file', 'audio'];
+      const messageType = allowedTypes.includes(type) ? type : 'text';
+
+      const cleanMessage = cleanText(payload?.text || '', 1000);
+      const fileName = cleanText(payload?.fileName || '', 200) || null;
+      const fileMime = cleanText(payload?.fileMime || '', 100) || null;
+      const fileData = String(payload?.fileData || '');
       const targetId = Number(receiverId);
 
-      if (!cleanMessage || !Number.isInteger(targetId)) return;
+      if (!Number.isInteger(targetId)) return;
+      if (messageType === 'text' && !cleanMessage) return;
+      if (messageType !== 'text' && !fileData.startsWith('data:')) return;
+      if (fileData.length > 3000000) {
+        socket.emit('notification', { type: 'error', payload: { message: 'Dosya çok büyük. Daha küçük dosya gönder.' } });
+        return;
+      }
 
       const ok = await areFriends(socket.user.id, targetId);
       if (!ok) {
@@ -713,10 +861,10 @@ io.on('connection', (socket) => {
       }
 
       const saved = await pool.query(
-        `INSERT INTO dm_messages (sender_id, receiver_id, text)
-         VALUES ($1, $2, $3)
-         RETURNING id, sender_id, receiver_id, text, created_at, edited_at, deleted_at, read_at`,
-        [socket.user.id, targetId, cleanMessage]
+        `INSERT INTO dm_messages (sender_id, receiver_id, text, message_type, file_name, file_mime, file_data)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, sender_id, receiver_id, text, created_at, edited_at, deleted_at, read_at, message_type, file_name, file_mime, file_data`,
+        [socket.user.id, targetId, cleanMessage, messageType, fileName, fileMime, fileData || null]
       );
 
       const avatarResult = await pool.query('SELECT avatar_url FROM users WHERE id = $1', [socket.user.id]);
@@ -728,6 +876,10 @@ io.on('connection', (socket) => {
         sender_username: socket.user.username,
         sender_avatar_url: avatarResult.rows[0]?.avatar_url || null,
         text: saved.rows[0].text,
+        message_type: saved.rows[0].message_type,
+        file_name: saved.rows[0].file_name,
+        file_mime: saved.rows[0].file_mime,
+        file_data: saved.rows[0].file_data,
         edited_at: saved.rows[0].edited_at,
         deleted_at: saved.rows[0].deleted_at,
         read_at: saved.rows[0].read_at,
