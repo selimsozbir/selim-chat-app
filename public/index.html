@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v8.4.0</title>
-  <link rel="stylesheet" href="style.css?v=840" />
+  <title>Selim Chat v8.4.1</title>
+  <link rel="stylesheet" href="style.css?v=841" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -232,6 +232,7 @@
         </div>
 
         <form id="messageForm" class="message-form">
+          <button id="emojiButton" type="button" title="Emoji">😊</button>
           <button id="attachButton" type="button" title="Dosya gönder">📎</button>
           <button id="voiceButton" type="button" title="Sesli mesaj">🎙️</button>
           <input id="fileInput" type="file" accept="image/*,audio/*,.pdf,.txt,.zip,.rar,.doc,.docx" hidden />
@@ -240,6 +241,7 @@
             <span id="composerHint" class="composer-hint">Enter gönderir</span>
           </div>
           <button id="sendButton" type="submit">Gönder</button>
+          <div id="emojiPanel" class="emoji-panel hidden" aria-label="Emoji paneli"></div>
         </form>
 
         <nav id="mobileBottomNav" class="mobile-bottom-nav">
@@ -576,7 +578,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=840"></script>
+  <script src="script.js?v=841"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
