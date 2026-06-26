@@ -64,6 +64,8 @@ const typingText = document.getElementById('typingText');
 
 const messageForm = document.getElementById('messageForm');
 const messageInput = document.getElementById('messageInput');
+const emojiButton = document.getElementById('emojiButton');
+const emojiPanel = document.getElementById('emojiPanel');
 const attachButton = document.getElementById('attachButton');
 const voiceButton = document.getElementById('voiceButton');
 const fileInput = document.getElementById('fileInput');
@@ -536,6 +538,55 @@ messageInput.addEventListener('input', () => {
   }
 });
 
+
+const CHAT_EMOJIS = [
+  '😀','😂','🤣','😍','😘','😎','😭','😡','😈','💀','🔥','❤️','💜','💯','✨','⚡',
+  '🌀','🔴','⚫','🧊','🏛️','🇹🇷','🇷🇸','🐈','🤖','👑','🎮','🎧','🎵','🚀','🌌','🕳️',
+  '👍','👎','🙏','👏','🤝','🫡','😳','🤨','😐','😴','🥶','🤯','🗿','🍀','⭐','💎'
+];
+
+function renderEmojiPanel() {
+  if (!emojiPanel) return;
+  emojiPanel.innerHTML = '';
+  CHAT_EMOJIS.forEach((emoji) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'emoji-option';
+    btn.textContent = emoji;
+    btn.onclick = () => insertEmoji(emoji);
+    emojiPanel.appendChild(btn);
+  });
+}
+
+function insertEmoji(emoji) {
+  const start = messageInput.selectionStart ?? messageInput.value.length;
+  const end = messageInput.selectionEnd ?? messageInput.value.length;
+  messageInput.value = messageInput.value.slice(0, start) + emoji + messageInput.value.slice(end);
+  messageInput.focus();
+  const pos = start + emoji.length;
+  messageInput.setSelectionRange(pos, pos);
+  emojiPanel?.classList.add('hidden');
+  updateMentionSuggestions();
+}
+
+function toggleEmojiPanel() {
+  if (!emojiPanel) return;
+  renderEmojiPanel();
+  emojiPanel.classList.toggle('hidden');
+}
+
+if (emojiButton) emojiButton.addEventListener('click', (event) => {
+  event.stopPropagation();
+  toggleEmojiPanel();
+});
+
+document.addEventListener('click', (event) => {
+  if (!emojiPanel || emojiPanel.classList.contains('hidden')) return;
+  if (emojiPanel.contains(event.target) || emojiButton?.contains(event.target)) return;
+  emojiPanel.classList.add('hidden');
+});
+
+
 attachButton.addEventListener('click', () => fileInput.click());
 
 fileInput.addEventListener('change', async () => {
@@ -799,6 +850,37 @@ if (focusComposerButton) focusComposerButton.addEventListener('click', () => mes
 if (jumpBottomHeaderButton) jumpBottomHeaderButton.addEventListener('click', scrollToBottom);
 if (scrollBottomButton) scrollBottomButton.addEventListener('click', scrollToBottom);
 messagesEl.addEventListener('scroll', updateScrollBottomButton);
+bindGamifyControls();
+
+
+function bindGamifyControls() {
+  if (refreshGamifyButton && !refreshGamifyButton.dataset.bound) {
+    refreshGamifyButton.dataset.bound = '1';
+    refreshGamifyButton.addEventListener('click', loadGamify);
+  }
+
+  if (questsTabButton && !questsTabButton.dataset.bound) {
+    questsTabButton.dataset.bound = '1';
+    questsTabButton.addEventListener('click', () => switchGamifyTab('quests'));
+  }
+
+  if (marketTabButton && !marketTabButton.dataset.bound) {
+    marketTabButton.dataset.bound = '1';
+    marketTabButton.addEventListener('click', () => switchGamifyTab('market'));
+  }
+
+  if (leaderboardTabButton && !leaderboardTabButton.dataset.bound) {
+    leaderboardTabButton.dataset.bound = '1';
+    leaderboardTabButton.addEventListener('click', () => switchGamifyTab('leaderboard'));
+  }
+
+  leaderboardFilters.forEach((btn) => {
+    if (btn.dataset.bound) return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () => loadLeaderboard(btn.dataset.leaderboard || 'level'));
+  });
+}
+
 
 async function api(url, options = {}, withAuth = true) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
@@ -1691,7 +1773,12 @@ function switchGamifyTab(tab) {
   questsPanel?.classList.toggle('hidden', tab !== 'quests');
   marketPanel?.classList.toggle('hidden', tab !== 'market');
   leaderboardPanel?.classList.toggle('hidden', tab !== 'leaderboard');
+
+  if (tab === 'market') loadGamify();
   if (tab === 'leaderboard') loadLeaderboard();
+
+  const box = document.querySelector('.gamify-box');
+  if (box) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 async function loadGamify() {
@@ -3714,14 +3801,36 @@ function getFiveEggLayer() {
     layer.setAttribute('aria-hidden', 'true');
     document.body.appendChild(layer);
   }
+  layer.classList.remove('hidden');
   return layer;
 }
 
 function clearFiveEggClasses() {
+  clearTimeout(fiveEggTimeout);
+  fiveEggTimeout = null;
+
   document.body.classList.remove('egg-serbia', 'egg-limbo', 'egg-vertex', 'egg-rome', 'egg-egypt', 'egg-anitkabir', 'egg-cat', 'egg-reset', 'egg-rift', 'egg-5ecropolis', 'egg-selim', 'egg-xara', 'egg-nico', 'egg-yasin', 'egg-jung', 'egg-fetullah', 'egg-blake', 'egg-feiz', 'egg-pnico', 'egg-pyasin', 'egg-ataturk');
-  const layer = getFiveEggLayer();
-  layer.innerHTML = '';
+
+  const layer = document.getElementById('fiveEggLayer');
+  if (layer) {
+    layer.innerHTML = '';
+    layer.classList.add('hidden');
+    layer.removeAttribute('style');
+  }
 }
+
+function scheduleFiveEggClear(ms = 3800) {
+  clearTimeout(fiveEggTimeout);
+  fiveEggTimeout = setTimeout(clearFiveEggClasses, ms);
+  setTimeout(() => {
+    const layer = document.getElementById('fiveEggLayer');
+    if (layer && !layer.classList.contains('hidden')) clearFiveEggClasses();
+  }, ms + 1400);
+}
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') clearFiveEggClasses();
+});
 
 function normalizeFiveEggText(value) {
   return String(value || '').trim().toLowerCase().split(/\s+/)[0];
@@ -3732,12 +3841,11 @@ function runFiveEgg(command, username = '') {
   if (!settings.eggsEnabled) return false;
 
   const normalized = normalizeFiveEggText(command);
-  const layer = getFiveEggLayer();
 
   if (settings.eggSound) playUiBeep('egg');
 
-  clearTimeout(fiveEggTimeout);
   clearFiveEggClasses();
+  const layer = getFiveEggLayer();
 
   if (normalized === '/serbia') {
     document.body.classList.add('egg-serbia');
@@ -3748,7 +3856,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-portal-sub">5ECROPOLIS anomaly detected</div>
     `;
     addSystemMessage(`🌀 ${username ? username + ' ' : ''}Sırbistan kapısını açtı. Frekans değişiyor...`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4200);
+    scheduleFiveEggClear(4200);
     return true;
   }
 
@@ -3759,7 +3867,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-limbo-sub">sesler kesildi · gerçeklik askıya alındı</div>
     `;
     addSystemMessage(`◼ ${username ? username + ' ' : ''}Limbo'ya düştü. Ekran birkaç saniyeliğine kararıyor...`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3600);
+    scheduleFiveEggClear(3600);
     return true;
   }
 
@@ -3770,7 +3878,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-vertex-sub">red universe breach</div>
     `;
     addSystemMessage(`🔴 VERTEX aktifleşti. Kırmızı evren çatlağı açılıyor...`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3600);
+    scheduleFiveEggClear(3600);
     return true;
   }
 
@@ -3782,7 +3890,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-rome-sub">kurallara uymayanlar yüksek yapıya çıkarılır</div>
     `;
     addFiveSystemMessage('rome', `🏛️ ROMA PROTOKOLÜ: Kurallar değişti. Saçlar tıraş edildi, simülasyon yeniden yazıldı.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4200);
+    scheduleFiveEggClear(4200);
     return true;
   }
 
@@ -3798,7 +3906,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-egypt-sub">the monument rises from the sand</div>
     `;
     addSystemMessage(`𓂀 ${username ? username + ' ' : ''}Mısır çölünü yükledi. Kumlar Anıtkabir'in gölgesini saklıyor...`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4300);
+    scheduleFiveEggClear(4300);
     return true;
   }
 
@@ -3811,7 +3919,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-anitkabir-sub">dimension memory restored</div>
     `;
     addSystemMessage(`🇹🇷 Anıtkabir boyut hafızasından yükseldi. Simülasyon saygı moduna geçti.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4400);
+    scheduleFiveEggClear(4400);
     return true;
   }
 
@@ -3825,7 +3933,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-cat-sub">kaçış reddedildi · simülasyona geri dön</div>
     `;
     addSystemMessage(`🐈 Kediler devreye girdi. Kaçış yolu kapandı.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3800);
+    scheduleFiveEggClear(3800);
     return true;
   }
 
@@ -3837,7 +3945,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-reset-sub">dramadan absürt bilimkurguya geçildi</div>
     `;
     addSystemMessage(`⏱️ Sıfırlama düğmesine basıldı. Evren tür değiştirdi.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3600);
+    scheduleFiveEggClear(3600);
     return true;
   }
 
@@ -3849,7 +3957,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-rift-sub">parallel universe bleeding through</div>
     `;
     addSystemMessage(`🩸 Kırmızı yarık açıldı. Paralel evren sızıyor...`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3800);
+    scheduleFiveEggClear(3800);
     return true;
   }
 
@@ -3861,7 +3969,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-five-sub">all universes reserved</div>
     `;
     addSystemMessage(`Ⅴ 5ECROPOLIS protokolü aktif. Tüm evrenler senkronize ediliyor.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4400);
+    scheduleFiveEggClear(4400);
     return true;
   }
 
@@ -3875,7 +3983,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-selim-sub">red pixels scattered across the simulation</div>
     `;
     addSystemMessage(`🧩 Selim antivirüs tarafından kırmızı piksellere ayrıldı.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3900);
+    scheduleFiveEggClear(3900);
     return true;
   }
 
@@ -3889,7 +3997,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-xara-sub">the reset button changed the genre</div>
     `;
     addSystemMessage(`✨ Xara sahneye girdi. Zaman değil, tür sıfırlandı.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4100);
+    scheduleFiveEggClear(4100);
     return true;
   }
 
@@ -3904,7 +4012,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-nico-sub">crossing dimensions with cold-blooded calm</div>
     `;
     addSystemMessage(`❄️ Nico boyutlar arasında sessizce kaydı.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3900);
+    scheduleFiveEggClear(3900);
     return true;
   }
 
@@ -3918,7 +4026,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-yasin-sub">violet signal spreading through the portal noise</div>
     `;
     addSystemMessage(`🟣 Yasin Menekşe sinyali yayıldı. Portal gürültüsü mora döndü.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4100);
+    scheduleFiveEggClear(4100);
     return true;
   }
 
@@ -3931,7 +4039,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-jung-sub">bassline from another universe detected</div>
     `;
     addSystemMessage(`🎧 Jung Blake frekansı vurdu. Evren bass ile titriyor.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3900);
+    scheduleFiveEggClear(3900);
     return true;
   }
 
@@ -3944,7 +4052,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-fetullah-sub">oracle mode enabled · the simulation is preaching</div>
     `;
     addSystemMessage(`👁️ Fetullah ortaya çıktı. Simülasyon vahiy moduna geçti.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4200);
+    scheduleFiveEggClear(4200);
     return true;
   }
 
@@ -3958,7 +4066,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-blake-sub">underground frequency from the red universe</div>
     `;
     addSystemMessage(`♛ Yung Blake sahneye indi. Kırmızı evren trap frekansına geçti.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4100);
+    scheduleFiveEggClear(4100);
     return true;
   }
 
@@ -3971,7 +4079,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-feiz-sub">ai anomaly connected to the chat core</div>
     `;
     addSystemMessage(`🤖 feiz bağlandı. Chat çekirdeği yapay zekâ moduna geçti.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 3900);
+    scheduleFiveEggClear(3900);
     return true;
   }
 
@@ -3985,7 +4093,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-pnico-sub">same face · different universe</div>
     `;
     addSystemMessage(`🧊 Paralel Nico görüldü. Aynı kişi, başka frekans.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4100);
+    scheduleFiveEggClear(4100);
     return true;
   }
 
@@ -3998,7 +4106,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-pyasin-sub">violet signal inverted through the mirror dimension</div>
     `;
     addSystemMessage(`🟪 Paralel Yasin Menekşe aynadan geçti. Menekşe sinyali tersine döndü.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4300);
+    scheduleFiveEggClear(4300);
     return true;
   }
 
@@ -4011,7 +4119,7 @@ function runFiveEgg(command, username = '') {
       <div class="egg-ataturk-sub">cumhuriyet frekansı · saygı modu</div>
     `;
     addSystemMessage(`🇹🇷 Atatürk protokolü aktif. Simülasyon saygı moduna geçti.`);
-    fiveEggTimeout = setTimeout(clearFiveEggClasses, 4400);
+    scheduleFiveEggClear(4400);
     return true;
   }
 
