@@ -371,7 +371,6 @@ async function sendFileMessage(file) {
     }
 
     const uploaded = data.file;
-    addSystemMessage('Dosya yüklendi, mesaj gönderiliyor...');
     const payload = {
       text: uploaded.type === 'image' ? 'Fotoğraf' : uploaded.type === 'audio' ? 'Ses dosyası' : uploaded.fileName,
       type: uploaded.type,
