@@ -6053,3 +6053,264 @@ body {
     max-width: 90% !important;
   }
 }
+
+
+/* =========================================================
+   v8.4.0 — XP Market / Daily Quests / Leaderboard
+   ========================================================= */
+
+.gamify-box {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.07);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(139,92,246,.18), transparent 30%),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.018));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.gamify-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.gamify-header h3 {
+  margin: 0 0 4px;
+}
+
+#gamifyStats {
+  display: block;
+  color: #c4b5fd;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.gamify-tabs,
+.leaderboard-filters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.leaderboard-filters {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.gamify-tab,
+.leaderboard-filter {
+  min-height: 34px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.045);
+  color: #d4d4d8;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.gamify-tab.active,
+.leaderboard-filter.active {
+  color: white;
+  background: linear-gradient(135deg, #7c3aed, #db2777);
+}
+
+.gamify-list {
+  display: grid;
+  gap: 8px;
+}
+
+.quest-card,
+.market-card,
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(24,24,31,.78);
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+.quest-card.done {
+  border-color: rgba(34,197,94,.35);
+}
+
+.quest-card.claimed {
+  opacity: .68;
+}
+
+.quest-icon,
+.market-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(139,92,246,.18);
+  font-size: 18px;
+}
+
+.quest-main,
+.market-main,
+.leader-main {
+  min-width: 0;
+}
+
+.quest-main strong,
+.market-main strong,
+.leader-main strong {
+  display: block;
+  color: white;
+  font-size: 13px;
+}
+
+.quest-main span,
+.market-main span,
+.market-main small,
+.leader-main span {
+  display: block;
+  color: #a1a1aa;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.quest-progress {
+  height: 7px;
+  margin-top: 7px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,.08);
+}
+
+.quest-progress i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22c55e, #a3e635);
+}
+
+.quest-claim {
+  min-width: 58px;
+}
+
+.market-card {
+  grid-template-columns: 38px minmax(0, 1fr);
+}
+
+.market-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.market-card.owned {
+  border-color: rgba(34,211,238,.18);
+}
+
+.market-card.equipped {
+  border-color: rgba(34,197,94,.45);
+  box-shadow: 0 0 22px rgba(34,197,94,.08);
+}
+
+.market-card.rarity-epic {
+  border-color: rgba(168,85,247,.26);
+}
+
+.market-card.rarity-legendary {
+  border-color: rgba(251,191,36,.34);
+}
+
+.leaderboard-row {
+  cursor: pointer;
+  grid-template-columns: 42px 34px minmax(0, 1fr);
+}
+
+.leaderboard-row.me {
+  border-color: rgba(139,92,246,.52);
+  background: linear-gradient(135deg, rgba(124,58,237,.20), rgba(219,39,119,.10));
+}
+
+.leader-rank {
+  font-size: 14px;
+  font-weight: 1000;
+  color: #c4b5fd;
+}
+
+.message.cosmetic-bubble_vertex .msg-bubble {
+  background: linear-gradient(135deg, rgba(127,29,29,.98), rgba(236,72,153,.92)) !important;
+  box-shadow: 0 0 22px rgba(239,68,68,.16);
+}
+
+.message.cosmetic-bubble_limbo .msg-bubble {
+  background: linear-gradient(135deg, rgba(0,0,0,.98), rgba(39,39,42,.96)) !important;
+  border-color: rgba(255,255,255,.12);
+}
+
+.message.cosmetic-bubble_ice .msg-bubble {
+  background: linear-gradient(135deg, rgba(8,47,73,.98), rgba(34,211,238,.62)) !important;
+  box-shadow: 0 0 22px rgba(34,211,238,.15);
+}
+
+.message.cosmetic-bubble_gold .msg-bubble {
+  background: linear-gradient(135deg, rgba(120,53,15,.98), rgba(245,158,11,.82)) !important;
+  box-shadow: 0 0 24px rgba(245,158,11,.14);
+}
+
+.message.cosmetic-bubble_serbia .msg-bubble {
+  background: linear-gradient(135deg, rgba(88,28,135,.98), rgba(14,165,233,.62)) !important;
+  box-shadow: 0 0 24px rgba(139,92,246,.18);
+}
+
+.message.namefx-name_glitch .meta,
+.active-name-name_glitch #currentUsername {
+  text-shadow: 1px 0 #22d3ee, -1px 0 #ec4899;
+}
+
+.message.namefx-name_neon .meta,
+.active-name-name_neon #currentUsername {
+  color: #f5d0fe !important;
+  text-shadow: 0 0 10px rgba(217,70,239,.65);
+}
+
+.message.namefx-name_legend .meta,
+.active-name-name_legend #currentUsername {
+  color: #fde68a !important;
+  text-shadow: 0 0 12px rgba(251,191,36,.65);
+}
+
+.active-frame-frame_vertex .avatar,
+.active-frame-frame_vertex .avatar-img {
+  box-shadow: 0 0 0 3px rgba(239,68,68,.75), 0 0 20px rgba(239,68,68,.35);
+}
+
+.active-frame-frame_limbo .avatar,
+.active-frame-frame_limbo .avatar-img {
+  box-shadow: 0 0 0 3px rgba(255,255,255,.22), 0 0 20px rgba(0,0,0,.85);
+}
+
+.active-frame-frame_five .avatar,
+.active-frame-frame_five .avatar-img {
+  box-shadow: 0 0 0 3px rgba(139,92,246,.85), 0 0 24px rgba(236,72,153,.35);
+}
+
+.active-frame-frame_ataturk .avatar,
+.active-frame-frame_ataturk .avatar-img {
+  box-shadow: 0 0 0 3px rgba(239,68,68,.9), 0 0 0 6px rgba(255,255,255,.14), 0 0 28px rgba(239,68,68,.35);
+}
+
+@media (max-width: 760px) {
+  .quest-card,
+  .market-card,
+  .leaderboard-row {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .quest-claim {
+    grid-column: 1 / -1;
+  }
+}
