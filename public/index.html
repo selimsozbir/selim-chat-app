@@ -7,44 +7,75 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="app">
-    <section id="loginScreen" class="card login-card">
-      <h1>Selim Chat</h1>
-      <p>Gerçek zamanlı basit mesajlaşma uygulaması</p>
+  <div class="app">
+    <section id="authScreen" class="auth-screen">
+      <div class="auth-card">
+        <h1>Selim Chat</h1>
+        <p>Hesabınla giriş yap veya yeni hesap oluştur.</p>
 
-      <label>Kullanıcı adı</label>
-      <input id="usernameInput" maxlength="20" placeholder="Mesela: Selim" />
+        <div class="tabs">
+          <button id="loginTab" class="tab active">Giriş</button>
+          <button id="registerTab" class="tab">Kayıt Ol</button>
+        </div>
 
-      <label>Oda adı</label>
-      <input id="roomInput" maxlength="30" value="genel" />
+        <form id="authForm">
+          <input id="usernameInput" type="text" placeholder="Kullanıcı adı" maxlength="30" required />
+          <input id="passwordInput" type="password" placeholder="Şifre" minlength="6" required />
+          <button id="authButton" type="submit">Giriş Yap</button>
+        </form>
 
-      <button id="joinBtn">Sohbete Gir</button>
+        <p id="authError" class="error"></p>
+      </div>
     </section>
 
-    <section id="chatScreen" class="chat hidden">
+    <section id="chatScreen" class="chat-screen hidden">
       <aside class="sidebar">
-        <h2>Odadakiler</h2>
-        <ul id="usersList"></ul>
+        <div class="profile-box">
+          <div id="avatarPreview" class="avatar">?</div>
+          <div>
+            <strong id="currentUsername">Kullanıcı</strong>
+            <button id="logoutButton" class="small-button">Çıkış</button>
+          </div>
+        </div>
+
+        <div class="room-box">
+          <label>Oda</label>
+          <div class="room-row">
+            <input id="roomInput" type="text" value="genel" maxlength="50" />
+            <button id="joinRoomButton">Gir</button>
+          </div>
+        </div>
+
+        <div class="users-box">
+          <h3>Online</h3>
+          <ul id="usersList"></ul>
+        </div>
+
+        <div class="coming-soon">
+          <h3>Sonraki özellikler</h3>
+          <p>Arkadaş ekleme, DM, profil fotoğrafı ve bildirim sistemi sıradaki aşamada eklenecek.</p>
+        </div>
       </aside>
 
-      <section class="chat-panel">
+      <main class="chat-main">
         <header class="chat-header">
           <div>
-            <h1 id="roomTitle">#genel</h1>
-            <p id="typingText"></p>
+            <h2 id="roomTitle"># genel</h2>
+            <span id="statusText">Bağlanıyor...</span>
           </div>
-          <button id="leaveBtn">Çık</button>
         </header>
 
         <div id="messages" class="messages"></div>
 
+        <div id="typingText" class="typing"></div>
+
         <form id="messageForm" class="message-form">
-          <input id="messageInput" autocomplete="off" maxlength="500" placeholder="Mesaj yaz..." />
-          <button>Gönder</button>
+          <input id="messageInput" type="text" placeholder="Mesaj yaz..." maxlength="1000" autocomplete="off" />
+          <button type="submit">Gönder</button>
         </form>
-      </section>
+      </main>
     </section>
-  </main>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
