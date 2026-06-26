@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Selim Chat v7.4.1</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Selim Chat v7.4.2</title>
+  <link rel="stylesheet" href="style.css?v=742" />
 </head>
 <body>
   <div class="app">
@@ -47,6 +47,7 @@
         <div class="nav-buttons">
           <button id="roomModeButton" class="nav active">Oda</button>
           <button id="dmModeButton" class="nav">DM</button>
+          <button id="groupModeButton" class="tab">Grup</button>
         </div>
 
         <div id="roomPanel">
@@ -80,6 +81,31 @@
             <div id="mutedMembersList" class="mini-list"></div>
           </div>
         </div>
+        <div id="groupsPanel" class="friends-panel hidden">
+          <h3>Grup DM</h3>
+          <div class="room-row">
+            <input id="newGroupNameInput" type="text" placeholder="Grup adı" maxlength="80" />
+            <button id="createGroupButton">Kur</button>
+          </div>
+          <div id="newGroupFriendsList" class="mini-list"></div>
+
+          <h3>Gruplarım</h3>
+          <div id="groupsList" class="mini-list"></div>
+
+          <div id="groupDetailsBox" class="group-details hidden">
+            <h3>Grup Ayarları</h3>
+            <div id="activeGroupInfo" class="mini-list"></div>
+            <input id="groupAvatarInput" type="file" accept="image/*" hidden />
+            <button id="changeGroupAvatarButton" class="small-button">Grup fotoğrafı değiştir</button>
+            <button id="removeGroupAvatarButton" class="small-button">Grup fotoğrafı kaldır</button>
+            <button id="leaveGroupButton" class="small-button danger-button">Gruptan çık</button>
+            <h3>Üyeler</h3>
+            <div id="groupMembersList" class="mini-list"></div>
+            <h3>Arkadaş ekle</h3>
+            <div id="addGroupFriendList" class="mini-list"></div>
+          </div>
+        </div>
+
 
         <div id="friendsPanel" class="hidden">
           <div class="search-box">
@@ -173,6 +199,6 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js"></script>
+  <script src="script.js?v=742"></script>
 </body>
 </html>
