@@ -80,6 +80,20 @@ const friendsList = document.getElementById('friendsList');
 const blockedList = document.getElementById('blockedList');
 
 const notificationsList = document.getElementById('notificationsList');
+
+const gamifyStats = document.getElementById('gamifyStats');
+const refreshGamifyButton = document.getElementById('refreshGamifyButton');
+const questsTabButton = document.getElementById('questsTabButton');
+const marketTabButton = document.getElementById('marketTabButton');
+const leaderboardTabButton = document.getElementById('leaderboardTabButton');
+const questsPanel = document.getElementById('questsPanel');
+const marketPanel = document.getElementById('marketPanel');
+const leaderboardPanel = document.getElementById('leaderboardPanel');
+const questsList = document.getElementById('questsList');
+const marketList = document.getElementById('marketList');
+const leaderboardList = document.getElementById('leaderboardList');
+const leaderboardFilters = document.querySelectorAll('.leaderboard-filter');
+
 const notificationBadge = document.getElementById('notificationBadge');
 const enableNotificationsButton = document.getElementById('enableNotificationsButton');
 const clearNotificationsButton = document.getElementById('clearNotificationsButton');
@@ -926,12 +940,16 @@ async function startApp() {
   roomInput.value = currentRoom;
   connectSocket();
 
-  await Promise.allSettled([refreshMe(), loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration(), loadGlobalAdminStatus(), loadGroups()]);
+  await Promise.allSettled([refreshMe(), loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration(), loadGlobalAdminStatus(), loadGroups(), loadGamify()]);
   checkForUnlockedBadges(true);
   updateMessengerUi();
 }
 
 function renderProfile() {
+  document.body.classList.remove('active-frame-frame_vertex', 'active-frame-frame_limbo', 'active-frame-frame_five', 'active-frame-frame_ataturk', 'active-name-name_glitch', 'active-name-name_neon', 'active-name-name_legend');
+  if (user?.active_profile_frame) document.body.classList.add('active-frame-' + user.active_profile_frame);
+  if (user?.active_name_effect) document.body.classList.add('active-name-' + user.active_name_effect);
+
   currentUsername.textContent = user.display_name || user.username;
   avatarLetter.textContent = (user.display_name || user.username).charAt(0).toUpperCase();
 
@@ -1343,7 +1361,9 @@ function addRoomMessage(message) {
       || String(message.username || '').toLowerCase() === String(user.display_name || '').toLowerCase()
     ),
     edited: Boolean(message.edited_at),
-    deleted: Boolean(message.deleted_at)
+    deleted: Boolean(message.deleted_at),
+    bubble_theme: message.bubble_theme,
+    name_effect: message.name_effect
   });
 }
 
@@ -1638,9 +1658,217 @@ function addDmMessage(message) {
     mine: message.sender_id === user.id,
     edited: Boolean(message.edited_at),
     deleted: Boolean(message.deleted_at),
-    read: Boolean(message.read_at)
+    read: Boolean(message.read_at),
+    bubble_theme: message.bubble_theme,
+    name_effect: message.name_effect
   });
 }
+
+
+function rarityClass(rarity) {
+  return `rarity-${String(rarity || 'common').toLowerCase()}`;
+}
+
+function itemSlotLabel(type) {
+  if (type === 'bubble') return 'Mesaj';
+  if (type === 'frame') return 'Çerçeve';
+  if (type === 'name') return 'İsim';
+  return type || 'Item';
+}
+
+function activeItemForSlot(slot) {
+  if (!user) return '';
+  if (slot === 'bubble') return user.active_bubble_theme || '';
+  if (slot === 'frame') return user.active_profile_frame || '';
+  if (slot === 'name') return user.active_name_effect || '';
+  return '';
+}
+
+function switchGamifyTab(tab) {
+  questsTabButton?.classList.toggle('active', tab === 'quests');
+  marketTabButton?.classList.toggle('active', tab === 'market');
+  leaderboardTabButton?.classList.toggle('active', tab === 'leaderboard');
+  questsPanel?.classList.toggle('hidden', tab !== 'quests');
+  marketPanel?.classList.toggle('hidden', tab !== 'market');
+  leaderboardPanel?.classList.toggle('hidden', tab !== 'leaderboard');
+  if (tab === 'leaderboard') loadLeaderboard();
+}
+
+async function loadGamify() {
+  if (!token || !user || !gamifyStats) return;
+
+  try {
+    const data = await api('/api/gamify/summary');
+    if (data.user) {
+      user = { ...user, ...data.user };
+      localStorage.setItem('chat_user', JSON.stringify(user));
+      renderProfile();
+    }
+
+    gamifyStats.textContent = `Level ${data.user?.level || 1} · ${data.user?.shards || 0} Shards`;
+
+    renderQuests(data.quests || []);
+    renderMarket(data.market || []);
+    if (!leaderboardPanel?.classList.contains('hidden')) loadLeaderboard();
+  } catch (error) {
+    if (questsList) questsList.innerHTML = `<div class="mini-item">Hub yüklenemedi: ${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function renderQuests(quests) {
+  if (!questsList) return;
+  questsList.innerHTML = '';
+
+  if (!quests.length) {
+    questsList.innerHTML = '<div class="mini-item">Bugün görev yok.</div>';
+    return;
+  }
+
+  quests.forEach((quest) => {
+    const percent = Math.min(100, Math.round((Number(quest.progress || 0) / Number(quest.target || 1)) * 100));
+    const item = document.createElement('div');
+    item.className = `quest-card ${quest.done ? 'done' : ''} ${quest.claimed ? 'claimed' : ''}`;
+    item.innerHTML = `
+      <div class="quest-icon">${escapeHtml(quest.icon || '🎯')}</div>
+      <div class="quest-main">
+        <strong>${escapeHtml(quest.title)}</strong>
+        <span>${quest.progress}/${quest.target} · +${quest.xp} XP · +${quest.shards} Shards</span>
+        <div class="quest-progress"><i style="width:${percent}%"></i></div>
+      </div>
+    `;
+
+    const btn = document.createElement('button');
+    btn.className = 'small-button quest-claim';
+    btn.textContent = quest.claimed ? 'Alındı' : (quest.done ? 'Al' : 'Bekle');
+    btn.disabled = quest.claimed || !quest.done;
+    btn.onclick = () => claimQuest(quest.id);
+    item.appendChild(btn);
+    questsList.appendChild(item);
+  });
+}
+
+async function claimQuest(questId) {
+  try {
+    const data = await api('/api/quests/claim', {
+      method: 'POST',
+      body: JSON.stringify({ questId })
+    });
+
+    addSystemMessage(`Görev ödülü alındı: +${data.reward?.xp || 0} XP, +${data.reward?.shards || 0} Shards`);
+    await loadGamify();
+    await checkForUnlockedBadges(true);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+function renderMarket(items) {
+  if (!marketList) return;
+  marketList.innerHTML = '';
+
+  items.forEach((item) => {
+    const active = activeItemForSlot(item.type) === item.id;
+    const card = document.createElement('div');
+    card.className = `market-card ${rarityClass(item.rarity)} ${item.owned ? 'owned' : ''} ${active ? 'equipped' : ''}`;
+    card.innerHTML = `
+      <div class="market-icon">${escapeHtml(item.icon || '✦')}</div>
+      <div class="market-main">
+        <strong>${escapeHtml(item.name)}</strong>
+        <span>${escapeHtml(item.description || '')}</span>
+        <small>${itemSlotLabel(item.type)} · ${escapeHtml(item.rarity || 'common')} · ${item.price} Shards</small>
+      </div>
+    `;
+
+    const actions = document.createElement('div');
+    actions.className = 'market-actions';
+
+    if (!item.owned) {
+      const buy = document.createElement('button');
+      buy.className = 'small-button';
+      buy.textContent = 'Satın al';
+      buy.onclick = () => buyMarketItem(item.id);
+      actions.appendChild(buy);
+    } else {
+      const equip = document.createElement('button');
+      equip.className = 'small-button';
+      equip.textContent = active ? 'Aktif' : 'Kuşan';
+      equip.disabled = active;
+      equip.onclick = () => equipMarketItem(item.id, item.type);
+
+      const unequip = document.createElement('button');
+      unequip.className = 'small-button gray';
+      unequip.textContent = 'Çıkar';
+      unequip.disabled = !active;
+      unequip.onclick = () => equipMarketItem('', item.type);
+
+      actions.appendChild(equip);
+      actions.appendChild(unequip);
+    }
+
+    card.appendChild(actions);
+    marketList.appendChild(card);
+  });
+}
+
+async function buyMarketItem(itemId) {
+  try {
+    await api('/api/market/buy', {
+      method: 'POST',
+      body: JSON.stringify({ itemId })
+    });
+    addSystemMessage('Market ürünü satın alındı.');
+    await loadGamify();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function equipMarketItem(itemId, slot) {
+  try {
+    const data = await api('/api/market/equip', {
+      method: 'POST',
+      body: JSON.stringify({ itemId, slot })
+    });
+
+    user = { ...user, ...data.user };
+    localStorage.setItem('chat_user', JSON.stringify(user));
+    renderProfile();
+    addSystemMessage(itemId ? 'Kozmetik kuşanıldı.' : 'Kozmetik çıkarıldı.');
+    await loadGamify();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function loadLeaderboard(type = 'level') {
+  if (!leaderboardList) return;
+
+  leaderboardFilters.forEach((btn) => btn.classList.toggle('active', (btn.dataset.leaderboard || 'level') === type));
+  leaderboardList.innerHTML = '<div class="mini-item">Yükleniyor...</div>';
+
+  try {
+    const data = await api(`/api/leaderboard?type=${encodeURIComponent(type)}`);
+    leaderboardList.innerHTML = '';
+
+    (data.users || []).forEach((row) => {
+      const item = document.createElement('div');
+      item.className = `leaderboard-row ${Number(row.id) === Number(user.id) ? 'me' : ''}`;
+      item.innerHTML = `
+        <span class="leader-rank">#${row.rank}</span>
+        ${avatarHtml(row.display_name || row.username, row.avatar_url)}
+        <div class="leader-main">
+          <strong>${escapeHtml(row.display_name || row.username)}</strong>
+          <span>Lv ${row.level} · ${row.shards || 0} Shards · ${row.total_messages || 0} mesaj</span>
+        </div>
+      `;
+      item.onclick = () => openProfile(row.id);
+      leaderboardList.appendChild(item);
+    });
+  } catch (error) {
+    leaderboardList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
 
 async function loadNotifications() {
   try {
@@ -1728,10 +1956,12 @@ function renderUsers(users) {
   loadModeration();
 }
 
-function addMessage({ type, id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read }) {
+function addMessage({ type, id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read, bubble_theme, name_effect }) {
   const localSettings = getLocalSettings();
   const normalizedUsername = String(username || '').toLowerCase();
   const isBotMessage = ['feiz', 'selimbot', 'bot'].includes(normalizedUsername);
+  const activeBubble = bubble_theme || (mine ? user?.active_bubble_theme : '') || '';
+  const activeName = name_effect || (mine ? user?.active_name_effect : '') || '';
 
   if (isBotMessage && localSettings.botHide) return;
 
@@ -1740,7 +1970,7 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
   const sameSender = senderKey === lastRenderedSenderKey && type === lastRenderedMessageType;
 
   const div = document.createElement('div');
-  div.className = `message ${mine ? 'mine' : ''} ${isBotMessage ? 'bot-message' : ''} ${sameSender ? 'same-sender' : ''}`;
+  div.className = `message ${mine ? 'mine' : ''} ${isBotMessage ? 'bot-message' : ''} ${sameSender ? 'same-sender' : ''} ${activeBubble ? 'cosmetic-' + activeBubble : ''} ${activeName ? 'namefx-' + activeName : ''}`;
   div.dataset.type = type;
   div.dataset.id = id;
 
