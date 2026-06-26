@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.0.0",
-  "description": "Selim Chat v8.0.0 Profile Card V2 with cover, level, badges and shards",
+  "version": "8.0.1",
+  "description": "Selim Chat v8.0.1 profile card polish update",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
