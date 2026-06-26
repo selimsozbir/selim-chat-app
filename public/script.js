@@ -63,6 +63,24 @@ let mediaRecorder = null;
 let recordedChunks = [];
 let isRecording = false;
 
+const imageModal = document.createElement('div');
+imageModal.className = 'image-modal hidden';
+imageModal.innerHTML = '<button class="image-modal-close" type="button">×</button><img alt="Büyük fotoğraf">';
+document.body.appendChild(imageModal);
+
+const imageModalImg = imageModal.querySelector('img');
+const imageModalClose = imageModal.querySelector('.image-modal-close');
+
+imageModalClose.addEventListener('click', closeImageModal);
+imageModal.addEventListener('click', (event) => {
+  if (event.target === imageModal) closeImageModal();
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeImageModal();
+});
+
+
 function setMode(nextMode) {
   mode = nextMode;
   loginTab.classList.toggle('active', mode === 'login');
@@ -180,8 +198,8 @@ voiceButton.addEventListener('click', async () => {
 });
 
 async function sendFileMessage(file) {
-  if (file.size > 2_200_000) {
-    throw new Error('Dosya çok büyük. 2 MB altı dosya seç.');
+  if (file.size > 5_000_000) {
+    throw new Error('Dosya çok büyük. 5 MB altı dosya seç.');
   }
 
   const dataUrl = await fileToDataUrl(file);
@@ -924,12 +942,18 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
     const edit = document.createElement('button');
     edit.className = 'message-action';
     edit.textContent = 'Düzenle';
-    edit.onclick = () => editMessage(type, id, body.textContent);
+    edit.onclick = (event) => {
+      event.stopPropagation();
+      editMessage(type, id, body.textContent);
+    };
 
     const del = document.createElement('button');
     del.className = 'message-action';
     del.textContent = 'Sil';
-    del.onclick = () => deleteMessage(type, id);
+    del.onclick = (event) => {
+      event.stopPropagation();
+      deleteMessage(type, id);
+    };
 
     actions.appendChild(edit);
     actions.appendChild(del);
@@ -944,6 +968,17 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
     status.textContent = read ? 'Görüldü ✓✓' : 'Gönderildi ✓';
     bubble.appendChild(status);
   }
+
+  div.addEventListener('click', () => {
+    document.querySelectorAll('.message.active').forEach((message) => {
+      if (message !== div) message.classList.remove('active');
+    });
+    div.classList.toggle('active');
+  });
+
+  div.addEventListener('dblclick', () => {
+    sendReaction(type, id, '❤️');
+  });
 
   div.appendChild(avatar);
   div.appendChild(bubble);
@@ -996,6 +1031,10 @@ function renderMedia({ message_type, file_name, file_mime, file_data }) {
     const img = document.createElement('img');
     img.src = file_data;
     img.alt = file_name || 'image';
+    img.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openImageModal(file_data);
+    });
     wrap.appendChild(img);
     return wrap;
   }
@@ -1032,7 +1071,10 @@ function addReactionPicker(bubble, scope, messageId) {
     btn.type = 'button';
     btn.className = 'message-action';
     btn.textContent = emoji;
-    btn.onclick = () => sendReaction(scope, messageId, emoji);
+    btn.onclick = (event) => {
+      event.stopPropagation();
+      sendReaction(scope, messageId, emoji);
+    };
     picker.appendChild(btn);
   });
 
@@ -1073,6 +1115,16 @@ function addReactionToElement(scope, messageId, emoji) {
   pill.dataset.count = '1';
   pill.textContent = `${emoji} 1`;
   reactions.appendChild(pill);
+}
+
+function openImageModal(src) {
+  imageModalImg.src = src;
+  imageModal.classList.remove('hidden');
+}
+
+function closeImageModal() {
+  imageModal.classList.add('hidden');
+  imageModalImg.src = '';
 }
 
 function fileToDataUrl(file) {
