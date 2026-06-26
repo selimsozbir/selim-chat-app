@@ -1753,3 +1753,496 @@ input::placeholder {
     border-radius: 16px !important;
   }
 }
+
+
+/* =========================================================
+   v7.7.0 — 5ECROPOLIS Secret Commands
+   /serbia /limbo /vertex /rome
+   ========================================================= */
+
+#fiveEggLayer {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 999999;
+  overflow: hidden;
+}
+
+#fiveEggLayer:empty {
+  display: none;
+}
+
+.egg-serbia #fiveEggLayer {
+  background:
+    radial-gradient(circle at center, rgba(139, 92, 246, 0.16), transparent 32%),
+    linear-gradient(90deg, rgba(10, 10, 18, 0.06), rgba(190, 24, 93, 0.09));
+}
+
+.egg-portal-ring {
+  position: absolute;
+  width: min(62vw, 560px);
+  height: min(62vw, 560px);
+  border-radius: 50%;
+  border: 5px solid rgba(168, 85, 247, 0.78);
+  box-shadow:
+    0 0 28px rgba(139, 92, 246, 0.9),
+    inset 0 0 34px rgba(236, 72, 153, 0.7),
+    0 0 120px rgba(34, 211, 238, 0.28);
+  animation: portalSpin 1.45s linear infinite, portalPulse 0.95s ease-in-out infinite alternate;
+}
+
+.egg-portal-ring::before,
+.egg-portal-ring::after {
+  content: "";
+  position: absolute;
+  inset: 9%;
+  border-radius: 50%;
+  border: 2px dashed rgba(34, 211, 238, 0.7);
+}
+
+.egg-portal-ring::after {
+  inset: 20%;
+  border-color: rgba(244, 63, 94, 0.7);
+  animation: portalSpin 0.95s linear infinite reverse;
+}
+
+.egg-portal-core {
+  position: absolute;
+  width: min(35vw, 300px);
+  height: min(35vw, 300px);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255,255,255,0.92), rgba(34,211,238,0.42) 18%, rgba(139,92,246,0.18) 42%, transparent 70%);
+  filter: blur(2px);
+  animation: portalCore 1.2s ease-in-out infinite alternate;
+}
+
+.egg-portal-text,
+.egg-limbo-text,
+.egg-vertex-text,
+.egg-rome-text {
+  position: absolute;
+  top: 18%;
+  width: 100%;
+  text-align: center;
+  font-weight: 1000;
+  letter-spacing: 0.16em;
+  font-size: clamp(30px, 7vw, 82px);
+  color: #fff;
+  text-shadow: 0 0 18px rgba(139, 92, 246, 0.95), 0 0 44px rgba(236, 72, 153, 0.55);
+}
+
+.egg-portal-sub,
+.egg-limbo-sub,
+.egg-vertex-sub,
+.egg-rome-sub {
+  position: absolute;
+  top: calc(18% + clamp(48px, 9vw, 96px));
+  width: 100%;
+  text-align: center;
+  color: rgba(255,255,255,0.78);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: clamp(11px, 2vw, 17px);
+}
+
+.egg-limbo #fiveEggLayer {
+  background: rgba(0, 0, 0, 0.92);
+  animation: limboFade 3.4s ease-in-out forwards;
+}
+
+.egg-limbo-text {
+  top: 42%;
+  color: #d8d8d8;
+  text-shadow: 0 0 20px rgba(255,255,255,0.28);
+  animation: limboDrift 2.8s ease-in-out infinite;
+}
+
+.egg-limbo-sub {
+  top: calc(42% + 80px);
+  color: rgba(255,255,255,0.45);
+}
+
+.egg-vertex #fiveEggLayer {
+  background:
+    linear-gradient(90deg, rgba(255,0,0,0.12), transparent 18%, rgba(255,0,0,0.16) 45%, transparent 62%, rgba(255,0,0,0.14)),
+    rgba(10, 0, 0, 0.28);
+  animation: vertexScreenShake 0.13s linear infinite;
+}
+
+.egg-vertex #fiveEggLayer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,0,0,0.16) 0 2px, transparent 2px 8px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 9px);
+  mix-blend-mode: screen;
+  animation: vertexScan 0.38s linear infinite;
+}
+
+.egg-vertex-text {
+  top: 36%;
+  color: #ff1744;
+  text-shadow: 2px 0 #00e5ff, -2px 0 #ffea00, 0 0 34px rgba(255, 0, 0, 0.98);
+  animation: vertexGlitch 0.34s infinite;
+}
+
+.egg-vertex-text::before,
+.egg-vertex-text::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  right: 0;
+  opacity: 0.62;
+}
+
+.egg-vertex-text::before {
+  transform: translate(3px, -2px);
+  color: #00e5ff;
+  clip-path: inset(0 0 48% 0);
+}
+
+.egg-vertex-text::after {
+  transform: translate(-3px, 2px);
+  color: #ff005d;
+  clip-path: inset(54% 0 0 0);
+}
+
+.egg-vertex-sub {
+  top: calc(36% + 90px);
+  color: #fecaca;
+  text-shadow: 0 0 18px rgba(255, 0, 0, 0.65);
+}
+
+.egg-rome #fiveEggLayer {
+  background:
+    radial-gradient(circle at center, rgba(251, 191, 36, 0.14), transparent 32%),
+    linear-gradient(180deg, rgba(76, 29, 149, 0.12), rgba(120, 53, 15, 0.22));
+}
+
+.egg-rome-emblem {
+  position: absolute;
+  top: 24%;
+  width: 140px;
+  height: 140px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 3px solid rgba(251, 191, 36, 0.78);
+  color: #fde68a;
+  font-size: 80px;
+  font-weight: 900;
+  font-family: Georgia, serif;
+  box-shadow: 0 0 30px rgba(251, 191, 36, 0.36), inset 0 0 26px rgba(251, 191, 36, 0.12);
+  animation: romeSeal 2.8s ease-in-out infinite;
+}
+
+.egg-rome-text {
+  top: calc(24% + 155px);
+  color: #fde68a;
+  font-family: Georgia, serif;
+  text-shadow: 0 0 22px rgba(251, 191, 36, 0.62);
+}
+
+.egg-rome-sub {
+  top: calc(24% + 245px);
+  color: rgba(253, 230, 138, 0.72);
+}
+
+.five-system-rome {
+  color: #fde68a !important;
+  background: rgba(120, 53, 15, 0.24) !important;
+  border-color: rgba(251, 191, 36, 0.45) !important;
+  font-family: Georgia, serif;
+}
+
+@keyframes portalSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes portalPulse {
+  from { transform: scale(0.96); opacity: 0.82; }
+  to { transform: scale(1.04); opacity: 1; }
+}
+
+@keyframes portalCore {
+  from { transform: scale(0.86); opacity: 0.64; }
+  to { transform: scale(1.08); opacity: 0.96; }
+}
+
+@keyframes limboFade {
+  0% { opacity: 0; }
+  18% { opacity: 1; }
+  78% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes limboDrift {
+  0%, 100% { transform: translateY(0); opacity: 0.82; }
+  50% { transform: translateY(-9px); opacity: 1; }
+}
+
+@keyframes vertexScreenShake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(2px, -1px); }
+  50% { transform: translate(-2px, 1px); }
+  75% { transform: translate(1px, 2px); }
+}
+
+@keyframes vertexScan {
+  to { transform: translateY(12px); }
+}
+
+@keyframes vertexGlitch {
+  0%, 100% { transform: translate(0, 0) skewX(0deg); }
+  20% { transform: translate(-5px, 2px) skewX(-8deg); }
+  45% { transform: translate(4px, -1px) skewX(6deg); }
+  70% { transform: translate(-2px, 1px) skewX(-3deg); }
+}
+
+@keyframes romeSeal {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+
+@media (max-width: 640px) {
+  .egg-portal-ring {
+    width: 82vw;
+    height: 82vw;
+  }
+
+  .egg-portal-core {
+    width: 48vw;
+    height: 48vw;
+  }
+
+  .egg-rome-emblem {
+    width: 110px;
+    height: 110px;
+    font-size: 62px;
+  }
+}
+
+
+/* =========================================================
+   v7.7.2 — 5ECROPOLIS Secret Commands FIX
+   /serbia /limbo /vertex /rome
+   ========================================================= */
+
+#fiveEggLayer {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 2147483647;
+  overflow: hidden;
+}
+
+#fiveEggLayer:empty {
+  display: none;
+}
+
+.egg-serbia #fiveEggLayer {
+  background:
+    radial-gradient(circle at center, rgba(139, 92, 246, 0.16), transparent 32%),
+    linear-gradient(90deg, rgba(10, 10, 18, 0.06), rgba(190, 24, 93, 0.09));
+}
+
+.egg-portal-ring {
+  position: absolute;
+  width: min(62vw, 560px);
+  height: min(62vw, 560px);
+  border-radius: 50%;
+  border: 5px solid rgba(168, 85, 247, 0.78);
+  box-shadow:
+    0 0 28px rgba(139, 92, 246, 0.9),
+    inset 0 0 34px rgba(236, 72, 153, 0.7),
+    0 0 120px rgba(34, 211, 238, 0.28);
+  animation: portalSpin 1.45s linear infinite, portalPulse 0.95s ease-in-out infinite alternate;
+}
+
+.egg-portal-ring::before,
+.egg-portal-ring::after {
+  content: "";
+  position: absolute;
+  inset: 9%;
+  border-radius: 50%;
+  border: 2px dashed rgba(34, 211, 238, 0.7);
+}
+
+.egg-portal-ring::after {
+  inset: 20%;
+  border-color: rgba(244, 63, 94, 0.7);
+  animation: portalSpin 0.95s linear infinite reverse;
+}
+
+.egg-portal-core {
+  position: absolute;
+  width: min(35vw, 300px);
+  height: min(35vw, 300px);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255,255,255,0.92), rgba(34,211,238,0.42) 18%, rgba(139,92,246,0.18) 42%, transparent 70%);
+  filter: blur(2px);
+  animation: portalCore 1.2s ease-in-out infinite alternate;
+}
+
+.egg-portal-text,
+.egg-limbo-text,
+.egg-vertex-text,
+.egg-rome-text {
+  position: absolute;
+  top: 18%;
+  width: 100%;
+  text-align: center;
+  font-weight: 1000;
+  letter-spacing: 0.16em;
+  font-size: clamp(30px, 7vw, 82px);
+  color: #fff;
+  text-shadow: 0 0 18px rgba(139, 92, 246, 0.95), 0 0 44px rgba(236, 72, 153, 0.55);
+}
+
+.egg-portal-sub,
+.egg-limbo-sub,
+.egg-vertex-sub,
+.egg-rome-sub {
+  position: absolute;
+  top: calc(18% + clamp(48px, 9vw, 96px));
+  width: 100%;
+  text-align: center;
+  color: rgba(255,255,255,0.78);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: clamp(11px, 2vw, 17px);
+}
+
+.egg-limbo #fiveEggLayer {
+  background: rgba(0, 0, 0, 0.92);
+  animation: limboFade 3.4s ease-in-out forwards;
+}
+
+.egg-limbo-text {
+  top: 42%;
+  color: #d8d8d8;
+  text-shadow: 0 0 20px rgba(255,255,255,0.28);
+  animation: limboDrift 2.8s ease-in-out infinite;
+}
+
+.egg-limbo-sub {
+  top: calc(42% + 80px);
+  color: rgba(255,255,255,0.45);
+}
+
+.egg-vertex #fiveEggLayer {
+  background:
+    linear-gradient(90deg, rgba(255,0,0,0.12), transparent 18%, rgba(255,0,0,0.16) 45%, transparent 62%, rgba(255,0,0,0.14)),
+    rgba(10, 0, 0, 0.28);
+  animation: vertexScreenShake 0.13s linear infinite;
+}
+
+.egg-vertex #fiveEggLayer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,0,0,0.16) 0 2px, transparent 2px 8px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 9px);
+  mix-blend-mode: screen;
+  animation: vertexScan 0.38s linear infinite;
+}
+
+.egg-vertex-text {
+  top: 36%;
+  color: #ff1744;
+  text-shadow: 2px 0 #00e5ff, -2px 0 #ffea00, 0 0 34px rgba(255, 0, 0, 0.98);
+  animation: vertexGlitch 0.34s infinite;
+}
+
+.egg-vertex-text::before,
+.egg-vertex-text::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  right: 0;
+  opacity: 0.62;
+}
+
+.egg-vertex-text::before {
+  transform: translate(3px, -2px);
+  color: #00e5ff;
+  clip-path: inset(0 0 48% 0);
+}
+
+.egg-vertex-text::after {
+  transform: translate(-3px, 2px);
+  color: #ff005d;
+  clip-path: inset(54% 0 0 0);
+}
+
+.egg-vertex-sub {
+  top: calc(36% + 90px);
+  color: #fecaca;
+  text-shadow: 0 0 18px rgba(255, 0, 0, 0.65);
+}
+
+.egg-rome #fiveEggLayer {
+  background:
+    radial-gradient(circle at center, rgba(251, 191, 36, 0.14), transparent 32%),
+    linear-gradient(180deg, rgba(76, 29, 149, 0.12), rgba(120, 53, 15, 0.22));
+}
+
+.egg-rome-emblem {
+  position: absolute;
+  top: 24%;
+  width: 140px;
+  height: 140px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 3px solid rgba(251, 191, 36, 0.78);
+  color: #fde68a;
+  font-size: 80px;
+  font-weight: 900;
+  font-family: Georgia, serif;
+  box-shadow: 0 0 30px rgba(251, 191, 36, 0.36), inset 0 0 26px rgba(251, 191, 36, 0.12);
+  animation: romeSeal 2.8s ease-in-out infinite;
+}
+
+.egg-rome-text {
+  top: calc(24% + 155px);
+  color: #fde68a;
+  font-family: Georgia, serif;
+  text-shadow: 0 0 22px rgba(251, 191, 36, 0.62);
+}
+
+.egg-rome-sub {
+  top: calc(24% + 245px);
+  color: rgba(253, 230, 138, 0.72);
+}
+
+.five-system-rome {
+  color: #fde68a !important;
+  background: rgba(120, 53, 15, 0.24) !important;
+  border-color: rgba(251, 191, 36, 0.45) !important;
+  font-family: Georgia, serif;
+}
+
+@keyframes portalSpin { to { transform: rotate(360deg); } }
+@keyframes portalPulse { from { transform: scale(0.96); opacity: 0.82; } to { transform: scale(1.04); opacity: 1; } }
+@keyframes portalCore { from { transform: scale(0.86); opacity: 0.64; } to { transform: scale(1.08); opacity: 0.96; } }
+@keyframes limboFade { 0% { opacity: 0; } 18% { opacity: 1; } 78% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes limboDrift { 0%, 100% { transform: translateY(0); opacity: 0.82; } 50% { transform: translateY(-9px); opacity: 1; } }
+@keyframes vertexScreenShake { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(2px, -1px); } 50% { transform: translate(-2px, 1px); } 75% { transform: translate(1px, 2px); } }
+@keyframes vertexScan { to { transform: translateY(12px); } }
+@keyframes vertexGlitch { 0%, 100% { transform: translate(0, 0) skewX(0deg); } 20% { transform: translate(-5px, 2px) skewX(-8deg); } 45% { transform: translate(4px, -1px) skewX(6deg); } 70% { transform: translate(-2px, 1px) skewX(-3deg); } }
+@keyframes romeSeal { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.06); opacity: 1; } }
+
+@media (max-width: 640px) {
+  .egg-portal-ring { width: 82vw; height: 82vw; }
+  .egg-portal-core { width: 48vw; height: 48vw; }
+  .egg-rome-emblem { width: 110px; height: 110px; font-size: 62px; }
+}
