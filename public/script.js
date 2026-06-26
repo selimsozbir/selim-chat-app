@@ -99,6 +99,22 @@ const profileUsername = document.getElementById('profileUsername');
 const profileStatus = document.getElementById('profileStatus');
 const profileBio = document.getElementById('profileBio');
 const profileBioInput = document.getElementById('profileBioInput');
+const profileCover = document.getElementById('profileCover');
+const profileLevel = document.getElementById('profileLevel');
+const profileShards = document.getElementById('profileShards');
+const profileTotalMessages = document.getElementById('profileTotalMessages');
+const profileXpText = document.getElementById('profileXpText');
+const profileNextXpText = document.getElementById('profileNextXpText');
+const profileLevelFill = document.getElementById('profileLevelFill');
+const profileJoinDate = document.getElementById('profileJoinDate');
+const profileLastActive = document.getElementById('profileLastActive');
+const profileFavoriteEgg = document.getElementById('profileFavoriteEgg');
+const profileBadges = document.getElementById('profileBadges');
+const profileEditPanel = document.getElementById('profileEditPanel');
+const profileCoverInput = document.getElementById('profileCoverInput');
+const profileColorInput = document.getElementById('profileColorInput');
+const profileFavoriteEggSelect = document.getElementById('profileFavoriteEggSelect');
+const profileRemoveCoverButton = document.getElementById('profileRemoveCoverButton');
 const profileSaveBioButton = document.getElementById('profileSaveBioButton');
 
 const settingsModal = document.getElementById('settingsModal');
@@ -327,6 +343,7 @@ profileModal.addEventListener('click', (event) => {
 });
 
 profileSaveBioButton.addEventListener('click', saveBio);
+if (profileRemoveCoverButton) profileRemoveCoverButton.addEventListener('click', removeProfileCover);
 
 if (settingsButton) settingsButton.addEventListener('click', openSettings);
 
@@ -2472,21 +2489,77 @@ async function clearNotificationsFromSettings() {
 }
 
 
+
+function formatProfileDate(value) {
+  if (!value) return '-';
+  try {
+    return new Date(value).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return '-';
+  }
+}
+
+function formatProfileDateTime(value) {
+  if (!value) return '-';
+  try {
+    return new Date(value).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '-';
+  }
+}
+
+function safeProfileColor(value) {
+  return /^#[0-9a-fA-F]{6}$/.test(String(value || '')) ? value : '#8b5cf6';
+}
+
+
 async function openProfile(userId) {
   try {
     const data = await api(`/api/profile/${userId}`);
     const profile = data.profile;
+    const color = safeProfileColor(profile.profile_color);
+    const stats = profile.stats || {};
 
     profileAvatar.innerHTML = avatarHtml(profile.username, profile.avatar_url, 'profile-avatar-inner');
     profileUsername.textContent = displayName(profile);
-    profileStatus.textContent = formatPresence(profile);
+    profileStatus.textContent = `${formatPresence(profile)} · @${profile.username}`;
     profileBio.textContent = profile.bio || 'Bio yok.';
 
-    const isMe = profile.id === user.id;
-    profileBioInput.classList.toggle('hidden', !isMe);
-    profileSaveBioButton.classList.toggle('hidden', !isMe);
+    profileCover.style.setProperty('--profile-color', color);
+    profileCover.style.backgroundImage = profile.profile_cover_url
+      ? `linear-gradient(135deg, rgba(0,0,0,.22), rgba(0,0,0,.42)), url("${profile.profile_cover_url}")`
+      : `radial-gradient(circle at 20% 20%, ${color}88, transparent 34%), linear-gradient(135deg, ${color}, #0f172a 62%, #020617)`;
 
-    if (isMe) profileBioInput.value = profile.bio || '';
+    profileLevel.textContent = profile.level || 1;
+    profileShards.textContent = profile.shards || 0;
+    profileTotalMessages.textContent = stats.total_messages || 0;
+    profileXpText.textContent = `${profile.xp || 0} XP`;
+    profileNextXpText.textContent = `Next ${profile.next_level_xp || 100} XP`;
+    profileLevelFill.style.width = `${Math.max(0, Math.min(100, profile.level_progress || 0))}%`;
+    profileLevelFill.style.background = `linear-gradient(90deg, ${color}, #ec4899)`;
+
+    profileJoinDate.textContent = formatProfileDate(profile.created_at);
+    profileLastActive.textContent = profile.online ? 'Şu an aktif' : formatProfileDateTime(profile.last_active || profile.last_seen);
+    profileFavoriteEgg.textContent = profile.favorite_egg || '/serbia';
+
+    profileBadges.innerHTML = '';
+    (profile.badges || []).forEach((badge) => {
+      const item = document.createElement('div');
+      item.className = 'profile-badge';
+      item.title = badge.description || '';
+      item.innerHTML = `<span>${escapeHtml(badge.icon || '🏆')}</span><div><strong>${escapeHtml(badge.name || 'Badge')}</strong><small>${escapeHtml(badge.description || '')}</small></div>`;
+      profileBadges.appendChild(item);
+    });
+
+    const isMe = Number(profile.id) === Number(user.id);
+    profileEditPanel.classList.toggle('hidden', !isMe);
+
+    if (isMe) {
+      profileBioInput.value = profile.bio || '';
+      profileColorInput.value = color;
+      profileFavoriteEggSelect.value = profile.favorite_egg || '/serbia';
+      profileCoverInput.value = '';
+    }
 
     profileModal.classList.remove('hidden');
   } catch (error) {
@@ -2500,15 +2573,40 @@ function closeProfile() {
 
 async function saveBio() {
   try {
-    const data = await api('/api/profile/bio', {
+    let coverData = '';
+    const coverFile = profileCoverInput?.files?.[0] || null;
+    if (coverFile) coverData = await resizeImage(coverFile, 1200);
+
+    const bioData = await api('/api/profile/bio', {
       method: 'POST',
       body: JSON.stringify({ bio: profileBioInput.value })
     });
 
+    const data = await api('/api/profile/v2', {
+      method: 'POST',
+      body: JSON.stringify({
+        coverData,
+        profileColor: profileColorInput.value,
+        favoriteEgg: profileFavoriteEggSelect.value
+      })
+    });
+
+    user = { ...bioData.user, ...data.user };
+    localStorage.setItem('chat_user', JSON.stringify(user));
+    addSystemMessage('Profil kartı güncellendi.');
+    openProfile(user.id);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function removeProfileCover() {
+  try {
+    const data = await api('/api/profile/cover', { method: 'DELETE' });
     user = data.user;
     localStorage.setItem('chat_user', JSON.stringify(user));
-    profileBio.textContent = user.bio || 'Bio yok.';
-    addSystemMessage('Bio güncellendi.');
+    addSystemMessage('Profil kapağı kaldırıldı.');
+    openProfile(user.id);
   } catch (error) {
     addSystemMessage(error.message);
   }
