@@ -4542,3 +4542,317 @@ html {
     width: 100%;
   }
 }
+
+
+/* =========================================================
+   v8.1.0 — Cinematic Profile Card Upgrade
+   ========================================================= */
+
+.profile-card-v2 {
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --parallax-x: 0px;
+  --parallax-y: 0px;
+  width: min(680px, 96vw) !important;
+  max-height: min(92vh, 980px);
+  transform-style: preserve-3d;
+  transform: perspective(1400px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  transition: transform .22s ease, box-shadow .22s ease;
+  overflow-y: auto;
+}
+
+.profile-card-v2:hover {
+  box-shadow: 0 32px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(139,92,246,.18), 0 0 70px rgba(139,92,246,.18);
+}
+
+.profile-card-v2::-webkit-scrollbar { width: 10px; }
+.profile-card-v2::-webkit-scrollbar-thumb { background: rgba(139,92,246,.36); border-radius: 999px; }
+
+.profile-cover-v2 {
+  height: 196px;
+  background-position: calc(50% + var(--parallax-x)) calc(50% + var(--parallax-y));
+  transition: background-position .18s linear;
+}
+
+.profile-cover-v2::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255,255,255,.10), transparent 40%), linear-gradient(180deg, rgba(8,10,18,.05), rgba(8,10,18,.82));
+  backdrop-filter: blur(5px);
+}
+
+.profile-cover-shine {
+  mix-blend-mode: screen;
+  opacity: .95;
+}
+
+.profile-main-v2, .profile-stats-v2, .profile-level-box, .profile-meta-v2, .profile-about-box, .profile-badges-v2, .profile-edit-panel {
+  position: relative;
+  z-index: 2;
+}
+
+.profile-main-v2 {
+  align-items: center;
+  margin-top: -66px;
+  gap: 18px;
+}
+
+.profile-avatar-v2 {
+  width: 112px !important;
+  height: 112px !important;
+  flex: 0 0 112px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+}
+
+.profile-avatar-v2::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 0 0 3px rgba(139,92,246,.16);
+  pointer-events: none;
+}
+
+.profile-avatar-v2 img,
+.profile-avatar-v2 .profile-avatar-inner {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  object-fit: cover;
+}
+
+.profile-identity-v2 {
+  flex: 1;
+  padding: 14px 18px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(14,17,27,.88), rgba(10,12,20,.72));
+  border: 1px solid rgba(255,255,255,.06);
+  backdrop-filter: blur(10px);
+}
+
+.profile-role-badge { box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); }
+
+.profile-stats-v2 div {
+  position: relative;
+  padding-top: 18px;
+}
+
+.profile-stats-v2 em {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-style: normal;
+  font-size: 15px;
+  opacity: .8;
+}
+
+.profile-about-box {
+  margin: 0 22px 18px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.07);
+  background: linear-gradient(180deg, rgba(18,20,30,.88), rgba(10,12,18,.80));
+}
+
+.profile-about-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.profile-about-head h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+#profileAboutText {
+  margin: 0;
+  color: #e7e5e4;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.profile-about-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.profile-about-meta span {
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(139,92,246,.12);
+  border: 1px solid rgba(139,92,246,.18);
+  color: #ddd6fe;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.profile-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.profile-action-buttons .small-button {
+  min-width: 118px;
+}
+
+.profile-action-buttons .secondary {
+  background: linear-gradient(135deg, rgba(59,130,246,.22), rgba(139,92,246,.22));
+  border: 1px solid rgba(96,165,250,.24);
+}
+
+.profile-badges-v2 h3 { margin-bottom: 14px; }
+
+.profile-badges-list { gap: 12px; }
+
+.profile-badge {
+  position: relative;
+  align-items: flex-start;
+  padding: 12px 12px 14px;
+  overflow: hidden;
+}
+
+.profile-badge::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: .14;
+  pointer-events: none;
+}
+
+.profile-badge label {
+  margin-left: auto;
+  align-self: flex-start;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #f8fafc;
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+.profile-badge.rarity-common::before { background: linear-gradient(135deg, rgba(148,163,184,.6), transparent 65%); }
+.profile-badge.rarity-common > span, .achievement-toast.rarity-common .achievement-icon { background: rgba(148,163,184,.18); }
+.profile-badge.rarity-common label, .achievement-toast.rarity-common small { background: rgba(148,163,184,.18); }
+
+.profile-badge.rarity-rare::before { background: linear-gradient(135deg, rgba(59,130,246,.7), transparent 65%); }
+.profile-badge.rarity-rare > span, .achievement-toast.rarity-rare .achievement-icon { background: rgba(59,130,246,.18); }
+.profile-badge.rarity-rare label, .achievement-toast.rarity-rare small { background: rgba(59,130,246,.18); }
+
+.profile-badge.rarity-epic::before { background: linear-gradient(135deg, rgba(168,85,247,.7), transparent 65%); }
+.profile-badge.rarity-epic > span, .achievement-toast.rarity-epic .achievement-icon { background: rgba(168,85,247,.2); }
+.profile-badge.rarity-epic label, .achievement-toast.rarity-epic small { background: rgba(168,85,247,.2); }
+
+.profile-badge.rarity-legendary::before { background: linear-gradient(135deg, rgba(251,191,36,.78), transparent 65%); }
+.profile-badge.rarity-legendary > span, .achievement-toast.rarity-legendary .achievement-icon { background: rgba(251,191,36,.2); }
+.profile-badge.rarity-legendary label, .achievement-toast.rarity-legendary small { background: rgba(251,191,36,.2); }
+
+.achievement-toast-container {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 10060;
+  display: grid;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.achievement-toast {
+  position: relative;
+  width: min(360px, calc(100vw - 26px));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: linear-gradient(180deg, rgba(12,15,24,.96), rgba(7,10,16,.96));
+  box-shadow: 0 22px 50px rgba(0,0,0,.45);
+  transform: translateX(22px) scale(.96);
+  opacity: 0;
+  transition: transform .35s ease, opacity .35s ease;
+  overflow: hidden;
+}
+
+.achievement-toast.show {
+  transform: translateX(0) scale(1);
+  opacity: 1;
+}
+
+.achievement-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.achievement-copy { position: relative; z-index: 2; min-width: 0; }
+.achievement-copy small, .achievement-copy strong, .achievement-copy span { display: block; }
+.achievement-copy small {
+  margin-bottom: 3px;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #f5f3ff;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+.achievement-copy strong { color: white; font-size: 16px; }
+.achievement-copy span { margin-top: 4px; color: #cbd5e1; font-size: 13px; line-height: 1.35; }
+.achievement-glow {
+  position: absolute;
+  inset: auto -10% -45% auto;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139,92,246,.22), transparent 66%);
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .profile-card-v2 {
+    width: min(96vw, 680px) !important;
+    transform: none !important;
+  }
+
+  .profile-cover-v2 { height: 158px; }
+  .profile-main-v2 {
+    flex-direction: column;
+    align-items: stretch;
+    margin-top: -52px;
+    padding: 0 16px 16px;
+  }
+  .profile-avatar-v2 {
+    width: 94px !important;
+    height: 94px !important;
+    flex-basis: 94px;
+  }
+  .profile-identity-v2 { padding: 12px 14px; }
+  .profile-stats-v2,
+  .profile-level-box,
+  .profile-meta-v2,
+  .profile-badges-v2,
+  .profile-about-box { padding-left: 16px; padding-right: 16px; margin-left: 0; margin-right: 0; }
+  .profile-about-box { margin: 0 16px 16px; }
+  .profile-action-buttons { width: 100%; justify-content: stretch; }
+  .profile-action-buttons .small-button { flex: 1; min-width: 0; }
+  .achievement-toast-container { top: 10px; right: 10px; left: 10px; }
+  .achievement-toast { width: 100%; }
+}
