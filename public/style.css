@@ -467,3 +467,63 @@ h3 { margin: 0 0 12px; font-size: 16px; }
   gap: 5px;
   margin-top: 6px;
 }
+
+
+/* v6.1.8 */
+.message {
+  cursor: pointer;
+}
+
+.message-actions,
+.reaction-picker {
+  display: none;
+}
+
+.message.active .message-actions,
+.message.active .reaction-picker {
+  display: flex;
+}
+
+.message-media img {
+  cursor: zoom-in;
+  transition: transform .15s ease;
+}
+
+.message-media img:hover {
+  transform: scale(1.02);
+}
+
+.image-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, .86);
+}
+
+.image-modal.hidden {
+  display: none !important;
+}
+
+.image-modal img {
+  max-width: 94vw;
+  max-height: 88vh;
+  border-radius: 14px;
+  object-fit: contain;
+  box-shadow: 0 20px 80px rgba(0, 0, 0, .7);
+}
+
+.image-modal-close {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: #27272a;
+  color: white;
+  font-size: 22px;
+  font-weight: 900;
+}
