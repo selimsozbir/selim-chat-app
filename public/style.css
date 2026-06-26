@@ -1019,7 +1019,7 @@ h3 { margin: 0 0 12px; font-size: 16px; }
 }
 
 
-/* v7.2.0 storage */
+/* v7.2.3 storage */
 .message-form button:disabled {
   opacity: .55;
   cursor: not-allowed;
