@@ -103,6 +103,12 @@ const profileCover = document.getElementById('profileCover');
 const profileLevel = document.getElementById('profileLevel');
 const profileShards = document.getElementById('profileShards');
 const profileTotalMessages = document.getElementById('profileTotalMessages');
+const profileToggleAllBadgesButton = document.getElementById('profileToggleAllBadgesButton');
+const profileAllBadgesPanel = document.getElementById('profileAllBadgesPanel');
+const profileAllBadgesList = document.getElementById('profileAllBadgesList');
+const profileSaveBadgesButton = document.getElementById('profileSaveBadgesButton');
+const profileBadgeCounter = document.getElementById('profileBadgeCounter');
+const profileBadgeHint = document.getElementById('profileBadgeHint');
 const profileXpText = document.getElementById('profileXpText');
 const profileNextXpText = document.getElementById('profileNextXpText');
 const profileLevelFill = document.getElementById('profileLevelFill');
@@ -120,6 +126,8 @@ const profileAboutMeta = document.getElementById('profileAboutMeta');
 const profileActionButtons = document.getElementById('profileActionButtons');
 const profileMessageButton = document.getElementById('profileMessageButton');
 const profileFriendButton = document.getElementById('profileFriendButton');
+const profileExportButton = document.getElementById('profileExportButton');
+const profileSelfExportButton = document.getElementById('profileSelfExportButton');
 const achievementToastContainer = document.getElementById('achievementToastContainer');
 const profileColorInput = document.getElementById('profileColorInput');
 const profileFavoriteEggSelect = document.getElementById('profileFavoriteEggSelect');
@@ -200,6 +208,8 @@ let canOpenGlobalAdmin = false;
 let isUploadingFile = false;
 let badgeCheckCooldown = 0;
 let activeProfileUser = null;
+let activeProfileAllBadges = [];
+let activeProfileSelectedBadges = [];
 
 const contextMenu = document.createElement('div');
 contextMenu.className = 'message-context-menu hidden';
@@ -362,6 +372,10 @@ if (profileCardV2) {
   profileCardV2.addEventListener('mousemove', syncProfileParallax);
   profileCardV2.addEventListener('mouseleave', resetProfileParallax);
 }
+if (profileExportButton) profileExportButton.addEventListener('click', exportProfilePng);
+if (profileSelfExportButton) profileSelfExportButton.addEventListener('click', exportProfilePng);
+if (profileToggleAllBadgesButton) profileToggleAllBadgesButton.addEventListener('click', toggleAllBadgesPanel);
+if (profileSaveBadgesButton) profileSaveBadgesButton.addEventListener('click', saveProfileBadgeShowcase);
 
 if (settingsButton) settingsButton.addEventListener('click', openSettings);
 
@@ -2623,7 +2637,7 @@ async function checkForUnlockedBadges(force = false) {
 
   try {
     const data = await api(`/api/profile/${user.id}`);
-    const badges = data.profile?.badges || [];
+    const badges = (data.profile?.all_badges || data.profile?.badges || []).filter((badge) => badge.unlocked !== false);
     const keys = badges.map((badge) => badge.key).filter(Boolean);
     const seen = getSeenBadgeKeys();
 
@@ -2683,6 +2697,123 @@ function resetProfileParallax() {
   profileCardV2.style.setProperty('--parallax-y', '0px');
 }
 
+function animateNumber(element, toValue, duration = 700) {
+  if (!element) return;
+  const fromValue = Number(String(element.textContent || '0').replace(/\D/g, '')) || 0;
+  const target = Number(toValue) || 0;
+  const start = performance.now();
+
+  function frame(now) {
+    const progress = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    element.textContent = String(Math.round(fromValue + (target - fromValue) * eased));
+    if (progress < 1) requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+}
+
+function toggleAllBadgesPanel() {
+  profileAllBadgesPanel?.classList.toggle('hidden');
+}
+
+function renderAllBadgesPanel(profile, isMe) {
+  if (!profileAllBadgesList) return;
+
+  activeProfileAllBadges = profile.all_badges || [];
+  activeProfileSelectedBadges = Array.isArray(profile.selected_badges) ? [...profile.selected_badges] : [];
+  const unlocked = activeProfileAllBadges.filter((badge) => badge.unlocked);
+
+  if (profileBadgeCounter) profileBadgeCounter.textContent = `${unlocked.length} / ${activeProfileAllBadges.length} açık`;
+  if (profileBadgeHint) {
+    profileBadgeHint.textContent = isMe
+      ? 'Profilinde gözükecek rozetleri seçebilirsin. En fazla 8 rozet.'
+      : 'Bu kullanıcının açtığı ve kilitli rozetler.';
+  }
+
+  profileSaveBadgesButton?.classList.toggle('hidden', !isMe);
+  profileAllBadgesList.innerHTML = '';
+
+  activeProfileAllBadges.forEach((badge) => {
+    const rarity = badgeRarity(badge);
+    const item = document.createElement(isMe ? 'label' : 'div');
+    item.className = `profile-all-badge rarity-${rarity} ${badge.unlocked ? 'unlocked' : 'locked'}`;
+
+    const checked = activeProfileSelectedBadges.includes(badge.key);
+    item.innerHTML = `
+      <input type="checkbox" ${checked ? 'checked' : ''} ${(!isMe || !badge.unlocked) ? 'disabled' : ''} data-badge-key="${escapeHtml(badge.key)}">
+      <span class="all-badge-icon">${escapeHtml(badge.icon || '🏆')}</span>
+      <div>
+        <strong>${escapeHtml(badge.name || 'Badge')}</strong>
+        <small>${escapeHtml(badge.description || '')}</small>
+      </div>
+      <em>${badge.unlocked ? rarityLabel(rarity) : 'Kilitli'}</em>
+    `;
+
+    const checkbox = item.querySelector('input');
+    if (checkbox && isMe && badge.unlocked) {
+      checkbox.onchange = () => {
+        const checkedBoxes = Array.from(profileAllBadgesList.querySelectorAll('input:checked'));
+        if (checkedBoxes.length > 8) {
+          checkbox.checked = false;
+          addSystemMessage('En fazla 8 rozet seçebilirsin.');
+        }
+      };
+    }
+
+    profileAllBadgesList.appendChild(item);
+  });
+}
+
+async function saveProfileBadgeShowcase() {
+  try {
+    const selected = Array.from(profileAllBadgesList.querySelectorAll('input:checked'))
+      .map((input) => input.dataset.badgeKey)
+      .filter(Boolean)
+      .slice(0, 8);
+
+    await api('/api/profile/badges', {
+      method: 'POST',
+      body: JSON.stringify({ badges: selected })
+    });
+
+    addSystemMessage('Rozet vitrini kaydedildi.');
+    if (activeProfileUser) openProfile(activeProfileUser.id);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function exportProfilePng() {
+  if (!profileCardV2) return;
+  try {
+    if (typeof html2canvas !== 'function') {
+      addSystemMessage('PNG dışa aktarma kütüphanesi yüklenemedi.');
+      return;
+    }
+
+    profileCardV2.classList.add('exporting-profile');
+    const canvas = await html2canvas(profileCardV2, {
+      backgroundColor: null,
+      scale: Math.min(2, window.devicePixelRatio || 1.5),
+      useCORS: true,
+      logging: false
+    });
+
+    profileCardV2.classList.remove('exporting-profile');
+
+    const link = document.createElement('a');
+    const safeName = String(activeProfileUser?.username || 'profile').replace(/[^a-zA-Z0-9_-]/g, '-');
+    link.download = `${safeName}-profile-card.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (error) {
+    profileCardV2.classList.remove('exporting-profile');
+    addSystemMessage('Profil PNG oluşturulamadı: ' + error.message);
+  }
+}
+
+
 async function openProfile(userId) {
   try {
     const data = await api(`/api/profile/${userId}`);
@@ -2706,9 +2837,9 @@ async function openProfile(userId) {
       ? `linear-gradient(180deg, rgba(7,10,19,.12), rgba(7,10,19,.78)), radial-gradient(circle at 15% 15%, ${color}55, transparent 30%), url("${profile.profile_cover_url}")`
       : `radial-gradient(circle at 20% 20%, ${color}88, transparent 34%), linear-gradient(135deg, ${color}, #0f172a 62%, #020617)`;
 
-    profileLevel.textContent = profile.level || 1;
-    profileShards.textContent = profile.shards || 0;
-    profileTotalMessages.textContent = stats.total_messages || 0;
+    animateNumber(profileLevel, profile.level || 1, 520);
+    animateNumber(profileShards, profile.shards || 0, 950);
+    animateNumber(profileTotalMessages, stats.total_messages || 0, 650);
     profileXpText.textContent = `${profile.xp || 0} XP`;
     profileNextXpText.textContent = `Next ${profile.next_level_xp || 100} XP`;
     profileLevelFill.style.width = `${Math.max(0, Math.min(100, profile.level_progress || 0))}%`;
@@ -2731,6 +2862,8 @@ async function openProfile(userId) {
     const isMe = Number(profile.id) === Number(user.id);
     renderProfileAbout(profile, stats, isMe);
     syncProfileActionState(profile, isMe);
+    renderAllBadgesPanel(profile, isMe);
+    if (profileAllBadgesPanel) profileAllBadgesPanel.classList.add('hidden');
     profileEditPanel.classList.toggle('hidden', !isMe);
 
     if (isMe) {
