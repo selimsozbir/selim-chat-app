@@ -12329,3 +12329,255 @@ body.admin-panel-visible .admin-panel {
 #sendButton.voice-send-ready {
   background: linear-gradient(135deg, #15803d, #22c55e) !important;
 }
+
+
+/* =========================================================
+   v9.6.0 — Live Events + Portal Drops + Universe Systems
+   ========================================================= */
+
+.universe-card,
+.live-event-box,
+.universe-section {
+  padding: 12px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.045);
+  border: 1px solid rgba(255,255,255,.075);
+  margin-bottom: 10px;
+}
+
+.universe-title,
+.live-event-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.universe-title strong,
+.universe-title span,
+.live-event-box strong,
+.live-event-box span {
+  display: block;
+}
+
+.universe-title span,
+.live-event-box span {
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.universe-meter {
+  height: 10px;
+  margin: 12px 0 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+}
+
+#universeEnergyBar {
+  width: 0%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #8b5cf6, #ec4899, #f97316);
+  transition: width .35s ease;
+}
+
+.universe-stats,
+.inventory-list,
+.titles-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.universe-stats span,
+.inventory-pill,
+.title-pill,
+.empty-pill {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(139,92,246,.14);
+  color: #ddd6fe;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.title-pill {
+  background: rgba(234,179,8,.14);
+  color: #fde68a;
+}
+
+.inventory-pill {
+  background: rgba(34,197,94,.12);
+  color: #bbf7d0;
+}
+
+.universe-section strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.live-event-box {
+  justify-content: flex-start;
+  border-color: rgba(139,92,246,.28);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(139,92,246,.22), transparent 36%),
+    rgba(255,255,255,.045);
+}
+
+.live-event-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 16px;
+  background: rgba(139,92,246,.16);
+  font-size: 22px;
+}
+
+.portal-drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(6px);
+}
+
+.portal-drop-overlay.hidden {
+  display: none !important;
+}
+
+.portal-drop-card {
+  width: min(390px, 94vw);
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  text-align: center;
+  padding: 22px;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(139,92,246,.32), transparent 44%),
+    rgba(8,10,20,.96);
+  border: 1px solid rgba(139,92,246,.36);
+  box-shadow: 0 30px 90px rgba(0,0,0,.55), 0 0 60px rgba(139,92,246,.16);
+  animation: portalPop .32s ease both;
+}
+
+.portal-drop-icon {
+  width: 88px;
+  height: 88px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 48px;
+  background: radial-gradient(circle, rgba(139,92,246,.30), rgba(236,72,153,.10));
+  box-shadow: inset 0 0 30px rgba(255,255,255,.06), 0 0 44px rgba(139,92,246,.28);
+  animation: portalSpin 2.4s linear infinite;
+}
+
+.portal-drop-card strong {
+  font-size: 22px;
+}
+
+.portal-drop-card span {
+  color: #cbd5e1;
+}
+
+#claimPortalButton {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 17px;
+  background: linear-gradient(135deg, #7c3aed, #db2777);
+  color: white;
+  font-weight: 1000;
+}
+
+@keyframes portalPop {
+  from { opacity: 0; transform: scale(.88) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes portalSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Event themes */
+body.universe-theme-serbia .chat-main {
+  box-shadow: inset 0 0 70px rgba(220,38,38,.08) !important;
+}
+
+body.universe-theme-limbo .chat-main {
+  filter: saturate(.78) contrast(1.05);
+}
+
+body.universe-theme-rome .chat-main {
+  box-shadow: inset 0 0 70px rgba(234,179,8,.08) !important;
+}
+
+body.universe-theme-egypt .chat-main {
+  box-shadow: inset 0 0 70px rgba(245,158,11,.10) !important;
+}
+
+body.universe-theme-vertex .chat-main {
+  animation: vertexPulse 3s ease-in-out infinite;
+}
+
+@keyframes vertexPulse {
+  0%,100% { box-shadow: inset 0 0 48px rgba(220,38,38,.08); }
+  50% { box-shadow: inset 0 0 80px rgba(220,38,38,.16); }
+}
+
+.universe-theme-serbia .portal-drop-card,
+.live-event-box.universe-theme-serbia {
+  border-color: rgba(248,113,113,.42);
+}
+
+.universe-theme-limbo .portal-drop-card,
+.live-event-box.universe-theme-limbo {
+  border-color: rgba(148,163,184,.42);
+  filter: grayscale(.2);
+}
+
+.universe-theme-rome .portal-drop-card,
+.live-event-box.universe-theme-rome {
+  border-color: rgba(234,179,8,.42);
+}
+
+.universe-theme-egypt .portal-drop-card,
+.live-event-box.universe-theme-egypt {
+  border-color: rgba(245,158,11,.42);
+}
+
+.universe-theme-vertex .portal-drop-card,
+.live-event-box.universe-theme-vertex {
+  border-color: rgba(239,68,68,.45);
+  box-shadow: 0 0 34px rgba(239,68,68,.12);
+}
+
+@media (max-width: 760px) {
+  .portal-drop-card {
+    padding: 18px;
+  }
+
+  .portal-drop-icon {
+    width: 74px;
+    height: 74px;
+    font-size: 40px;
+  }
+
+  .portal-drop-card strong {
+    font-size: 19px;
+  }
+
+  .universe-card,
+  .live-event-box,
+  .universe-section {
+    padding: 10px;
+    border-radius: 17px;
+  }
+}
