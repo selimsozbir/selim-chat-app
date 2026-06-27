@@ -1923,6 +1923,36 @@ async function initDatabase() {
   `);
 
 
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_companions (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      pet_type VARCHAR(40) NOT NULL DEFAULT 'limbo_cat',
+      pet_name VARCHAR(80) NOT NULL DEFAULT 'Limbo Cat',
+      xp INTEGER NOT NULL DEFAULT 0,
+      level INTEGER NOT NULL DEFAULT 1,
+      mood VARCHAR(40) NOT NULL DEFAULT 'curious',
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS story_decisions (
+      id SERIAL PRIMARY KEY,
+      room VARCHAR(50) NOT NULL,
+      prompt TEXT NOT NULL,
+      options JSONB NOT NULL DEFAULT '[]',
+      votes JSONB NOT NULL DEFAULT '{}',
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      result_text TEXT,
+      ends_at TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL '10 minutes'),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_story_decisions_room_time ON story_decisions(room, created_at DESC);`);
+
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS message_reactions (
       id SERIAL PRIMARY KEY,
@@ -1967,6 +1997,164 @@ async function initDatabase() {
 }
 
 /* AUTH */
+
+
+const STORY_DECISION_TEMPLATES = [
+  {
+    prompt: 'Serbia Rift tekrar açıldı. Ekip ne yapsın?',
+    options: [
+      { key: 'enter', label: 'Portala gir', result: 'Ekip portala girdi. Rift enerjisi yükseldi.' },
+      { key: 'ask_feiz', label: 'Feiz’e sor', result: 'Feiz anlamsız ama faydalı bir kehanet verdi.' },
+      { key: 'seal', label: 'Kapıyı mühürle', result: 'Portal geçici olarak mühürlendi.' }
+    ]
+  },
+  {
+    prompt: 'Limbo Cat odanın köşesinde bir anahtar buldu. Ne yapılsın?',
+    options: [
+      { key: 'take', label: 'Anahtarı al', result: 'Anahtar inventory’ye yazılmasa da lore’a işlendi.' },
+      { key: 'follow_cat', label: 'Kediyi takip et', result: 'Kedi gizli bir geçit gösterdi.' },
+      { key: 'ignore', label: 'Dokunma', result: 'Anahtar kendi kendine kayboldu.' }
+    ]
+  },
+  {
+    prompt: 'VERTEX Entity sohbete sinyal gönderdi. Cevap verilsin mi?',
+    options: [
+      { key: 'reply', label: 'Cevap ver', result: 'VERTEX kısa süreliğine sakinleşti.' },
+      { key: 'spam', label: 'Mesaj yağdır', result: 'Sinyal gürültüye boğuldu.' },
+      { key: 'hide', label: 'Sessiz kal', result: 'Entity başka odaya geçti.' }
+    ]
+  },
+  {
+    prompt: 'Rome Simulation’da reset düğmesi belirdi. Basalım mı?',
+    options: [
+      { key: 'press', label: 'Bas', result: 'Simülasyon tür değiştirdi.' },
+      { key: 'guard', label: 'Nöbet tut', result: 'Düğme korunmaya alındı.' },
+      { key: 'break', label: 'Düğmeyi kır', result: 'Roma glitch’i kısa süreliğine durdu.' }
+    ]
+  }
+];
+
+const PET_DEFS = {
+  limbo_cat: { icon: '🐈‍⬛', name: 'Limbo Cat' },
+  vertex_drone: { icon: '🔴', name: 'VERTEX Drone' },
+  serbia_crow: { icon: '🪶', name: 'Serbia Crow' },
+  egypt_scarab: { icon: '🪲', name: 'Egypt Scarab' },
+  rome_wolf: { icon: '🐺', name: 'Rome Wolf' }
+};
+
+function petLevelFromXp(xp = 0) {
+  const safe = Math.max(0, Number(xp || 0));
+  return Math.max(1, Math.floor(Math.sqrt(safe / 35)) + 1);
+}
+
+function petNextXp(level = 1) {
+  const next = Math.max(2, Number(level || 1) + 1);
+  return Math.pow(next - 1, 2) * 35;
+}
+
+function petMoodFromStats({ level = 1, xp = 0 } = {}) {
+  if (level >= 10) return 'legendary';
+  if (level >= 7) return 'charged';
+  if (xp % 5 === 0) return 'curious';
+  return 'loyal';
+}
+
+async function ensureCompanion(userId) {
+  const existing = await pool.query('SELECT * FROM user_companions WHERE user_id = $1', [userId]);
+  if (existing.rows.length) return existing.rows[0];
+
+  const created = await pool.query(
+    `INSERT INTO user_companions (user_id, pet_type, pet_name, xp, level, mood)
+     VALUES ($1, 'limbo_cat', 'Limbo Cat', 0, 1, 'curious')
+     RETURNING *`,
+    [userId]
+  );
+  return created.rows[0];
+}
+
+async function rewardCompanionXp(userId, amount = 1) {
+  if (!userId) return null;
+  const pet = await ensureCompanion(userId);
+  const xp = Number(pet.xp || 0) + Number(amount || 1);
+  const level = petLevelFromXp(xp);
+  const mood = petMoodFromStats({ level, xp });
+  const updated = await pool.query(
+    `UPDATE user_companions
+     SET xp = $1, level = $2, mood = $3, updated_at = CURRENT_TIMESTAMP
+     WHERE user_id = $4
+     RETURNING *`,
+    [xp, level, mood, userId]
+  );
+  return updated.rows[0];
+}
+
+function serializeCompanion(row = {}) {
+  const def = PET_DEFS[row.pet_type] || PET_DEFS.limbo_cat;
+  const xp = Number(row.xp || 0);
+  const level = Number(row.level || petLevelFromXp(xp));
+  return {
+    pet_type: row.pet_type || 'limbo_cat',
+    pet_name: row.pet_name || def.name,
+    icon: def.icon,
+    xp,
+    level,
+    mood: row.mood || 'curious',
+    next_xp: petNextXp(level),
+    progress: Math.max(0, Math.min(100, Math.round((xp / petNextXp(level)) * 100)))
+  };
+}
+
+function currentStoryResult(row) {
+  if (!row) return '';
+  const options = Array.isArray(row.options) ? row.options : [];
+  const votes = row.votes || {};
+  const winner = options
+    .map((opt) => ({ ...opt, count: Number(votes[opt.key] || 0) }))
+    .sort((a, b) => b.count - a.count)[0];
+  return winner?.result || row.result_text || 'Oda henüz kaderini seçmedi.';
+}
+
+async function getOrCreateStoryDecision(room, userId = null) {
+  const active = await pool.query(
+    `SELECT * FROM story_decisions
+     WHERE room = $1 AND ends_at > CURRENT_TIMESTAMP
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [room]
+  );
+  if (active.rows.length) return active.rows[0];
+
+  const template = STORY_DECISION_TEMPLATES[Math.floor(Math.random() * STORY_DECISION_TEMPLATES.length)];
+  const created = await pool.query(
+    `INSERT INTO story_decisions (room, prompt, options, votes, created_by, ends_at)
+     VALUES ($1, $2, $3::jsonb, '{}'::jsonb, $4, CURRENT_TIMESTAMP + INTERVAL '12 minutes')
+     RETURNING *`,
+    [room, template.prompt, JSON.stringify(template.options), userId]
+  );
+  return created.rows[0];
+}
+
+function serializeStoryDecision(row) {
+  const options = Array.isArray(row.options) ? row.options : [];
+  const votes = row.votes || {};
+  const totalVotes = Object.values(votes).reduce((sum, value) => sum + Number(value || 0), 0);
+  return {
+    id: row.id,
+    room: row.room,
+    prompt: row.prompt,
+    options: options.map((opt) => ({
+      key: opt.key,
+      label: opt.label,
+      result: opt.result,
+      votes: Number(votes[opt.key] || 0)
+    })),
+    total_votes: totalVotes,
+    result_text: currentStoryResult(row),
+    ends_at: row.ends_at,
+    created_at: row.created_at
+  };
+}
+
 
 app.post('/api/register', async (req, res) => {
   try {
@@ -2054,6 +2242,152 @@ app.get('/api/me', authMiddleware, async (req, res) => {
   const result = await pool.query('SELECT id, username, display_name, avatar_url, bio, global_role, presence_status, custom_status, story_text, story_expires_at, last_seen, last_active, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme FROM users WHERE id = $1', [req.user.id]);
   if (result.rows.length === 0) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
   res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
+});
+
+
+
+app.get('/api/replay/daily/:room', authMiddleware, async (req, res) => {
+  try {
+    const room = cleanText(req.params.room, 50).toLowerCase() || 'genel';
+
+    const totals = await pool.query(
+      `SELECT COUNT(*)::int AS total,
+              COUNT(*) FILTER (WHERE message_type = 'image')::int AS images,
+              COUNT(*) FILTER (WHERE message_type = 'audio')::int AS audio,
+              COUNT(*) FILTER (WHERE message_type = 'file')::int AS files
+       FROM messages
+       WHERE room = $1 AND deleted_at IS NULL AND created_at::date = CURRENT_DATE`,
+      [room]
+    );
+
+    const topUsers = await pool.query(
+      `SELECT COALESCE(u.display_name, m.username) AS username, COUNT(*)::int AS count
+       FROM messages m
+       LEFT JOIN users u ON u.id = m.user_id
+       WHERE m.room = $1 AND m.deleted_at IS NULL AND m.created_at::date = CURRENT_DATE
+       GROUP BY COALESCE(u.display_name, m.username)
+       ORDER BY count DESC, username ASC
+       LIMIT 5`,
+      [room]
+    );
+
+    const topReaction = await pool.query(
+      `SELECT r.emoji, COUNT(*)::int AS count
+       FROM message_reactions r
+       JOIN messages m ON m.id = r.message_id
+       WHERE r.message_scope = 'room' AND m.room = $1 AND r.created_at::date = CURRENT_DATE
+       GROUP BY r.emoji
+       ORDER BY count DESC
+       LIMIT 1`,
+      [room]
+    );
+
+    const recent = await pool.query(
+      `SELECT COALESCE(u.display_name, m.username) AS username, m.text, m.message_type
+       FROM messages m
+       LEFT JOIN users u ON u.id = m.user_id
+       WHERE m.room = $1 AND m.deleted_at IS NULL AND m.created_at::date = CURRENT_DATE
+       ORDER BY m.created_at DESC
+       LIMIT 5`,
+      [room]
+    );
+
+    const total = Number(totals.rows[0]?.total || 0);
+    const top = topUsers.rows[0];
+    const mood = total >= 80 ? 'kaotik' : total >= 30 ? 'aktif' : total >= 8 ? 'sakin ama canlı' : 'sessiz';
+    const summary = total
+      ? `Bugün #${room} odası ${mood}: ${total} mesaj atıldı. ${top ? `${top.username} ${top.count} mesajla öne çıktı.` : ''}`
+      : `Bugün #${room} odası sessiz kaldı. İlk sinyali sen gönderebilirsin.`;
+
+    res.json({
+      room,
+      date: new Date().toISOString().slice(0, 10),
+      summary,
+      stats: {
+        total,
+        images: Number(totals.rows[0]?.images || 0),
+        audio: Number(totals.rows[0]?.audio || 0),
+        files: Number(totals.rows[0]?.files || 0),
+        top_reaction: topReaction.rows[0] || null
+      },
+      top_users: topUsers.rows,
+      recent: recent.rows
+    });
+  } catch (error) {
+    console.error('Daily replay error:', error);
+    res.status(500).json({ error: 'Günün özeti yüklenemedi.' });
+  }
+});
+
+app.get('/api/story-decision/:room', authMiddleware, async (req, res) => {
+  try {
+    const room = cleanText(req.params.room, 50).toLowerCase() || 'genel';
+    const decision = await getOrCreateStoryDecision(room, req.user.id);
+    res.json({ decision: serializeStoryDecision(decision) });
+  } catch (error) {
+    console.error('Story decision error:', error);
+    res.status(500).json({ error: 'Hikaye kararı yüklenemedi.' });
+  }
+});
+
+app.post('/api/story-decision/:room/vote', authMiddleware, async (req, res) => {
+  try {
+    const room = cleanText(req.params.room, 50).toLowerCase() || 'genel';
+    const optionKey = cleanText(req.body.optionKey, 60);
+    const decision = await getOrCreateStoryDecision(room, req.user.id);
+    const options = Array.isArray(decision.options) ? decision.options : [];
+    if (!options.some((opt) => opt.key === optionKey)) return res.status(400).json({ error: 'Geçersiz seçenek.' });
+
+    const updated = await pool.query(
+      `UPDATE story_decisions
+       SET votes = jsonb_set(COALESCE(votes, '{}'::jsonb), ARRAY[$1], to_jsonb(COALESCE((votes->>$1)::int, 0) + 1), true)
+       WHERE id = $2
+       RETURNING *`,
+      [optionKey, decision.id]
+    );
+
+    await addShards(req.user.id, 2);
+    await logShardTransaction(req.user.id, 2, 'story_vote', 'Mini hikaye kararı oyu', { room, decisionId: decision.id, optionKey });
+    await rewardCompanionXp(req.user.id, 2);
+
+    const payload = { decision: serializeStoryDecision(updated.rows[0]) };
+    io.to(room).emit('story_decision_update', payload);
+    res.json(payload);
+  } catch (error) {
+    console.error('Story vote error:', error);
+    res.status(500).json({ error: 'Oy kaydedilemedi.' });
+  }
+});
+
+app.get('/api/companion/me', authMiddleware, async (req, res) => {
+  try {
+    const companion = await ensureCompanion(req.user.id);
+    res.json({ companion: serializeCompanion(companion), pets: PET_DEFS });
+  } catch (error) {
+    console.error('Companion error:', error);
+    res.status(500).json({ error: 'Companion yüklenemedi.' });
+  }
+});
+
+app.post('/api/companion/select', authMiddleware, async (req, res) => {
+  try {
+    const petType = cleanText(req.body.petType, 40);
+    const def = PET_DEFS[petType];
+    if (!def) return res.status(400).json({ error: 'Geçersiz companion.' });
+
+    await ensureCompanion(req.user.id);
+    const updated = await pool.query(
+      `UPDATE user_companions
+       SET pet_type = $1, pet_name = $2, updated_at = CURRENT_TIMESTAMP
+       WHERE user_id = $3
+       RETURNING *`,
+      [petType, def.name, req.user.id]
+    );
+    res.json({ companion: serializeCompanion(updated.rows[0]), pets: PET_DEFS });
+  } catch (error) {
+    console.error('Companion select error:', error);
+    res.status(500).json({ error: 'Companion değiştirilemedi.' });
+  }
 });
 
 
@@ -4452,6 +4786,7 @@ io.on('connection', (socket) => {
       );
 
       await rewardUserActivity(socket.user.id, 5, 1);
+      await rewardCompanionXp(socket.user.id, 1);
       await maybeRememberChatMoment({ userId: socket.user.id, room, username: socket.user.username, text });
       await addUniverseEnergy(1);
       await maybeRewardLiveEventMessage(socket.user.id, room);
