@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.3.2",
-  "description": "Selim Chat v10.3.2 polished message bubbles and media cards",
+  "version": "10.3.3",
+  "description": "Selim Chat v10.3.3 DM list, compact profile and meaningful header",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
