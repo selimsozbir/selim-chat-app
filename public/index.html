@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v9.5.3</title>
-  <link rel="stylesheet" href="style.css?v=953" />
+  <title>Selim Chat v9.6.0</title>
+  <link rel="stylesheet" href="style.css?v=960" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -228,6 +228,15 @@
           <button id="voiceCancelButton" type="button">İptal</button>
         </div>
 
+        <div id="portalDropOverlay" class="portal-drop-overlay hidden">
+          <div class="portal-drop-card">
+            <div class="portal-drop-icon">🌀</div>
+            <strong id="portalDropTitle">Portal açıldı!</strong>
+            <span id="portalDropText">İlk tıklayan ödülü alır.</span>
+            <button id="claimPortalButton" type="button">Portal'a Gir</button>
+          </div>
+        </div>
+
         <nav id="mobileBottomNav" class="mobile-bottom-nav">
           <button id="mobileRoomButton" class="mobile-nav-item active" type="button">🏠<span>Oda</span></button>
           <button id="mobileDmButton" class="mobile-nav-item" type="button">💬<span>DM</span></button>
@@ -265,6 +274,7 @@
             <button id="leaderboardTabButton" class="gamify-tab" type="button">Liderlik</button>
             <button id="casinoTabButton" class="gamify-tab" type="button">Casino</button>
             <button id="shardsHistoryTabButton" class="gamify-tab" type="button">Geçmiş</button>
+            <button id="universeTabButton" class="gamify-tab" type="button">Evren</button>
           </div>
 
           <div id="dailyPanel" class="gamify-panel">
@@ -317,6 +327,43 @@
               <button id="refreshShardsHistoryButton" class="small-button" type="button">Yenile</button>
             </div>
             <div id="shardsHistoryList" class="gamify-list"></div>
+          </div>
+
+          <div id="universePanel" class="gamify-panel hidden">
+            <div class="universe-card">
+              <div class="universe-title">
+                <div>
+                  <strong>5ECROPOLIS Universe</strong>
+                  <span id="universeStatusText">Evren yükleniyor...</span>
+                </div>
+                <button id="refreshUniverseButton" class="small-button" type="button">Yenile</button>
+              </div>
+              <div class="universe-meter">
+                <div id="universeEnergyBar"></div>
+              </div>
+              <div class="universe-stats">
+                <span id="universeLevelText">Level -</span>
+                <span id="universeEnergyText">Energy -</span>
+                <span id="universeEventText">Event -</span>
+              </div>
+            </div>
+
+            <div id="liveEventBox" class="live-event-box hidden"></div>
+
+            <div class="universe-section">
+              <strong>Inventory</strong>
+              <div id="inventoryList" class="inventory-list"></div>
+            </div>
+
+            <div class="universe-section">
+              <strong>Titles</strong>
+              <div id="titlesList" class="titles-list"></div>
+            </div>
+
+            <div class="universe-section">
+              <strong>Son Profil Ziyaretçileri</strong>
+              <div id="profileVisitorsList" class="gamify-list"></div>
+            </div>
           </div>
 
           <div id="leaderboardPanel" class="gamify-panel hidden">
@@ -730,7 +777,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=953"></script>
+  <script src="script.js?v=960"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
