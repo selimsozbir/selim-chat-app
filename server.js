@@ -27,6 +27,8 @@ const GROQ_API_KEY = String(process.env.GROQ_API_KEY || '');
 const GROQ_MODEL = String(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile');
 const AI_BOT_COOLDOWN_MS = Number(process.env.AI_BOT_COOLDOWN_MS || 10000);
 const AI_BOT_RULES = String(process.env.AI_BOT_RULES || '').trim().slice(0, 2000);
+const AI_BOT_RANDOM_TALK_MS = Number(process.env.AI_BOT_RANDOM_TALK_MS || 8 * 60 * 1000);
+const AI_BOT_RANDOM_TALK_CHANCE = Number(process.env.AI_BOT_RANDOM_TALK_CHANCE || 0.35);
 
 app.set('trust proxy', true);
 
@@ -1141,14 +1143,177 @@ function checkAiCooldown(userId) {
   return 0;
 }
 
+
+async function getAiBotState() {
+  const result = await pool.query('SELECT mood, random_talk_enabled, updated_at FROM ai_bot_state WHERE id = 1');
+  return result.rows[0] || { mood: 'calm', random_talk_enabled: true };
+}
+
+function normalizeFeizMood(mood) {
+  const clean = String(mood || '').toLowerCase().trim();
+  const map = {
+    sakin: 'calm',
+    calm: 'calm',
+    agresif: 'aggressive',
+    aggressive: 'aggressive',
+    cursed: 'cursed',
+    serious: 'serious',
+    ciddi: 'serious',
+    lore: 'lore'
+  };
+  return map[clean] || 'calm';
+}
+
+function feizMoodPrompt(mood) {
+  const m = normalizeFeizMood(mood);
+  const prompts = {
+    calm: 'Mood: sakin. Daha yumuşak, kısa, yardımcı ve arkadaş gibi konuş.',
+    aggressive: 'Mood: agresif. Daha keskin, enerjik, meydan okuyan ama hakaret etmeyen bir tavır kullan.',
+    cursed: 'Mood: cursed. Hafif tuhaf, glitchli, absürt ve karanlık mizah tonunda konuş; yine de anlaşılır kal.',
+    serious: 'Mood: serious. Daha ciddi, net, mantıklı ve kısa cevap ver; şaka az olsun.',
+    lore: 'Mood: lore. 5ECROPOLIS evreni, Serbia Rift, Limbo, VERTEX, portal ve simülasyon havasını cevaplara yedir.'
+  };
+  return prompts[m] || prompts.calm;
+}
+
+async function getAiNickname(userId, username = 'kullanıcı') {
+  if (!userId) return null;
+  const existing = await pool.query('SELECT nickname FROM ai_bot_nicknames WHERE user_id = $1', [userId]);
+  if (existing.rows[0]?.nickname) return existing.rows[0].nickname;
+
+  const base = String(username || 'kullanıcı').toLowerCase();
+  const poolNames = [
+    'rift yolcusu',
+    'portal bağımlısı',
+    'limbo kaçkını',
+    'vertex şahidi',
+    'gece kodcusu',
+    'shard avcısı',
+    'serbia frekansı',
+    'simülasyon çocuğu'
+  ];
+  const sum = base.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const nickname = poolNames[sum % poolNames.length];
+
+  await pool.query(
+    `INSERT INTO ai_bot_nicknames (user_id, nickname)
+     VALUES ($1, $2)
+     ON CONFLICT (user_id) DO UPDATE SET nickname = EXCLUDED.nickname, updated_at = CURRENT_TIMESTAMP`,
+    [userId, nickname]
+  );
+  return nickname;
+}
+
+async function rememberAiMoment({ userId, room, memory }) {
+  const text = cleanText(memory || '', 260);
+  if (!text) return;
+  await pool.query(
+    `INSERT INTO ai_bot_memories (user_id, room, memory)
+     VALUES ($1, $2, $3)`,
+    [userId || null, room || null, text]
+  );
+}
+
+async function maybeRememberChatMoment({ userId, room, username, text }) {
+  const clean = cleanText(text || '', 260);
+  if (!clean || clean.length < 8) return;
+  if (Math.random() > 0.18 && !/@feiz|@bot|feiz/i.test(clean)) return;
+
+  const memory = `${username || 'biri'} şunu dedi: "${clean.slice(0, 160)}"`;
+  await rememberAiMoment({ userId, room, memory });
+}
+
+async function getAiContextMemory({ userId, room }) {
+  const [nick, memories, recent] = await Promise.all([
+    userId ? pool.query('SELECT nickname FROM ai_bot_nicknames WHERE user_id = $1', [userId]) : Promise.resolve({ rows: [] }),
+    pool.query(
+      `SELECT memory FROM ai_bot_memories
+       WHERE ($1::int IS NULL OR user_id = $1) OR ($2::text IS NOT NULL AND room = $2)
+       ORDER BY created_at DESC
+       LIMIT 8`,
+      [userId || null, room || null]
+    ),
+    room ? pool.query(
+      `SELECT username, text FROM messages
+       WHERE room = $1 AND message_type = 'text' AND deleted_at IS NULL
+       ORDER BY created_at DESC
+       LIMIT 8`,
+      [room]
+    ) : Promise.resolve({ rows: [] })
+  ]);
+
+  return {
+    nickname: nick.rows[0]?.nickname || null,
+    memories: memories.rows.map(r => r.memory),
+    recent: recent.rows.reverse().map(r => `${r.username}: ${r.text}`)
+  };
+}
+
+async function setAiBotMood(mood, actorId = null) {
+  const normalized = normalizeFeizMood(mood);
+  await pool.query(
+    `UPDATE ai_bot_state
+     SET mood = $1, updated_by = $2, updated_at = CURRENT_TIMESTAMP
+     WHERE id = 1`,
+    [normalized, actorId || null]
+  );
+  io.emit('feiz_mood_changed', { mood: normalized });
+  return normalized;
+}
+
+async function getFeizPanelData(userId) {
+  const [state, nicknames, mine] = await Promise.all([
+    getAiBotState(),
+    pool.query(
+      `SELECT n.user_id, n.nickname, COALESCE(u.display_name, u.username) AS display_name, u.username
+       FROM ai_bot_nicknames n
+       JOIN users u ON u.id = n.user_id
+       ORDER BY n.updated_at DESC
+       LIMIT 20`
+    ),
+    getAiNickname(userId)
+  ]);
+
+  return {
+    state,
+    my_nickname: mine,
+    nicknames: nicknames.rows
+  };
+}
+
+async function handleFeizAdminCommand({ socket, text, room }) {
+  const clean = String(text || '').trim();
+  const match = clean.match(/^\/feiz\s+mood\s+([a-zA-ZçğıöşüÇĞİÖŞÜ]+)/i);
+  if (!match) return false;
+
+  const admin = await getGlobalRole(socket.user.id);
+  if (!['owner', 'admin'].includes(admin)) {
+    socket.emit('system_message', 'feiz mood değiştirmek için admin/owner olman lazım.');
+    return true;
+  }
+
+  const mood = await setAiBotMood(match[1], socket.user.id);
+  io.to(room).emit('system_message', `feiz mood değişti: ${mood}`);
+  return true;
+}
+
+
 async function askGroq(prompt, context = {}) {
   if (!GROQ_API_KEY) throw new Error('GROQ_API_KEY eksik.');
 
+  const state = await getAiBotState();
+  const memoryContext = await getAiContextMemory({ userId: context.userId, room: context.room });
   const systemPrompt = [
-    `Sen ${AI_BOT_NAME} adında Selim Chat içinde çalışan Türkçe konuşan yardımcı bir botsun.`,
+    `Sen ${AI_BOT_NAME} adında Selim Chat içinde yaşayan Türkçe konuşan bir AI entity'sin.`,
+    'Selim Chat, 5ECROPOLIS evrenine bağlı bir chat/oyun hibritidir. Serbia Rift, Limbo, VERTEX, portal, shard ve evren enerjisi gibi kavramları gerektiğinde doğal biçimde kullan.',
+    feizMoodPrompt(state.mood),
+    memoryContext.nickname ? `Bu kullanıcıya taktığın lakap: ${memoryContext.nickname}. Arada doğal şekilde kullanabilirsin.` : '',
+    memoryContext.memories.length ? `Hatırladığın kısa notlar: ${memoryContext.memories.join(' | ')}` : '',
+    memoryContext.recent.length ? `Son chat bağlamı: ${memoryContext.recent.join(' | ')}` : '',
     'Kısa, net, samimi ve doğal cevap ver.',
     'Kullanıcı Türkçe konuşuyorsa Türkçe cevap ver.',
     'Gereksiz uzun yazma; genelde 1-6 cümle yeter.',
+    'Bazen küçük şaka yapabilirsin ama spam yapma.',
     'Kod istenirse okunabilir kod ver.',
     'Tehlikeli, gizli anahtar, şifre veya kötüye kullanım isteklerine yardımcı olma.',
     AI_BOT_RULES ? `Ek bot kuralları: ${AI_BOT_RULES}` : ''
@@ -1197,6 +1362,7 @@ async function maybeHandleAiBot({ scope, text, senderId, senderUsername, room, g
     return;
   }
 
+  await getAiNickname(senderId, senderUsername);
   const prompt = extractBotPrompt(text);
   if (!prompt) {
     const helpText = `Beni şöyle çağır: @feiz oyun fikri ver`;
@@ -1205,7 +1371,7 @@ async function maybeHandleAiBot({ scope, text, senderId, senderUsername, room, g
   }
 
   try {
-    const answer = await askGroq(prompt, { scope, room, groupName, username: senderUsername });
+    const answer = await askGroq(prompt, { scope, room, groupName, username: senderUsername, userId: senderId });
     await sendAiBotMessage({ scope, text: answer, targetUserId: senderId, room, groupId });
   } catch (error) {
     console.error('AI bot hatası:', error);
@@ -1441,6 +1607,45 @@ async function initDatabase() {
     );
   `);
 
+
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ai_bot_state (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      mood VARCHAR(40) NOT NULL DEFAULT 'calm',
+      random_talk_enabled BOOLEAN NOT NULL DEFAULT true,
+      updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(`
+    INSERT INTO ai_bot_state (id, mood, random_talk_enabled)
+    VALUES (1, 'calm', true)
+    ON CONFLICT (id) DO NOTHING;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ai_bot_nicknames (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      nickname VARCHAR(80) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ai_bot_memories (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      room VARCHAR(50),
+      memory TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ai_bot_memories_user_time ON ai_bot_memories(user_id, created_at DESC);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ai_bot_memories_room_time ON ai_bot_memories(room, created_at DESC);`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS universe_state (
@@ -2727,6 +2932,27 @@ async function getGroupSummary(groupId, userId) {
 
 
 
+
+app.get('/api/feiz/personality', authMiddleware, async (req, res) => {
+  try {
+    res.json(await getFeizPanelData(req.user.id));
+  } catch (error) {
+    console.error('Feiz personality error:', error);
+    res.status(500).json({ error: 'feiz verileri yüklenemedi.' });
+  }
+});
+
+app.patch('/api/feiz/personality', authMiddleware, requireGlobalAdmin, async (req, res) => {
+  try {
+    const mood = await setAiBotMood(req.body?.mood, req.user.id);
+    res.json(await getFeizPanelData(req.user.id));
+  } catch (error) {
+    console.error('Feiz personality update error:', error);
+    res.status(500).json({ error: 'feiz mood güncellenemedi.' });
+  }
+});
+
+
 app.get('/api/universe', authMiddleware, async (req, res) => {
   try {
     res.json(await getUserUniverseData(req.user.id));
@@ -3884,6 +4110,10 @@ io.on('connection', (socket) => {
       if (!socket.data.room) return;
       if (messageType === 'text' && !text) return;
 
+      if (messageType === 'text' && await handleFeizAdminCommand({ socket, text, room: socket.data.room })) {
+        return;
+      }
+
       if (messageType === 'text' && await handleUniverseCommand({ socket, room: socket.data.room, text })) {
         return;
       }
@@ -3930,6 +4160,7 @@ io.on('connection', (socket) => {
       );
 
       await rewardUserActivity(socket.user.id, 5, 1);
+      await maybeRememberChatMoment({ userId: socket.user.id, room, username: socket.user.username, text });
       await addUniverseEnergy(2);
       await maybeRewardLiveEventMessage(socket.user.id, room);
 
@@ -4390,6 +4621,41 @@ io.on('connection', (socket) => {
 });
 
 
+
+async function triggerFeizRandomTalk() {
+  if (!AI_BOT_ENABLED || !GROQ_API_KEY) return;
+  const state = await getAiBotState();
+  if (!state.random_talk_enabled) return;
+
+  const rooms = Array.from(new Set(Array.from(onlineUsers.values()).map(u => u.room).filter(Boolean)));
+  if (!rooms.length) return;
+
+  const room = rooms[Math.floor(Math.random() * rooms.length)];
+  const recent = await pool.query(
+    `SELECT username, text FROM messages
+     WHERE room = $1 AND message_type = 'text' AND deleted_at IS NULL
+     ORDER BY created_at DESC
+     LIMIT 10`,
+    [room]
+  );
+
+  const contextText = recent.rows.reverse().map(r => `${r.username}: ${r.text}`).join(' | ');
+  const prompt = [
+    'Chatte kendiliğinden kısa bir mesaj atacaksın.',
+    'Spam gibi olmasın; tek mesaj, 1-2 cümle.',
+    'Kullanıcıları hafif tiye alabilir veya event/portal/5ECROPOLIS hakkında yorum yapabilirsin.',
+    contextText ? `Son konuşmalar: ${contextText}` : 'Chat sakin.'
+  ].join('\n');
+
+  try {
+    const answer = await askGroq(prompt, { scope: 'room', room, username: 'chat' });
+    await sendAiBotMessage({ scope: 'room', text: answer, room });
+  } catch (error) {
+    console.error('Feiz random talk error:', error);
+  }
+}
+
+
 function startUniverseSchedulers() {
   if (global.__universeSchedulersStarted) return;
   global.__universeSchedulersStarted = true;
@@ -4410,6 +4676,14 @@ function startUniverseSchedulers() {
       console.error('Live event scheduler error:', error);
     }
   }, 12 * 60 * 1000);
+
+  setInterval(async () => {
+    try {
+      if (Math.random() < AI_BOT_RANDOM_TALK_CHANCE) await triggerFeizRandomTalk();
+    } catch (error) {
+      console.error('Feiz scheduler error:', error);
+    }
+  }, AI_BOT_RANDOM_TALK_MS);
 }
 
 function updateRoomUsers(room) {
