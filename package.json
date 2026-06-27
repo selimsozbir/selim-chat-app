@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.9.0",
-  "description": "Selim Chat v8.9.0 friend activity and badges v2",
+  "version": "9.0.0",
+  "description": "Selim Chat v9.0.0 full polish update",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
