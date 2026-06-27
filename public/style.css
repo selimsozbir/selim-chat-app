@@ -10001,3 +10001,367 @@ select:focus {
     max-width: min(82vw, 560px) !important;
   }
 }
+
+
+/* =========================================================
+   v9.3.0 — Modern Settings Interface Redesign
+   Ayarlar artık kategorili, daha derli toplu ve profesyonel.
+   ========================================================= */
+
+.settings-modal {
+  background:
+    radial-gradient(circle at 24% 10%, rgba(168,85,247,.16), transparent 32%),
+    radial-gradient(circle at 82% 20%, rgba(236,72,153,.10), transparent 28%),
+    rgba(0,0,0,.76) !important;
+  backdrop-filter: blur(16px);
+}
+
+.settings-card-v2 {
+  width: min(1040px, 96vw) !important;
+  max-height: min(860px, calc(100vh - 32px)) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border-radius: 30px !important;
+  background:
+    linear-gradient(180deg, rgba(10,14,26,.98), rgba(4,7,15,.98)) !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  box-shadow: 0 30px 120px rgba(0,0,0,.68) !important;
+}
+
+.settings-close-v2 {
+  top: 16px !important;
+  right: 16px !important;
+  z-index: 10 !important;
+}
+
+.settings-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 22px 24px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(168,85,247,.22), transparent 34%),
+    linear-gradient(180deg, rgba(15,23,42,.82), rgba(8,12,24,.66));
+}
+
+.settings-hero-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #7c3aed, #ec4899);
+  box-shadow: 0 14px 34px rgba(168,85,247,.28);
+  font-size: 24px;
+}
+
+.settings-hero h2 {
+  margin: 0 !important;
+  font-size: 25px !important;
+  line-height: 1.1;
+}
+
+.settings-hero .settings-muted {
+  margin: 5px 0 0 !important;
+}
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.settings-nav {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px;
+  border-right: 1px solid rgba(255,255,255,.08);
+  background: rgba(3,7,18,.34);
+  max-height: calc(min(860px, 100vh - 32px) - 97px);
+  overflow-y: auto;
+}
+
+.settings-nav-item {
+  display: grid !important;
+  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 11px 12px !important;
+  border-radius: 17px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: #cbd5e1 !important;
+  text-align: left;
+}
+
+.settings-nav-item > span {
+  grid-row: 1 / 3;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(255,255,255,.06);
+}
+
+.settings-nav-item strong,
+.settings-nav-item small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-nav-item strong {
+  color: #f8fafc;
+  font-size: 13px;
+}
+
+.settings-nav-item small {
+  color: #94a3b8;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.settings-nav-item:hover {
+  background: rgba(255,255,255,.055) !important;
+  border-color: rgba(255,255,255,.08) !important;
+}
+
+.settings-nav-item.active {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(168,85,247,.24), transparent 38%),
+    rgba(168,85,247,.12) !important;
+  border-color: rgba(168,85,247,.32) !important;
+}
+
+.settings-nav-item.active > span {
+  background: linear-gradient(135deg, #7c3aed, #ec4899);
+  color: #fff;
+}
+
+.settings-content-v2 {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  padding: 18px !important;
+  max-height: calc(min(860px, 100vh - 32px) - 97px);
+  overflow-y: auto;
+}
+
+.settings-section-hidden {
+  display: none !important;
+}
+
+.settings-section {
+  position: relative;
+  min-width: 0;
+  padding: 16px !important;
+  border-radius: 22px !important;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(168,85,247,.09), transparent 34%),
+    rgba(255,255,255,.045) !important;
+  border: 1px solid rgba(255,255,255,.085) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.settings-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px !important;
+  font-size: 15px !important;
+  color: #f8fafc !important;
+}
+
+.settings-section h3 span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: rgba(168,85,247,.15);
+}
+
+.settings-section label:not(.settings-check) {
+  display: block;
+  margin: 12px 0 6px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.settings-section input:not([type="checkbox"]),
+.settings-section textarea,
+.settings-section select {
+  width: 100% !important;
+  min-height: 42px !important;
+  border-radius: 15px !important;
+  background: rgba(3,7,18,.62) !important;
+  border: 1px solid rgba(255,255,255,.09) !important;
+}
+
+.settings-section textarea {
+  min-height: 96px !important;
+  resize: vertical;
+}
+
+.settings-check {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  margin: 10px 0 !important;
+  padding: 10px 12px !important;
+  border-radius: 16px;
+  background: rgba(255,255,255,.045);
+  border: 1px solid rgba(255,255,255,.065);
+  cursor: pointer;
+}
+
+.settings-check span {
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.settings-check input[type="checkbox"] {
+  appearance: none;
+  width: 44px;
+  height: 24px;
+  flex: 0 0 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(15,23,42,.95);
+  position: relative;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease;
+}
+
+.settings-check input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 2px;
+  top: 2px;
+  border-radius: 999px;
+  background: #94a3b8;
+  transition: transform .18s ease, background .18s ease;
+}
+
+.settings-check input[type="checkbox"]:checked {
+  background: linear-gradient(135deg, #7c3aed, #ec4899);
+  border-color: rgba(236,72,153,.52);
+}
+
+.settings-check input[type="checkbox"]:checked::after {
+  transform: translateX(20px);
+  background: #fff;
+}
+
+.settings-action,
+.settings-section .small-button {
+  width: 100%;
+  min-height: 42px !important;
+  margin-top: 12px;
+  border-radius: 15px !important;
+}
+
+.settings-status {
+  min-height: 18px;
+  margin: 9px 0 0;
+  color: #a5b4fc;
+  font-size: 12px;
+}
+
+.settings-muted {
+  color: #94a3b8 !important;
+  line-height: 1.45;
+}
+
+.settings-content-v2::-webkit-scrollbar,
+.settings-nav::-webkit-scrollbar {
+  width: 8px;
+}
+
+.settings-content-v2::-webkit-scrollbar-thumb,
+.settings-nav::-webkit-scrollbar-thumb {
+  background: rgba(168,85,247,.34);
+  border-radius: 999px;
+}
+
+@media (max-width: 880px) {
+  .settings-card-v2 {
+    width: min(100vw - 14px, 720px) !important;
+    max-height: calc(100vh - 14px) !important;
+  }
+
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-nav {
+    grid-template-columns: repeat(5, minmax(74px, 1fr));
+    grid-auto-flow: column;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    max-height: none;
+    padding: 10px;
+  }
+
+  .settings-nav-item {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    justify-items: center;
+    text-align: center;
+    min-width: 82px;
+    padding: 9px !important;
+  }
+
+  .settings-nav-item > span {
+    grid-row: auto;
+  }
+
+  .settings-nav-item small {
+    display: none;
+  }
+
+  .settings-content-v2 {
+    grid-template-columns: 1fr !important;
+    max-height: calc(100vh - 190px);
+    padding: 12px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .settings-hero {
+    padding: 18px 16px;
+  }
+
+  .settings-hero-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 15px;
+  }
+
+  .settings-hero h2 {
+    font-size: 21px !important;
+  }
+
+  .settings-nav {
+    grid-template-columns: repeat(5, 78px);
+  }
+
+  .settings-section {
+    padding: 13px !important;
+  }
+}
