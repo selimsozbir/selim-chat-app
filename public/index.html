@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v9.6.0</title>
-  <link rel="stylesheet" href="style.css?v=960" />
+  <title>Selim Chat v9.7.0</title>
+  <link rel="stylesheet" href="style.css?v=970" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -360,9 +360,26 @@
               <div id="titlesList" class="titles-list"></div>
             </div>
 
-            <div class="universe-section">
-              <strong>Son Profil Ziyaretçileri</strong>
-              <div id="profileVisitorsList" class="gamify-list"></div>
+            <div id="feizPersonalityBox" class="universe-section feiz-personality-box">
+              <div class="feiz-personality-head">
+                <div>
+                  <strong>feiz Entity</strong>
+                  <span id="feizMoodText">Mood yükleniyor...</span>
+                </div>
+                <button id="refreshFeizButton" class="small-button" type="button">Yenile</button>
+              </div>
+              <div id="feizNicknamesList" class="feiz-nickname-list"></div>
+              <div id="feizAdminControls" class="feiz-admin-controls hidden">
+                <select id="feizMoodSelect">
+                  <option value="calm">sakin</option>
+                  <option value="aggressive">agresif</option>
+                  <option value="cursed">cursed</option>
+                  <option value="serious">serious</option>
+                  <option value="lore">lore</option>
+                </select>
+                <button id="saveFeizMoodButton" class="small-button" type="button">Mood Kaydet</button>
+              </div>
+              <small>Komut: <b>/feiz mood cursed</b> · sadece admin/owner.</small>
             </div>
           </div>
 
@@ -777,7 +794,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=960"></script>
+  <script src="script.js?v=970"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
