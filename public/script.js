@@ -441,8 +441,13 @@ if (refreshFriendActivityButton) refreshFriendActivityButton.addEventListener('c
 
 
 function updateMobileViewportHeight() {
-  const height = window.visualViewport?.height || window.innerHeight;
+  const vv = window.visualViewport;
+  const height = vv?.height || window.innerHeight;
+  const offsetTop = vv?.offsetTop || 0;
+  const keyboardInset = Math.max(0, Math.round(window.innerHeight - height - offsetTop));
+
   document.documentElement.style.setProperty('--mobile-vvh', `${Math.round(height)}px`);
+  document.documentElement.style.setProperty('--keyboard-inset', `${keyboardInset}px`);
 }
 
 function setMobileKeyboardOpen(open) {
@@ -468,6 +473,21 @@ if (window.visualViewport) {
     }
   });
 }
+
+
+function forceMobileComposerPosition() {
+  if (!isMobileLayout()) return;
+  updateMobileViewportHeight();
+  document.body.classList.toggle('keyboard-open', document.activeElement === messageInput);
+  document.body.classList.toggle('composer-focused', document.activeElement === messageInput);
+  if (document.activeElement === messageInput) {
+    requestAnimationFrame(() => scrollToBottom?.());
+  }
+}
+
+window.visualViewport?.addEventListener('scroll', forceMobileComposerPosition);
+window.visualViewport?.addEventListener('resize', forceMobileComposerPosition);
+window.addEventListener('orientationchange', () => setTimeout(forceMobileComposerPosition, 220));
 
 window.addEventListener('resize', updateMobileViewportHeight);
 document.addEventListener('DOMContentLoaded', updateMobileViewportHeight);
@@ -2145,7 +2165,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '933');
+    url.searchParams.set('v', '934');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
