@@ -342,3 +342,16 @@
     height: 36px;
   }
 }
+
+
+/* v10.6.1 mobile link preview thumbnail */
+@media (max-width: 960px) {
+  .link-preview-card.has-thumb {
+    grid-template-columns: 76px minmax(0,1fr) auto;
+  }
+
+  .link-preview-thumb {
+    width: 76px;
+    height: 50px;
+  }
+}
