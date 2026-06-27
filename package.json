@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.3.7",
-  "description": "Selim Chat v10.3.7 real own bubble detection fix and no header buttons",
+  "version": "10.3.8",
+  "description": "Selim Chat v10.3.8 login send fix after header button removal",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
