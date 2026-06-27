@@ -1954,7 +1954,7 @@ app.post('/api/login', async (req, res) => {
     const password = String(req.body.password || '');
 
     const result = await pool.query(
-      'SELECT id, username, display_name, password_hash, avatar_url, bio, global_role, is_banned, ban_reason, last_seen FROM users WHERE LOWER(username) = LOWER($1)',
+      'SELECT id, username, display_name, password_hash, avatar_url, bio, global_role, presence_status, custom_status, story_text, story_expires_at, is_banned, ban_reason, last_seen FROM users WHERE LOWER(username) = LOWER($1)',
       [username]
     );
 
@@ -4345,6 +4345,34 @@ io.on('connection', (socket) => {
     }
   });
 
+
+  socket.on('presence_update', async ({ presenceStatus, customStatus } = {}) => {
+    try {
+      const presence = cleanPresenceStatus(presenceStatus);
+      const custom = cleanText(customStatus || '', 80);
+      await pool.query(
+        `UPDATE users SET presence_status = $1, custom_status = $2, last_active = CURRENT_TIMESTAMP WHERE id = $3`,
+        [presence, custom, socket.user.id]
+      );
+
+      const socketSet = userSockets.get(String(socket.user.id));
+      if (socketSet) {
+        for (const sid of socketSet) {
+          const entry = onlineUsers.get(sid);
+          if (entry) {
+            entry.presence_status = presence;
+            entry.custom_status = custom;
+          }
+        }
+      }
+
+      for (const roomName of new Set(Array.from(onlineUsers.values()).map(u => u.room).filter(Boolean))) {
+        await updateRoomUsers(roomName);
+      }
+    } catch (error) {
+      console.error('Presence socket update error:', error);
+    }
+  });
 
   socket.on('room_messages_read', async ({ room, messageIds } = {}) => {
     try {
