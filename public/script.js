@@ -539,22 +539,24 @@ messageForm.addEventListener('submit', (event) => {
 
   messageInput.value = '';
   messageInput.focus();
+  setTimeout(() => {
+    if (document.getElementById('fiveEggLayer')) clearFiveEggClasses();
+  }, 6500);
 });
 
 messageInput.addEventListener('keydown', (event) => {
   if (event.key !== 'Enter') return;
+  if (event.shiftKey) return;
 
-  const settings = getLocalSettings();
-  if (!settings.enterSend && !event.ctrlKey && !event.metaKey) {
-    event.preventDefault();
-    addSystemMessage('Enter ile gönder kapalı. Göndermek için Ctrl+Enter kullan veya ayarlardan aç.');
-    return;
-  }
+  // Mention seçimi açıksa Enter önce mention seçsin, mesaj göndermesin.
+  if (mentionPopup && !mentionPopup.classList.contains('hidden')) return;
 
-  if (!settings.enterSend && (event.ctrlKey || event.metaKey)) {
-    event.preventDefault();
-    messageForm.requestSubmit();
-  }
+  event.preventDefault();
+
+  const text = messageInput.value.trim();
+  if (!text) return;
+
+  messageForm.requestSubmit();
 });
 
 messageInput.addEventListener('input', () => {
@@ -1862,7 +1864,7 @@ function addDmMessage(message) {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '888');
+    url.searchParams.set('v', '889');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -4333,6 +4335,7 @@ function addGroupMessage(message) {
 /* 5ECROPOLIS EASTER EGGS */
 
 let fiveEggTimeout = null;
+let fiveEggSafetyTimeout = null;
 const FIVE_EGG_COMMANDS = ['/serbia', '/limbo', '/vertex', '/rome', '/egypt', '/anitkabir', '/cat', '/reset', '/rift', '/5ecropolis', '/selim', '/xara', '/nico', '/yasin', '/jung', '/fetullah', '/blake', '/feiz', '/pnico', '/pyasin', '/ataturk'];
 
 function getFiveEggLayer() {
@@ -4344,33 +4347,51 @@ function getFiveEggLayer() {
     document.body.appendChild(layer);
   }
   layer.classList.remove('hidden');
+  layer.style.display = 'grid';
+  layer.style.opacity = '1';
   return layer;
 }
 
 function clearFiveEggClasses() {
   clearTimeout(fiveEggTimeout);
+  clearTimeout(fiveEggSafetyTimeout);
   fiveEggTimeout = null;
+  fiveEggSafetyTimeout = null;
 
-  document.body.classList.remove('egg-serbia', 'egg-limbo', 'egg-vertex', 'egg-rome', 'egg-egypt', 'egg-anitkabir', 'egg-cat', 'egg-reset', 'egg-rift', 'egg-5ecropolis', 'egg-selim', 'egg-xara', 'egg-nico', 'egg-yasin', 'egg-jung', 'egg-fetullah', 'egg-blake', 'egg-feiz', 'egg-pnico', 'egg-pyasin', 'egg-ataturk');
+  Array.from(document.body.classList)
+    .filter((cls) => cls.startsWith('egg-'))
+    .forEach((cls) => document.body.classList.remove(cls));
 
   const layer = document.getElementById('fiveEggLayer');
   if (layer) {
     layer.innerHTML = '';
     layer.classList.add('hidden');
-    layer.removeAttribute('style');
+    layer.style.display = 'none';
+    layer.style.opacity = '0';
+    layer.remove();
   }
 }
 
 function scheduleFiveEggClear(ms = 3800) {
   clearTimeout(fiveEggTimeout);
-  fiveEggTimeout = setTimeout(clearFiveEggClasses, ms);
-  setTimeout(() => {
-    const layer = document.getElementById('fiveEggLayer');
-    if (layer && !layer.classList.contains('hidden')) clearFiveEggClasses();
-  }, ms + 1400);
+  clearTimeout(fiveEggSafetyTimeout);
+
+  const safeMs = Math.max(1200, Math.min(Number(ms) || 3800, 5200));
+  fiveEggTimeout = setTimeout(clearFiveEggClasses, safeMs);
+
+  // Sert güvenlik: CSS animasyonu takılsa bile kapanır.
+  fiveEggSafetyTimeout = setTimeout(clearFiveEggClasses, safeMs + 900);
 }
 
-document.addEventListener('keydown', (event) => {
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) clearFiveEggClasses();
+});
+
+window.addEventListener('blur', () => {
+  setTimeout(clearFiveEggClasses, 800);
+});
+
+document.addEventListener('keydown' , (event) => {
   if (event.key === 'Escape') clearFiveEggClasses();
 });
 
