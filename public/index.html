@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v10.6.1</title>
-  <link rel="stylesheet" href="style.css?v=1061" />
+  <title>Selim Chat v10.7.0</title>
+  <link rel="stylesheet" href="style.css?v=1070" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -599,6 +599,26 @@
         <div><span>Favori Egg</span><strong id="profileFavoriteEgg">/serbia</strong></div>
       </div>
 
+
+      <div class="profile-activity-box">
+        <div class="profile-activity-head">
+          <div>
+            <h3>Aktivite Takvimi</h3>
+            <p>Son 30 gün mesaj aktivitesi</p>
+          </div>
+          <span id="profileActivityStreak" class="activity-streak-pill">0 gün streak</span>
+        </div>
+
+        <div class="profile-activity-stats">
+          <div><strong id="profileActivityTotal">0</strong><span>30 gün mesaj</span></div>
+          <div><strong id="profileActivityActiveDays">0</strong><span>aktif gün</span></div>
+          <div><strong id="profileActivityBestDay">-</strong><span>en aktif gün</span></div>
+        </div>
+
+        <div id="profileActivityGrid" class="activity-calendar-grid" aria-label="Son 30 gün aktivite takvimi"></div>
+        <div id="profileActivityTopDays" class="activity-top-days"></div>
+      </div>
+
       <div class="profile-about-box">
         <div class="profile-about-head">
           <h3>Hakkında</h3>
@@ -945,6 +965,6 @@
 
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=1061"></script>
+  <script src="script.js?v=1070"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div></body>
 </html>
