@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.8.0",
-  "description": "Selim Chat v10.8.0 chat replay story decisions companion pet",
+  "version": "10.8.1",
+  "description": "Selim Chat v10.8.1 replay command story poll inventory companion fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
