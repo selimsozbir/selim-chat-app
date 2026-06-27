@@ -259,6 +259,13 @@ const profileCoverFileName = document.getElementById('profileCoverFileName');
 const profileRoleBadge = document.getElementById('profileRoleBadge');
 const profileCardV2 = document.getElementById('profileCardV2');
 const profileAboutText = document.getElementById('profileAboutText');
+const profileActivityGrid = document.getElementById('profileActivityGrid');
+const profileActivityTotal = document.getElementById('profileActivityTotal');
+const profileActivityActiveDays = document.getElementById('profileActivityActiveDays');
+const profileActivityBestDay = document.getElementById('profileActivityBestDay');
+const profileActivityStreak = document.getElementById('profileActivityStreak');
+const profileActivityTopDays = document.getElementById('profileActivityTopDays');
+
 const profileAboutMeta = document.getElementById('profileAboutMeta');
 const profileActionButtons = document.getElementById('profileActionButtons');
 const profileMessageButton = document.getElementById('profileMessageButton');
@@ -2527,7 +2534,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1061');
+    url.searchParams.set('v', '1070');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -5573,6 +5580,93 @@ async function checkForUnlockedBadges(force = false) {
   } catch {}
 }
 
+
+function activityDateLabel(dateText, short = false) {
+  try {
+    const date = new Date(`${dateText}T12:00:00`);
+    return date.toLocaleDateString('tr-TR', short ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'long' });
+  } catch {
+    return dateText || '-';
+  }
+}
+
+function activityIntensity(count = 0, max = 0) {
+  if (!count) return 0;
+  if (max <= 1) return 1;
+  const ratio = count / max;
+  if (ratio >= .80) return 4;
+  if (ratio >= .50) return 3;
+  if (ratio >= .25) return 2;
+  return 1;
+}
+
+function renderActivityCalendar(data) {
+  if (!profileActivityGrid) return;
+
+  const daily = Array.isArray(data?.daily) ? data.daily : [];
+  const summary = data?.summary || {};
+  const max = Math.max(1, ...daily.map((day) => Number(day.count || 0)));
+
+  profileActivityGrid.innerHTML = '';
+
+  daily.forEach((day) => {
+    const count = Number(day.count || 0);
+    const cell = document.createElement('div');
+    cell.className = 'activity-day';
+    cell.dataset.level = String(activityIntensity(count, max));
+    cell.title = `${activityDateLabel(day.date)} · ${count} mesaj`;
+    cell.innerHTML = `<span>${activityDateLabel(day.date, true)}</span><strong>${count}</strong>`;
+    profileActivityGrid.appendChild(cell);
+  });
+
+  if (profileActivityTotal) profileActivityTotal.textContent = Number(summary.total || 0).toLocaleString('tr-TR');
+  if (profileActivityActiveDays) profileActivityActiveDays.textContent = Number(summary.active_days || 0).toLocaleString('tr-TR');
+
+  const best = summary.best_day;
+  if (profileActivityBestDay) {
+    profileActivityBestDay.textContent = best ? `${activityDateLabel(best.date, true)} · ${Number(best.count || 0)}` : '-';
+  }
+
+  if (profileActivityStreak) {
+    const current = Number(summary.current_streak || 0);
+    const longest = Number(summary.longest_streak || 0);
+    profileActivityStreak.textContent = `${current} gün streak`;
+    profileActivityStreak.title = `En uzun streak: ${longest} gün`;
+    profileActivityStreak.dataset.active = current > 0 ? 'true' : 'false';
+  }
+
+  if (profileActivityTopDays) {
+    const topDays = Array.isArray(summary.top_days) ? summary.top_days : [];
+    profileActivityTopDays.innerHTML = topDays.length
+      ? topDays.map((day, idx) => `<span><b>#${idx + 1}</b> ${escapeHtml(activityDateLabel(day.date, true))} · ${Number(day.count || 0)} mesaj</span>`).join('')
+      : '<span>Son 30 günde aktivite yok.</span>';
+  }
+}
+
+function renderActivityCalendarLoading() {
+  if (!profileActivityGrid) return;
+  profileActivityGrid.innerHTML = Array.from({ length: 30 }, (_, index) => `<div class="activity-day loading" data-level="0"><span>${index + 1}</span><strong>—</strong></div>`).join('');
+  if (profileActivityTotal) profileActivityTotal.textContent = '—';
+  if (profileActivityActiveDays) profileActivityActiveDays.textContent = '—';
+  if (profileActivityBestDay) profileActivityBestDay.textContent = '—';
+  if (profileActivityStreak) profileActivityStreak.textContent = 'yükleniyor';
+  if (profileActivityTopDays) profileActivityTopDays.innerHTML = '<span>Aktivite yükleniyor...</span>';
+}
+
+async function loadProfileActivity(userId) {
+  if (!profileActivityGrid || !userId) return;
+  renderActivityCalendarLoading();
+
+  try {
+    const data = await api(`/api/activity/${userId}`);
+    renderActivityCalendar(data);
+  } catch (error) {
+    profileActivityGrid.innerHTML = '<div class="activity-error">Aktivite yüklenemedi.</div>';
+    if (profileActivityTopDays) profileActivityTopDays.innerHTML = `<span>${escapeHtml(error.message)}</span>`;
+  }
+}
+
+
 function renderProfileAbout(profile, stats = {}, isMe = false) {
   if (!profileAboutText || !profileAboutMeta) return;
   const about = profile.bio || (isMe ? 'Burası senin mini hakkında alanın. Ayarlardan bio yazarak kişiselleştirebilirsin.' : 'Bu kullanıcı henüz bir hakkında metni eklememiş.');
@@ -5867,6 +5961,7 @@ async function openProfile(userId) {
 
     const isMe = Number(profile.id) === Number(user.id);
     renderProfileAbout(profile, stats, isMe);
+    loadProfileActivity(profile.id);
     syncProfileActionState(profile, isMe);
     renderAllBadgesPanel(profile, isMe);
     if (profileAllBadgesPanel) profileAllBadgesPanel.classList.add('hidden');
