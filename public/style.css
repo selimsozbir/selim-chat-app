@@ -15784,3 +15784,254 @@ button:hover {
     animation: none !important;
   }
 }
+
+
+/* =========================================================
+   v10.3.5 — Own Bubble Visibility + Premium Media Preview
+   ========================================================= */
+
+/* Kendi mesajın kesin bubble olarak görünsün */
+.message.mine {
+  justify-self: end !important;
+  align-self: flex-end !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+}
+
+.message.mine .msg-bubble {
+  display: block !important;
+  min-width: 42px !important;
+  max-width: min(100%, 720px) !important;
+  color: #ffffff !important;
+  background:
+    linear-gradient(135deg, rgba(0, 122, 255, 0.98) 0%, rgba(88, 86, 214, 0.96) 58%, rgba(175, 82, 222, 0.94) 100%) !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  box-shadow:
+    0 12px 32px rgba(0, 122, 255, .24),
+    inset 0 1px 0 rgba(255,255,255,.16) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.message.mine .msg-bubble *,
+.message.mine .text,
+.message.mine .meta,
+.message.mine .read-status,
+.message.mine a {
+  color: #ffffff !important;
+}
+
+/* Premium bubble shape + tail */
+.msg-bubble {
+  border-radius: 21px 21px 21px 9px !important;
+  clip-path: none !important;
+}
+
+.message.mine .msg-bubble {
+  border-radius: 21px 21px 9px 21px !important;
+}
+
+.message:not(.mine):not(.system) .msg-bubble::before,
+.message.mine .msg-bubble::before {
+  width: 12px !important;
+  height: 12px !important;
+  bottom: 8px !important;
+  border-radius: 4px !important;
+  z-index: -1 !important;
+  box-shadow: none !important;
+}
+
+.message:not(.mine):not(.system) .msg-bubble::before {
+  left: -5px !important;
+  background: linear-gradient(180deg, rgba(23,24,31,.96), rgba(19,20,27,.94)) !important;
+  border-left: 1px solid rgba(255,255,255,.08) !important;
+  border-bottom: 1px solid rgba(255,255,255,.08) !important;
+  border-right: 0 !important;
+  border-top: 0 !important;
+  transform: rotate(45deg) skew(-8deg, -8deg) !important;
+}
+
+.message.mine .msg-bubble::before {
+  right: -5px !important;
+  background: linear-gradient(135deg, rgba(88,86,214,.96), rgba(175,82,222,.94)) !important;
+  border-right: 1px solid rgba(255,255,255,.16) !important;
+  border-top: 1px solid rgba(255,255,255,.16) !important;
+  border-left: 0 !important;
+  border-bottom: 0 !important;
+  transform: rotate(45deg) skew(8deg, 8deg) !important;
+}
+
+/* Feiz tail ve kart da bozulmasın */
+.message.bot-message .msg-bubble::before {
+  background: linear-gradient(180deg, rgba(62,38,109,.96), rgba(27,33,55,.96)) !important;
+  border-color: rgba(139,92,246,.30) !important;
+}
+
+.message.same-sender .msg-bubble {
+  border-radius: 17px !important;
+}
+
+.message.mine.same-sender .msg-bubble {
+  border-radius: 17px !important;
+}
+
+/* iMessage / Linear arası fotoğraf preview */
+.message-media {
+  position: relative !important;
+  margin-top: 10px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  max-width: min(430px, 72vw) !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035)) !important;
+  box-shadow:
+    0 14px 34px rgba(0,0,0,.18),
+    inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+
+.message.mine .message-media {
+  border-color: rgba(255,255,255,.18) !important;
+  background: rgba(255,255,255,.10) !important;
+}
+
+.message-media img,
+.message img {
+  display: block !important;
+  width: 100% !important;
+  max-height: 360px !important;
+  object-fit: cover !important;
+  border-radius: 19px !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  transition: transform 180ms cubic-bezier(.22,1,.36,1), filter 180ms cubic-bezier(.22,1,.36,1) !important;
+}
+
+.message-media img:hover,
+.message img:hover {
+  transform: scale(1.012) !important;
+  filter: brightness(1.045) saturate(1.04) !important;
+}
+
+/* Dosya kartları daha modern */
+.message-file,
+.attachment-card {
+  position: relative !important;
+  max-width: 430px !important;
+  margin-top: 10px !important;
+  padding: 12px 13px !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035)) !important;
+  box-shadow:
+    0 12px 28px rgba(0,0,0,.16),
+    inset 0 1px 0 rgba(255,255,255,.06) !important;
+  overflow: hidden !important;
+}
+
+.message.mine .message-file,
+.message.mine .attachment-card {
+  background: rgba(255,255,255,.13) !important;
+  border-color: rgba(255,255,255,.18) !important;
+}
+
+.message-file::before,
+.attachment-card::before {
+  content: "📎" !important;
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 15px !important;
+  background:
+    linear-gradient(135deg, rgba(0,122,255,.22), rgba(88,86,214,.18)) !important;
+  border: 1px solid rgba(255,255,255,.13) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+
+.message-file a,
+.attachment-card a {
+  color: #f8fafc !important;
+  font-weight: 900 !important;
+  text-decoration: none !important;
+}
+
+.message-file span,
+.attachment-card span,
+.message-file small,
+.attachment-card small {
+  color: rgba(248,250,252,.72) !important;
+}
+
+/* Audio / voice cards: Linear minimal */
+.audio-card,
+.voice-player,
+.message-media audio {
+  max-width: 430px !important;
+}
+
+.audio-card,
+.voice-player {
+  margin-top: 10px !important;
+  padding: 12px !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035)) !important;
+  box-shadow:
+    0 12px 28px rgba(0,0,0,.16),
+    inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+
+.message.mine .audio-card,
+.message.mine .voice-player {
+  background: rgba(255,255,255,.13) !important;
+  border-color: rgba(255,255,255,.18) !important;
+}
+
+.voice-bars span,
+.voice-wave span,
+.audio-wave span {
+  background: rgba(0,122,255,.62) !important;
+}
+
+.message.mine .voice-bars span,
+.message.mine .voice-wave span,
+.message.mine .audio-wave span {
+  background: rgba(255,255,255,.72) !important;
+}
+
+/* Medya-only mesajlarda bubble gereksiz büyümesin ama görünür kalsın */
+.msg-bubble:has(.message-media):not(:has(.text:not(:empty))),
+.msg-bubble:has(.message-file):not(:has(.text:not(:empty))),
+.msg-bubble:has(.attachment-card):not(:has(.text:not(:empty))) {
+  padding: 8px !important;
+}
+
+/* Safari/older fallback: :has desteklemezse normal padding kalır, sorun yok */
+
+/* Mobile */
+@media (max-width: 760px) {
+  .message-media,
+  .message-file,
+  .attachment-card,
+  .audio-card,
+  .voice-player {
+    max-width: min(100%, 78vw) !important;
+    border-radius: 17px !important;
+  }
+
+  .message-media img,
+  .message img {
+    max-height: 280px !important;
+    border-radius: 16px !important;
+  }
+
+  .msg-bubble {
+    border-radius: 18px 18px 18px 8px !important;
+  }
+
+  .message.mine .msg-bubble {
+    border-radius: 18px 18px 8px 18px !important;
+  }
+}
