@@ -24,15 +24,28 @@ const mobileTitle = document.getElementById('mobileTitle');
 const mobileStatus = document.getElementById('mobileStatus');
 const mobileBottomNav = document.getElementById('mobileBottomNav');
 const mobileRoomButton = document.getElementById('mobileRoomButton');
+const mobileServerButton = document.getElementById('mobileServerButton');
 const mobileDmButton = document.getElementById('mobileDmButton');
 const mobileGroupButton = document.getElementById('mobileGroupButton');
 const mobilePanelButton = document.getElementById('mobilePanelButton');
 
 const roomModeButton = document.getElementById('roomModeButton');
+const serverModeButton = document.getElementById('serverModeButton');
 const dmModeButton = document.getElementById('dmModeButton');
 const groupModeButton = document.getElementById('groupModeButton');
 const roomPanel = document.getElementById('roomPanel');
 const friendsPanel = document.getElementById('friendsPanel');
+const serversPanel = document.getElementById('serversPanel');
+const newServerNameInput = document.getElementById('newServerNameInput');
+const newServerDescriptionInput = document.getElementById('newServerDescriptionInput');
+const createServerButton = document.getElementById('createServerButton');
+const serversList = document.getElementById('serversList');
+const serverDetailsBox = document.getElementById('serverDetailsBox');
+const activeServerInfo = document.getElementById('activeServerInfo');
+const newChannelNameInput = document.getElementById('newChannelNameInput');
+const createChannelButton = document.getElementById('createChannelButton');
+const serverChannelsList = document.getElementById('serverChannelsList');
+const serverMembersList = document.getElementById('serverMembersList');
 const groupsPanel = document.getElementById('groupsPanel');
 const newGroupNameInput = document.getElementById('newGroupNameInput');
 const createGroupButton = document.getElementById('createGroupButton');
@@ -224,6 +237,10 @@ let mode = 'login';
 let chatMode = 'room';
 let activeFriend = null;
 let activeGroup = null;
+let servers = [];
+let activeServer = null;
+let activeChannel = null;
+let serverMembers = [];
 let friends = [];
 let groups = [];
 let groupMembers = [];
@@ -388,6 +405,14 @@ dmModeButton.addEventListener('click', () => {
   loadBlocked();
 });
 
+if (serverModeButton) {
+  serverModeButton.addEventListener('click', () => {
+    clearReply();
+    setChatMode('server');
+    loadServers();
+  });
+}
+
 if (groupModeButton) {
   groupModeButton.addEventListener('click', () => {
     clearReply();
@@ -396,6 +421,9 @@ if (groupModeButton) {
     renderNewGroupFriends();
   });
 }
+
+if (createServerButton) createServerButton.addEventListener('click', createServer);
+if (createChannelButton) createChannelButton.addEventListener('click', createServerChannel);
 
 joinRoomButton.addEventListener('click', () => joinRoom(roomInput.value.trim() || 'genel'));
 searchButton.addEventListener('click', searchUsers);
@@ -526,6 +554,13 @@ messageForm.addEventListener('submit', (event) => {
     }
     socket.emit('group_message', { groupId: activeGroup.id, text, type: 'text', replyToId: replyingTo?.id || null });
     clearReply();
+  } else if (chatMode === 'server') {
+    if (!activeServer || !activeChannel) {
+      addSystemMessage('Önce bir sunucu kanalı seç.');
+      return;
+    }
+    socket.emit('chat_message', { text, type: 'text', replyToId: replyingTo?.id || null });
+    clearReply();
   } else {
     socket.emit('chat_message', { text, type: 'text', replyToId: replyingTo?.id || null });
     clearReply();
@@ -557,7 +592,7 @@ messageInput.addEventListener('input', () => {
 
   if (chatMode === 'dm' && activeFriend) {
     socket.emit('dm_typing', { receiverId: activeFriend.id });
-  } else if (chatMode === 'room') {
+  } else if (chatMode === 'room' || chatMode === 'server') {
     socket.emit('typing');
   }
 });
@@ -1107,7 +1142,7 @@ async function startApp() {
   roomInput.value = currentRoom;
   connectSocket();
 
-  await Promise.allSettled([refreshMe(), loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration(), loadGlobalAdminStatus(), loadGroups(), loadGamify()]);
+  await Promise.allSettled([refreshMe(), loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration(), loadGlobalAdminStatus(), loadGroups(), loadServers(), loadGamify()]);
   checkForUnlockedBadges(true);
   updateMessengerUi();
 }
@@ -1139,6 +1174,8 @@ function connectSocket() {
     syncMobileHeader();
     if (chatMode === 'group' && activeGroup) {
       socket.emit('group_join', { groupId: activeGroup.id });
+    } else if (chatMode === 'server' && activeServer && activeChannel) {
+      socket.emit('join', { room: serverRoomName(activeServer.id, activeChannel.id) });
     } else {
       joinRoom(currentRoom);
     }
@@ -1178,8 +1215,12 @@ function connectSocket() {
   });
   socket.on('chat_message', (message) => {
     if (message.sender_id === user.id || message.user_id === user.id) checkForUnlockedBadges();
-    if (chatMode !== 'room') return;
-    if (!message.room || message.room === currentRoom) {
+    const activeRoom = chatMode === 'server' && activeServer && activeChannel
+      ? serverRoomName(activeServer.id, activeChannel.id)
+      : currentRoom;
+
+    if (!['room', 'server'].includes(chatMode)) return;
+    if (!message.room || message.room === activeRoom) {
       addRoomMessage(message);
       maybeRunFiveEggFromMessage(message);
     }
@@ -1357,6 +1398,8 @@ function updateChatHeaderAvatar() {
 
   if (chatMode === 'dm' && activeFriend) {
     label = (activeFriend.display_name || activeFriend.username || '?').charAt(0).toUpperCase();
+  } else if (chatMode === 'server' && activeServer) {
+    label = (activeServer.name || 'S').charAt(0).toUpperCase();
   } else if (chatMode === 'group' && activeGroup) {
     label = (activeGroup.name || 'G').charAt(0).toUpperCase();
   } else if (chatMode === 'room') {
@@ -1378,6 +1421,10 @@ function updateComposerState() {
     disabled = !activeFriend;
     placeholder = activeFriend ? `@${activeFriend.username} kişisine mesaj yaz...` : 'Mesajlaşmak için soldan bir arkadaş seç...';
     hint = activeFriend ? 'DM açık' : 'DM seçilmedi';
+  } else if (chatMode === 'server') {
+    disabled = !(activeServer && activeChannel);
+    placeholder = activeServer && activeChannel ? `#${activeChannel.name} kanalına mesaj yaz...` : 'Mesajlaşmak için soldan sunucu/kanal seç...';
+    hint = activeServer && activeChannel ? `${activeServer.name} / #${activeChannel.name}` : 'Sunucu kanalı seçilmedi';
   } else if (chatMode === 'group') {
     disabled = !activeGroup;
     placeholder = activeGroup ? `${activeGroup.name} grubuna mesaj yaz...` : 'Mesajlaşmak için soldan bir grup seç...';
@@ -1405,6 +1452,14 @@ function markActiveConversation() {
     document.querySelectorAll(`[data-conversation-type="dm"][data-user-id="${activeFriend.id}"]`).forEach((el) => el.classList.add('active'));
   }
 
+  if (chatMode === 'server' && activeServer) {
+    document.querySelectorAll(`[data-conversation-type="server"][data-server-id="${activeServer.id}"]`).forEach((el) => el.classList.add('active'));
+  }
+
+  if (chatMode === 'server' && activeChannel) {
+    document.querySelectorAll(`[data-conversation-type="server-channel"][data-channel-id="${activeChannel.id}"]`).forEach((el) => el.classList.add('active'));
+  }
+
   if (chatMode === 'group' && activeGroup) {
     document.querySelectorAll(`[data-conversation-type="group"][data-group-id="${activeGroup.id}"]`).forEach((el) => el.classList.add('active'));
   }
@@ -1417,10 +1472,12 @@ function setChatMode(nextMode) {
   document.body.dataset.chatMode = chatMode;
 
   roomModeButton.classList.toggle('active', chatMode === 'room');
+  serverModeButton?.classList.toggle('active', chatMode === 'server');
   dmModeButton.classList.toggle('active', chatMode === 'dm');
   if (groupModeButton) groupModeButton.classList.toggle('active', chatMode === 'group');
 
   roomPanel.classList.toggle('hidden', chatMode !== 'room');
+  if (serversPanel) serversPanel.classList.toggle('hidden', chatMode !== 'server');
   friendsPanel.classList.toggle('hidden', chatMode !== 'dm');
   if (groupsPanel) groupsPanel.classList.toggle('hidden', chatMode !== 'group');
 
@@ -1433,6 +1490,11 @@ function setChatMode(nextMode) {
     activeGroup = null;
     chatTitle.textContent = `# ${currentRoom}`;
     loadOldRoomMessages(currentRoom);
+  } else if (chatMode === 'server') {
+    activeFriend = null;
+    activeGroup = null;
+    chatTitle.textContent = activeServer && activeChannel ? `${activeServer.name} / #${activeChannel.name}` : 'Sunucu seç';
+    if (!activeServer) addSystemMessage('Sunucu için soldan sunucu seç veya yeni sunucu kur.');
   } else if (chatMode === 'dm') {
     activeGroup = null;
     chatTitle.textContent = activeFriend ? `DM: ${activeFriend.username}` : 'DM seç';
@@ -1454,9 +1516,11 @@ async function joinRoom(room) {
   chatMode = 'room';
   roomModeButton.classList.add('active');
   dmModeButton.classList.remove('active');
+  serverModeButton?.classList.remove('active');
   if (groupModeButton) groupModeButton.classList.remove('active');
   roomPanel.classList.remove('hidden');
   friendsPanel.classList.add('hidden');
+  if (serversPanel) serversPanel.classList.add('hidden');
   if (groupsPanel) groupsPanel.classList.add('hidden');
 
   roomInput.value = currentRoom;
@@ -1530,7 +1594,8 @@ function addRoomMessage(message) {
     edited: Boolean(message.edited_at),
     deleted: Boolean(message.deleted_at),
     bubble_theme: message.bubble_theme,
-    name_effect: message.name_effect
+    name_effect: message.name_effect,
+    frame_theme: message.frame_theme || message.active_profile_frame
   });
 }
 
@@ -1827,7 +1892,8 @@ function addDmMessage(message) {
     deleted: Boolean(message.deleted_at),
     read: Boolean(message.read_at),
     bubble_theme: message.bubble_theme,
-    name_effect: message.name_effect
+    name_effect: message.name_effect,
+    frame_theme: message.frame_theme || message.active_profile_frame
   });
 }
 
@@ -1836,7 +1902,7 @@ function addDmMessage(message) {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '843');
+    url.searchParams.set('v', '860');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2336,12 +2402,13 @@ function renderUsers(users) {
   loadModeration();
 }
 
-function addMessage({ type, id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read, bubble_theme, name_effect }) {
+function addMessage({ type, id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read, bubble_theme, name_effect, frame_theme }) {
   const localSettings = getLocalSettings();
   const normalizedUsername = String(username || '').toLowerCase();
   const isBotMessage = ['feiz', 'selimbot', 'bot'].includes(normalizedUsername);
   const activeBubble = bubble_theme || (mine ? user?.active_bubble_theme : '') || '';
   const activeName = name_effect || (mine ? user?.active_name_effect : '') || '';
+  const activeFrame = frame_theme || (mine ? user?.active_profile_frame : '') || '';
 
   if (isBotMessage && localSettings.botHide) return;
 
@@ -2350,7 +2417,7 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
   const sameSender = senderKey === lastRenderedSenderKey && type === lastRenderedMessageType;
 
   const div = document.createElement('div');
-  div.className = `message ${mine ? 'mine' : ''} ${isBotMessage ? 'bot-message' : ''} ${sameSender ? 'same-sender' : ''} ${activeBubble ? 'cosmetic-' + activeBubble : ''} ${activeName ? 'namefx-' + activeName : ''}`;
+  div.className = `message ${mine ? 'mine' : ''} ${isBotMessage ? 'bot-message' : ''} ${sameSender ? 'same-sender' : ''} ${activeBubble ? 'cosmetic-' + activeBubble : ''} ${activeName ? 'namefx-' + activeName : ''} ${activeFrame ? 'framefx-' + activeFrame : ''}`;
   div.dataset.type = type;
   div.dataset.id = id;
 
@@ -2358,7 +2425,7 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
   lastRenderedMessageType = type;
 
   const avatar = document.createElement(avatar_url ? 'img' : 'div');
-  avatar.className = 'msg-avatar';
+  avatar.className = `msg-avatar ${activeFrame ? 'avatar-frame ' + activeFrame : ''}`;
   if (avatar_url) {
     avatar.src = avatar_url;
     avatar.alt = username;
@@ -3628,6 +3695,7 @@ async function openProfile(userId) {
     const stats = profile.stats || {};
     activeProfileUser = profile;
 
+    profileAvatar.className = `profile-avatar-shell ${profile.active_profile_frame ? 'avatar-frame ' + profile.active_profile_frame : ''}`;
     profileAvatar.innerHTML = avatarHtml(profile.username, profile.avatar_url, 'profile-avatar-inner');
     profileUsername.textContent = displayName(profile);
     profileStatus.textContent = `${formatPresence(profile)} · @${profile.username}`;
@@ -3849,6 +3917,212 @@ function formatPresence(profile) {
     hour: '2-digit',
     minute: '2-digit'
   })}`;
+}
+
+
+
+function serverRoomName(serverId, channelId) {
+  return `srv_${Number(serverId)}_${Number(channelId)}`;
+}
+
+async function loadServers() {
+  if (!serversList) return;
+
+  try {
+    const data = await api('/api/servers');
+    servers = data.servers || [];
+    renderServers();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+function renderServers() {
+  if (!serversList) return;
+  serversList.innerHTML = '';
+
+  if (!servers.length) {
+    serversList.innerHTML = '<div class="mini-item">Henüz sunucu yok. İlk sunucuyu kur.</div>';
+    return;
+  }
+
+  servers.forEach((server) => {
+    const item = document.createElement('div');
+    item.className = 'mini-item conversation-item';
+    item.dataset.conversationType = 'server';
+    item.dataset.serverId = server.id;
+    item.innerHTML = `<div class="mini-left">${avatarHtml(server.name, server.avatar_url)}<div><strong>${escapeHtml(server.name)}</strong><span>${server.member_count || 1} üye • ${server.channel_count || 1} kanal • ${server.my_role}</span></div></div>`;
+    item.onclick = () => openServer(server);
+    serversList.appendChild(item);
+  });
+
+  markActiveConversation();
+}
+
+async function createServer() {
+  const name = newServerNameInput?.value.trim();
+  const description = newServerDescriptionInput?.value.trim() || '';
+
+  if (!name) {
+    addSystemMessage('Sunucu adı yaz.');
+    return;
+  }
+
+  try {
+    const data = await api('/api/servers', {
+      method: 'POST',
+      body: JSON.stringify({ name, description })
+    });
+
+    newServerNameInput.value = '';
+    if (newServerDescriptionInput) newServerDescriptionInput.value = '';
+    await loadServers();
+    await openServer(data.server);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function openServer(server) {
+  activeServer = server;
+  activeFriend = null;
+  activeGroup = null;
+  chatMode = 'server';
+  document.body.dataset.chatMode = 'server';
+
+  roomModeButton.classList.remove('active');
+  serverModeButton?.classList.add('active');
+  dmModeButton.classList.remove('active');
+  if (groupModeButton) groupModeButton.classList.remove('active');
+
+  roomPanel.classList.add('hidden');
+  serversPanel?.classList.remove('hidden');
+  friendsPanel.classList.add('hidden');
+  groupsPanel?.classList.add('hidden');
+
+  if (serverDetailsBox) serverDetailsBox.classList.remove('hidden');
+  messagesEl.innerHTML = '';
+  resetMessageGrouping();
+  typingText.textContent = '';
+  chatTitle.textContent = `${server.name}`;
+
+  await loadServerDetails(server.id);
+
+  const firstChannel = activeChannel || document.querySelector('[data-channel-id]')?.dataset.channelObject;
+  if (!activeChannel && window.__serverChannels?.length) {
+    await openServerChannel(window.__serverChannels[0]);
+  } else if (activeChannel) {
+    await openServerChannel(activeChannel);
+  }
+
+  syncMobileHeader();
+  updateMessengerUi();
+}
+
+async function loadServerDetails(serverId) {
+  try {
+    const data = await api(`/api/servers/${serverId}`);
+    activeServer = data.server;
+    window.__serverChannels = data.channels || [];
+    serverMembers = data.members || [];
+
+    if (activeServerInfo) {
+      activeServerInfo.innerHTML = `<div class="mini-item"><div class="mini-left">${avatarHtml(activeServer.name, activeServer.avatar_url)}<div><strong>${escapeHtml(activeServer.name)}</strong><span>${escapeHtml(activeServer.description || 'Açıklama yok')} • rolün: ${activeServer.my_role}</span></div></div></div>`;
+    }
+
+    renderServerChannels(window.__serverChannels);
+    renderServerMembers();
+
+    if (!activeChannel && window.__serverChannels.length) activeChannel = window.__serverChannels[0];
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+function renderServerChannels(channels) {
+  if (!serverChannelsList) return;
+  serverChannelsList.innerHTML = '';
+
+  if (!channels.length) {
+    serverChannelsList.innerHTML = '<div class="mini-item">Kanal yok.</div>';
+    return;
+  }
+
+  channels.forEach((channel) => {
+    const item = document.createElement('div');
+    item.className = 'mini-item conversation-item';
+    item.dataset.conversationType = 'server-channel';
+    item.dataset.channelId = channel.id;
+    item.innerHTML = `<div class="mini-left"><div class="mini-avatar">#</div><div><strong>#${escapeHtml(channel.name)}</strong><span>${escapeHtml(channel.kind || 'text')}</span></div></div>`;
+    item.onclick = () => openServerChannel(channel);
+    serverChannelsList.appendChild(item);
+  });
+}
+
+function renderServerMembers() {
+  if (!serverMembersList) return;
+  serverMembersList.innerHTML = '';
+
+  if (!serverMembers.length) {
+    serverMembersList.innerHTML = '<div class="mini-item">Üye yok.</div>';
+    return;
+  }
+
+  serverMembers.forEach((member) => {
+    const item = document.createElement('div');
+    item.className = 'mini-item';
+    item.innerHTML = `<div class="mini-left">${avatarHtml(member.display_name || member.username, member.avatar_url)}<div><strong>${escapeHtml(member.display_name || member.username)}</strong><span>${member.online ? 'Çevrimiçi' : formatPresence(member)} • ${escapeHtml(member.role || 'member')}</span></div></div>`;
+    item.onclick = () => openProfile(member.id);
+    serverMembersList.appendChild(item);
+  });
+}
+
+async function createServerChannel() {
+  if (!activeServer) {
+    addSystemMessage('Önce sunucu seç.');
+    return;
+  }
+
+  const name = newChannelNameInput?.value.trim();
+  if (!name) {
+    addSystemMessage('Kanal adı yaz.');
+    return;
+  }
+
+  try {
+    const data = await api(`/api/servers/${activeServer.id}/channels`, {
+      method: 'POST',
+      body: JSON.stringify({ name })
+    });
+
+    if (newChannelNameInput) newChannelNameInput.value = '';
+    await loadServerDetails(activeServer.id);
+    await openServerChannel(data.channel);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function openServerChannel(channel) {
+  if (!activeServer || !channel) return;
+
+  activeChannel = channel;
+  chatMode = 'server';
+  document.body.dataset.chatMode = 'server';
+  chatTitle.textContent = `${activeServer.name} / #${channel.name}`;
+  messagesEl.innerHTML = '';
+  resetMessageGrouping();
+  typingText.textContent = '';
+
+  const room = serverRoomName(activeServer.id, channel.id);
+  currentRoom = room;
+
+  if (socket && socket.connected) socket.emit('join', { room });
+  await loadOldRoomMessages(room);
+  markActiveConversation();
+  updateMessengerUi();
+
+  if (window.innerWidth <= 760) document.body.classList.remove('mobile-sidebar-open');
 }
 
 
@@ -4172,7 +4446,8 @@ function addGroupMessage(message) {
     edited: message.edited_at,
     deleted: message.deleted_at,
     bubble_theme: message.bubble_theme,
-    name_effect: message.name_effect
+    name_effect: message.name_effect,
+    frame_theme: message.frame_theme || message.active_profile_frame
   });
 }
 
