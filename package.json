@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.3.6",
-  "description": "Selim Chat v10.3.6 force own bubble style fix",
+  "version": "10.3.7",
+  "description": "Selim Chat v10.3.7 real own bubble detection fix and no header buttons",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
