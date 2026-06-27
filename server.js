@@ -316,13 +316,55 @@ function buildProfileBadges({ user, stats, xp = 0, shards = 0, level = 1 }) {
 }
 
 async function rewardUserActivity(userId, xpAmount = 5, shardAmount = 1) {
+  const before = await pool.query('SELECT xp, shards FROM users WHERE id = $1', [userId]);
+  const oldXp = Number(before.rows[0]?.xp || 0);
+  const oldLevel = profileLevelFromXp(oldXp);
+  const newXp = oldXp + Number(xpAmount || 0);
+  const newLevel = profileLevelFromXp(newXp);
+
+  let levelRewardShards = 0;
+  const awardedLevels = [];
+
+  if (newLevel > oldLevel) {
+    for (let level = oldLevel + 1; level <= newLevel; level += 1) {
+      const reward = Math.min(2500, 150 + (level * 75));
+      const inserted = await pool.query(
+        `INSERT INTO user_level_rewards (user_id, level, shards)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (user_id, level) DO NOTHING
+         RETURNING level, shards`,
+        [userId, level, reward]
+      );
+
+      if (inserted.rows.length) {
+        levelRewardShards += reward;
+        awardedLevels.push({ level, shards: reward });
+      }
+    }
+  }
+
   await pool.query(
     `UPDATE users
      SET xp = COALESCE(xp, 0) + $1,
          shards = COALESCE(shards, 0) + $2
      WHERE id = $3`,
-    [xpAmount, shardAmount, userId]
+    [Number(xpAmount || 0), Number(shardAmount || 0) + levelRewardShards, userId]
   );
+
+  for (const reward of awardedLevels) {
+    await logShardTransaction(userId, reward.shards, 'level_reward', `Level ${reward.level} ödülü`, { level: reward.level, xp_after: newXp });
+  }
+
+  if (awardedLevels.length) {
+    emitToUser(userId, 'level_reward', {
+      levels: awardedLevels,
+      total_shards: levelRewardShards,
+      new_level: newLevel,
+      xp: newXp
+    });
+  }
+
+  return { xp: newXp, level: newLevel, level_rewards: awardedLevels, level_reward_shards: levelRewardShards };
 }
 
 
@@ -357,11 +399,11 @@ async function addUniverseEnergy(amount = 1) {
 }
 
 const LIVE_EVENT_TYPES = [
-  { key: 'serbia_rift', name: 'Serbia Rift', icon: '🌀', theme: 'serbia', shards: 35, xp: 25, title: 'Rift Survivor', item: ['serbia_key', 'Serbia Rift Key'] },
-  { key: 'limbo_storm', name: 'Limbo Storm', icon: '⚫', theme: 'limbo', shards: 30, xp: 30, title: 'Limbo Walker', item: ['limbo_fragment', 'Limbo Fragment'] },
-  { key: 'rome_simulation', name: 'Rome Simulation', icon: '🏛️', theme: 'rome', shards: 40, xp: 20, title: 'Rome Glitch', item: ['rome_coin', 'Rome Coin'] },
-  { key: 'egypt_signal', name: 'Egypt Signal', icon: '𓂀', theme: 'egypt', shards: 45, xp: 18, title: 'Scarab Finder', item: ['golden_scarab', 'Golden Scarab'] },
-  { key: 'vertex_breach', name: 'VERTEX Breach', icon: '🔴', theme: 'vertex', shards: 55, xp: 35, title: 'Vertex Witness', item: ['vertex_token', 'Vertex Token'] }
+  { key: 'serbia_rift', name: 'Serbia Rift', icon: '🌀', theme: 'serbia', shards: 4, xp: 18, title: 'Rift Survivor', item: ['serbia_key', 'Serbia Rift Key'] },
+  { key: 'limbo_storm', name: 'Limbo Storm', icon: '⚫', theme: 'limbo', shards: 3, xp: 20, title: 'Limbo Walker', item: ['limbo_fragment', 'Limbo Fragment'] },
+  { key: 'rome_simulation', name: 'Rome Simulation', icon: '🏛️', theme: 'rome', shards: 4, xp: 16, title: 'Rome Glitch', item: ['rome_coin', 'Rome Coin'] },
+  { key: 'egypt_signal', name: 'Egypt Signal', icon: '𓂀', theme: 'egypt', shards: 5, xp: 15, title: 'Scarab Finder', item: ['golden_scarab', 'Golden Scarab'] },
+  { key: 'vertex_breach', name: 'VERTEX Breach', icon: '🔴', theme: 'vertex', shards: 6, xp: 22, title: 'Vertex Witness', item: ['vertex_token', 'Vertex Token'] }
 ];
 
 function randomLiveEventType() {
@@ -404,7 +446,7 @@ async function startLiveEvent(room = null, source = 'random') {
 
   const payload = {
     event,
-    text: `${event.icon} ${event.name} başladı! 10 dakika boyunca mesaj atanlara bonus var.`
+    text: `${event.icon} ${event.name} başladı! 10 dakika boyunca mesajlara küçük bonus var.`
   };
 
   if (room) io.to(room).emit('live_event_started', payload);
@@ -434,8 +476,8 @@ async function createPortalDrop(room = null, forcedType = null) {
     name: `${type.name} Portal`,
     icon: type.icon,
     theme: type.theme,
-    reward_shards: 120 + Math.floor(Math.random() * 181),
-    reward_xp: 35 + Math.floor(Math.random() * 50),
+    reward_shards: 20 + Math.floor(Math.random() * 46),
+    reward_xp: 20 + Math.floor(Math.random() * 31),
     item: type.item,
     title: type.title,
     expires_at: Date.now() + 45 * 1000
@@ -1569,6 +1611,17 @@ async function initDatabase() {
       item_type VARCHAR(40) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(user_id, item_id)
+    );
+  `);
+
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_level_rewards (
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      level INTEGER NOT NULL,
+      shards INTEGER NOT NULL DEFAULT 0,
+      claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, level)
     );
   `);
 
@@ -3461,7 +3514,7 @@ app.post('/api/market/equip', authMiddleware, async (req, res) => {
 
     await pool.query(`UPDATE users SET ${column} = $1 WHERE id = $2`, [itemId, req.user.id]);
     const me = await pool.query(
-      `SELECT id, username, display_name, avatar_url, bio, global_role, last_seen,
+      `SELECT id, username, display_name, avatar_url, bio, global_role, presence_status, custom_status, story_text, story_expires_at, last_seen,
               profile_cover_url, profile_color, favorite_egg, profile_visible_badges,
               active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards
        FROM users WHERE id = $1`,
@@ -4294,7 +4347,7 @@ io.on('connection', (socket) => {
 
       await rewardUserActivity(socket.user.id, 5, 1);
       await maybeRememberChatMoment({ userId: socket.user.id, room, username: socket.user.username, text });
-      await addUniverseEnergy(2);
+      await addUniverseEnergy(1);
       await maybeRewardLiveEventMessage(socket.user.id, room);
 
       const avatarResult = await pool.query('SELECT avatar_url, display_name, username, active_bubble_theme, active_name_effect, active_profile_frame FROM users WHERE id = $1', [socket.user.id]);
@@ -4823,20 +4876,20 @@ function startUniverseSchedulers() {
 
   setInterval(async () => {
     try {
-      if (Math.random() < 0.35) await createPortalDrop(null);
+      if (Math.random() < 0.20) await createPortalDrop(null);
     } catch (error) {
       console.error('Portal scheduler error:', error);
     }
-  }, 7 * 60 * 1000);
+  }, 15 * 60 * 1000);
 
   setInterval(async () => {
     try {
       const state = await getUniverseState();
-      if (!state.active_event && Math.random() < 0.40) await startLiveEvent(null, 'scheduler');
+      if (!state.active_event && Math.random() < 0.25) await startLiveEvent(null, 'scheduler');
     } catch (error) {
       console.error('Live event scheduler error:', error);
     }
-  }, 12 * 60 * 1000);
+  }, 25 * 60 * 1000);
 
   setInterval(async () => {
     try {
