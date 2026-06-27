@@ -16035,3 +16035,146 @@ button:hover {
     border-radius: 18px 18px 8px 18px !important;
   }
 }
+
+
+/* =========================================================
+   v10.3.6 — FORCE Own Bubble Style Fix
+   Some older cosmetic/default bubble rules were overriding .message.mine.
+   This targets every possible own-bubble selector at the very end.
+   ========================================================= */
+
+/* Kendi mesaj satırı sağa kilitlensin */
+#messages .message.mine,
+.messages .message.mine,
+.message.mine,
+.message.own,
+.message.self {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 38px !important;
+  justify-items: end !important;
+  align-self: flex-end !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Kendi bubble: default/cosmetic ne varsa ez */
+#messages .message.mine > .msg-bubble,
+.messages .message.mine > .msg-bubble,
+#messages .message.mine .msg-bubble,
+.messages .message.mine .msg-bubble,
+.message.mine > .msg-bubble,
+.message.mine .msg-bubble,
+.message.mine .own-bubble,
+.message.own .msg-bubble,
+.message.self .msg-bubble,
+.msg-bubble.own-bubble {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  min-width: 44px !important;
+  max-width: 100% !important;
+  padding: 11px 13px 10px !important;
+  border-radius: 21px 21px 9px 21px !important;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #bf5af2 100%) !important;
+  background-color: #0a84ff !important;
+  border: 1px solid rgba(255,255,255,.20) !important;
+  box-shadow:
+    0 14px 34px rgba(10,132,255,.28),
+    inset 0 1px 0 rgba(255,255,255,.20) !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+/* Kendi mesajın içindeki bütün yazılar beyaz kalsın */
+#messages .message.mine .msg-bubble *,
+.messages .message.mine .msg-bubble *,
+.message.mine .msg-bubble *,
+.message.mine .own-bubble *,
+.msg-bubble.own-bubble *,
+.message.own .msg-bubble *,
+.message.self .msg-bubble * {
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+
+/* Kendi avatar sağda kalsın */
+#messages .message.mine > .msg-avatar,
+.messages .message.mine > .msg-avatar,
+.message.mine > .msg-avatar,
+.message.own > .msg-avatar,
+.message.self > .msg-avatar {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+}
+
+/* Kendi bubble tail'i kesin görünür olsun */
+#messages .message.mine > .msg-bubble::before,
+.messages .message.mine > .msg-bubble::before,
+.message.mine > .msg-bubble::before,
+.message.mine .own-bubble::before,
+.msg-bubble.own-bubble::before,
+.message.own .msg-bubble::before,
+.message.self .msg-bubble::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  right: -5px !important;
+  left: auto !important;
+  bottom: 8px !important;
+  width: 12px !important;
+  height: 12px !important;
+  z-index: -1 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  background: linear-gradient(135deg, #5e5ce6 0%, #bf5af2 100%) !important;
+  background-color: #5e5ce6 !important;
+  border-right: 1px solid rgba(255,255,255,.20) !important;
+  border-top: 1px solid rgba(255,255,255,.20) !important;
+  border-left: 0 !important;
+  border-bottom: 0 !important;
+  border-radius: 4px !important;
+  transform: rotate(45deg) skew(8deg, 8deg) !important;
+  box-shadow: none !important;
+}
+
+/* Aynı kişi peş peşe yazınca kendi mesaj default'a dönmesin */
+#messages .message.mine.same-sender > .msg-bubble,
+.messages .message.mine.same-sender > .msg-bubble,
+.message.mine.same-sender > .msg-bubble,
+.message.mine.same-sender .own-bubble {
+  border-radius: 18px !important;
+  background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #bf5af2 100%) !important;
+}
+
+/* Marketten kuşanılan bubble kozmetikleri kendi mesajı default'a çevirmesin.
+   İleride özel kozmetik istiyorsak bu alanı ayrıca tasarlarız. */
+#messages .message.mine[class*="cosmetic-"] > .msg-bubble,
+.messages .message.mine[class*="cosmetic-"] > .msg-bubble,
+.message.mine[class*="cosmetic-"] > .msg-bubble,
+.message.mine[class*="cosmetic-"] .own-bubble {
+  background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #bf5af2 100%) !important;
+  background-color: #0a84ff !important;
+  border-color: rgba(255,255,255,.20) !important;
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  #messages .message.mine,
+  .messages .message.mine,
+  .message.mine {
+    grid-template-columns: minmax(0, 1fr) 32px !important;
+  }
+
+  #messages .message.mine > .msg-bubble,
+  .messages .message.mine > .msg-bubble,
+  .message.mine > .msg-bubble,
+  .message.mine .own-bubble {
+    border-radius: 18px 18px 8px 18px !important;
+  }
+}
