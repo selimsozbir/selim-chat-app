@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.2.1",
-  "description": "Selim Chat v10.2.1 login, messaging and friends center fix",
+  "version": "10.2.2",
+  "description": "Selim Chat v10.2.2 polished social and friends tabs",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
