@@ -94,12 +94,14 @@ const lootboxTabButton = document.getElementById('lootboxTabButton');
 const marketTabButton = document.getElementById('marketTabButton');
 const leaderboardTabButton = document.getElementById('leaderboardTabButton');
 const casinoTabButton = document.getElementById('casinoTabButton');
+const shardsHistoryTabButton = document.getElementById('shardsHistoryTabButton');
 const dailyPanel = document.getElementById('dailyPanel');
 const questsPanel = document.getElementById('questsPanel');
 const lootboxPanel = document.getElementById('lootboxPanel');
 const marketPanel = document.getElementById('marketPanel');
 const leaderboardPanel = document.getElementById('leaderboardPanel');
 const casinoPanel = document.getElementById('casinoPanel');
+const shardsHistoryPanel = document.getElementById('shardsHistoryPanel');
 const dailyRewardText = document.getElementById('dailyRewardText');
 const dailyStreakText = document.getElementById('dailyStreakText');
 const dailyClaimButton = document.getElementById('dailyClaimButton');
@@ -113,6 +115,9 @@ const lootboxResult = document.getElementById('lootboxResult');
 const lootboxAnimationStage = document.getElementById('lootboxAnimationStage');
 const lootboxHistoryList = document.getElementById('lootboxHistoryList');
 const marketList = document.getElementById('marketList');
+const marketPreviewBox = document.getElementById('marketPreviewBox');
+const shardsHistoryList = document.getElementById('shardsHistoryList');
+const refreshShardsHistoryButton = document.getElementById('refreshShardsHistoryButton');
 const leaderboardList = document.getElementById('leaderboardList');
 const slotBetInput = document.getElementById('slotBetInput');
 const slotSpinButton = document.getElementById('slotSpinButton');
@@ -239,6 +244,8 @@ let groups = [];
 let groupMembers = [];
 let selectedGroupFriendIds = new Set();
 let selectedLootboxCrateId = 'serbia_rift';
+let marketPreviewOriginalUser = null;
+let marketPreviewTimer = null;
 document.body.dataset.chatMode = chatMode;
 
 let socket = null;
@@ -1123,6 +1130,16 @@ function bindGamifyControls() {
   if (casinoTabButton && !casinoTabButton.dataset.bound) {
     casinoTabButton.dataset.bound = '1';
     casinoTabButton.addEventListener('click', () => switchGamifyTab('casino'));
+  }
+
+  if (shardsHistoryTabButton && !shardsHistoryTabButton.dataset.bound) {
+    shardsHistoryTabButton.dataset.bound = '1';
+    shardsHistoryTabButton.addEventListener('click', () => switchGamifyTab('shards'));
+  }
+
+  if (refreshShardsHistoryButton && !refreshShardsHistoryButton.dataset.bound) {
+    refreshShardsHistoryButton.dataset.bound = '1';
+    refreshShardsHistoryButton.addEventListener('click', loadShardsHistory);
   }
 
   if (slotSpinButton && !slotSpinButton.dataset.bound) {
@@ -2165,7 +2182,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '938');
+    url.searchParams.set('v', '940');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2200,15 +2217,18 @@ function switchGamifyTab(tab) {
   marketTabButton?.classList.toggle('active', tab === 'market');
   leaderboardTabButton?.classList.toggle('active', tab === 'leaderboard');
   casinoTabButton?.classList.toggle('active', tab === 'casino');
+  shardsHistoryTabButton?.classList.toggle('active', tab === 'shards');
   dailyPanel?.classList.toggle('hidden', tab !== 'daily');
   questsPanel?.classList.toggle('hidden', tab !== 'quests');
   lootboxPanel?.classList.toggle('hidden', tab !== 'lootbox');
   marketPanel?.classList.toggle('hidden', tab !== 'market');
   leaderboardPanel?.classList.toggle('hidden', tab !== 'leaderboard');
   casinoPanel?.classList.toggle('hidden', tab !== 'casino');
+  shardsHistoryPanel?.classList.toggle('hidden', tab !== 'shards');
 
   if (tab === 'market' || tab === 'daily' || tab === 'lootbox') loadGamify();
   if (tab === 'leaderboard') loadLeaderboard();
+  if (tab === 'shards') loadShardsHistory();
 
   const box = document.querySelector('.gamify-box');
   if (box) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -2263,6 +2283,7 @@ async function claimDailyReward() {
     const data = await api('/api/daily/claim', { method: 'POST' });
     addSystemMessage(`Günlük ödül alındı: +${data.reward?.shards || 0} Shards, +${data.reward?.xp || 0} XP · Streak ${data.streak}`);
     await loadGamify();
+    if (!shardsHistoryPanel?.classList.contains('hidden')) loadShardsHistory();
     await checkForUnlockedBadges(true);
   } catch (error) {
     addSystemMessage(error.message);
@@ -2368,6 +2389,7 @@ async function openLootbox() {
     }
 
     await loadGamify();
+    if (!shardsHistoryPanel?.classList.contains('hidden')) loadShardsHistory();
   } catch (error) {
     if (lootboxAnimationStage) {
       lootboxAnimationStage.classList.remove('running');
@@ -2425,11 +2447,131 @@ async function claimQuest(questId) {
 
     addSystemMessage(`Görev ödülü alındı: +${data.reward?.xp || 0} XP, +${data.reward?.shards || 0} Shards`);
     await loadGamify();
+    if (!shardsHistoryPanel?.classList.contains('hidden')) loadShardsHistory();
     await checkForUnlockedBadges(true);
   } catch (error) {
     addSystemMessage(error.message);
   }
 }
+
+
+function shardReasonIcon(reason = '') {
+  if (reason.includes('daily')) return '🎁';
+  if (reason.includes('quest')) return '🎯';
+  if (reason.includes('market')) return '🛒';
+  if (reason.includes('lootbox')) return '📦';
+  if (reason.includes('casino') || reason.includes('blackjack')) return '🎰';
+  if (reason.includes('admin')) return '🛡️';
+  return '✦';
+}
+
+function renderShardsHistory(history = []) {
+  if (!shardsHistoryList) return;
+  shardsHistoryList.innerHTML = '';
+
+  if (!history.length) {
+    shardsHistoryList.innerHTML = '<div class="mini-item">Henüz Shards geçmişi yok.</div>';
+    return;
+  }
+
+  history.forEach((entry) => {
+    const amount = Number(entry.amount || 0);
+    const item = document.createElement('div');
+    item.className = `shard-history-item ${amount >= 0 ? 'gain' : 'spend'}`;
+    item.innerHTML = `
+      <div class="shard-history-icon">${shardReasonIcon(String(entry.reason || ''))}</div>
+      <div class="shard-history-main">
+        <strong>${escapeHtml(entry.label || 'Shards işlem')}</strong>
+        <span>${new Date(entry.created_at).toLocaleString('tr-TR')} · Bakiye: ${Number(entry.balance_after || 0)}</span>
+      </div>
+      <b>${amount >= 0 ? '+' : ''}${amount}</b>
+    `;
+    shardsHistoryList.appendChild(item);
+  });
+}
+
+async function loadShardsHistory() {
+  if (!shardsHistoryList) return;
+  try {
+    shardsHistoryList.innerHTML = '<div class="mini-item">Shards geçmişi yükleniyor...</div>';
+    const data = await api('/api/shards/history');
+    renderShardsHistory(data.history || []);
+  } catch (error) {
+    shardsHistoryList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function previewSlotColumn(type) {
+  if (type === 'bubble') return 'active_bubble_theme';
+  if (type === 'frame') return 'active_profile_frame';
+  if (type === 'name') return 'active_name_effect';
+  if (type === 'theme') return 'active_profile_theme';
+  return '';
+}
+
+function renderMarketPreview(item) {
+  if (!marketPreviewBox || !item) return;
+  marketPreviewBox.classList.remove('hidden');
+  marketPreviewBox.className = `market-preview-box ${rarityClass(item.rarity)}`;
+
+  const sampleBubbleClass = item.type === 'bubble' ? `cosmetic-${item.id}` : '';
+  const sampleNameClass = item.type === 'name' ? `namefx-${item.id}` : '';
+  const sampleFrameClass = item.type === 'frame' ? item.id : '';
+
+  marketPreviewBox.innerHTML = `
+    <div class="market-preview-head">
+      <div>
+        <strong>${escapeHtml(item.icon || '✦')} ${escapeHtml(item.name)}</strong>
+        <span>Geçici önizleme · ${escapeHtml(itemSlotLabel(item.type))}</span>
+      </div>
+      <button class="small-button gray" type="button" id="stopMarketPreviewButton">Kapat</button>
+    </div>
+    <div class="market-preview-stage">
+      <div class="message preview-message ${sampleBubbleClass} ${sampleNameClass} framefx-${item.type === 'frame' ? item.id : ''}">
+        <div class="msg-avatar avatar-frame ${sampleFrameClass}">${escapeHtml((user?.display_name || user?.username || 'S').charAt(0).toUpperCase())}</div>
+        <div class="msg-bubble">
+          <div class="meta">${escapeHtml(user?.display_name || user?.username || 'selim')} · preview</div>
+          <div class="text">Bu item sende böyle görünecek.</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('stopMarketPreviewButton')?.addEventListener('click', stopMarketPreview);
+}
+
+function startMarketPreview(item) {
+  if (!item || !user) return;
+
+  clearTimeout(marketPreviewTimer);
+  if (!marketPreviewOriginalUser) marketPreviewOriginalUser = { ...user };
+
+  const column = previewSlotColumn(item.type);
+  if (column) {
+    user = { ...user, [column]: item.id };
+    renderProfile();
+  }
+
+  renderMarketPreview(item);
+  showPolishToast?.('Market Preview', `${item.name} geçici olarak gösteriliyor.`, 'info');
+
+  marketPreviewTimer = setTimeout(stopMarketPreview, 12000);
+}
+
+function stopMarketPreview() {
+  clearTimeout(marketPreviewTimer);
+  marketPreviewTimer = null;
+
+  if (marketPreviewOriginalUser) {
+    user = { ...user, ...marketPreviewOriginalUser };
+    marketPreviewOriginalUser = null;
+    renderProfile();
+  }
+
+  marketPreviewBox?.classList.add('hidden');
+  if (marketPreviewBox) marketPreviewBox.innerHTML = '';
+}
+
 
 function renderMarket(items) {
   if (!marketList) return;
@@ -2450,6 +2592,12 @@ function renderMarket(items) {
 
     const actions = document.createElement('div');
     actions.className = 'market-actions';
+
+    const preview = document.createElement('button');
+    preview.className = 'small-button gray';
+    preview.textContent = 'Önizle';
+    preview.onclick = () => startMarketPreview(item);
+    actions.appendChild(preview);
 
     if (!item.owned) {
       const buy = document.createElement('button');
@@ -2487,6 +2635,7 @@ async function buyMarketItem(itemId) {
     });
     addSystemMessage('Market ürünü satın alındı. Site yenileniyor...');
     await loadGamify();
+    if (!shardsHistoryPanel?.classList.contains('hidden')) loadShardsHistory();
     forceAppRefresh();
   } catch (error) {
     addSystemMessage(error.message);
@@ -2505,6 +2654,7 @@ async function equipMarketItem(itemId, slot) {
     renderProfile();
     addSystemMessage(itemId ? 'Kozmetik kuşanıldı. Site yenileniyor...' : 'Kozmetik çıkarıldı. Site yenileniyor...');
     await loadGamify();
+    if (!shardsHistoryPanel?.classList.contains('hidden')) loadShardsHistory();
     forceAppRefresh();
   } catch (error) {
     addSystemMessage(error.message);
@@ -2563,6 +2713,7 @@ async function playSlot() {
     }
 
     await refreshShardText(data.shards);
+    if (!shardsHistoryPanel?.classList.contains('hidden')) loadShardsHistory();
   } catch (error) {
     addSystemMessage(error.message);
   }
@@ -2578,6 +2729,7 @@ async function startBlackjack() {
 
     renderBlackjack(data.session);
     await refreshShardText(data.shards);
+    if (!shardsHistoryPanel?.classList.contains('hidden')) loadShardsHistory();
   } catch (error) {
     addSystemMessage(error.message);
   }
@@ -2588,6 +2740,7 @@ async function hitBlackjack() {
     const data = await api('/api/casino/blackjack/hit', { method: 'POST' });
     renderBlackjack(data.session);
     await refreshShardText(data.shards);
+    if (!shardsHistoryPanel?.classList.contains('hidden')) loadShardsHistory();
   } catch (error) {
     addSystemMessage(error.message);
   }
@@ -2598,6 +2751,7 @@ async function standBlackjack() {
     const data = await api('/api/casino/blackjack/stand', { method: 'POST' });
     renderBlackjack(data.session);
     await refreshShardText(data.shards);
+    if (!shardsHistoryPanel?.classList.contains('hidden')) loadShardsHistory();
   } catch (error) {
     addSystemMessage(error.message);
   }
