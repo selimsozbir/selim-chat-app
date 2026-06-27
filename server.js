@@ -2879,6 +2879,55 @@ app.post('/api/servers/:serverId/channels', authMiddleware, async (req, res) => 
 });
 
 
+
+app.post('/api/servers/:serverId/members', authMiddleware, async (req, res) => {
+  const serverId = Number(req.params.serverId);
+  const userId = Number(req.body.userId);
+
+  if (!Number.isInteger(serverId) || !Number.isInteger(userId)) return res.status(400).json({ error: 'Geçersiz istek.' });
+
+  const member = await getServerMember(serverId, req.user.id);
+  if (!member || !['owner', 'admin'].includes(member.role)) return res.status(403).json({ error: 'Sunucuya üye ekleme yetkin yok.' });
+
+  const ok = await areFriends(req.user.id, userId);
+  if (!ok) return res.status(403).json({ error: 'Sunucuya sadece arkadaşlarını ekleyebilirsin.' });
+
+  await pool.query(
+    `INSERT INTO server_members (server_id, user_id, role)
+     VALUES ($1, $2, 'member')
+     ON CONFLICT (server_id, user_id) DO NOTHING`,
+    [serverId, userId]
+  );
+
+  emitToUser(userId, 'notification', {
+    type: 'system',
+    payload: { text: 'Bir sunucuya eklendin.' }
+  });
+
+  res.json({ ok: true });
+});
+
+app.delete('/api/servers/:serverId/channels/:channelId', authMiddleware, async (req, res) => {
+  const serverId = Number(req.params.serverId);
+  const channelId = Number(req.params.channelId);
+
+  if (!Number.isInteger(serverId) || !Number.isInteger(channelId)) return res.status(400).json({ error: 'Geçersiz kanal.' });
+
+  const member = await getServerMember(serverId, req.user.id);
+  if (!member || !['owner', 'admin'].includes(member.role)) return res.status(403).json({ error: 'Kanal silme yetkin yok.' });
+
+  const count = await pool.query('SELECT COUNT(*)::int AS count FROM server_channels WHERE server_id = $1', [serverId]);
+  if (Number(count.rows[0]?.count || 0) <= 1) return res.status(400).json({ error: 'Son kanalı silemezsin.' });
+
+  const channel = await pool.query('SELECT id, name FROM server_channels WHERE id = $1 AND server_id = $2', [channelId, serverId]);
+  if (channel.rows.length === 0) return res.status(404).json({ error: 'Kanal bulunamadı.' });
+
+  await pool.query('DELETE FROM server_channels WHERE id = $1 AND server_id = $2', [channelId, serverId]);
+
+  res.json({ ok: true, deleted: channel.rows[0] });
+});
+
+
 app.get('/api/groups', authMiddleware, async (req, res) => {
   const result = await pool.query(
     `SELECT gc.id, gc.name, gc.avatar_url, gc.owner_id, gm.role,
