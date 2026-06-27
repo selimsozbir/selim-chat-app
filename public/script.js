@@ -2165,7 +2165,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '936');
+    url.searchParams.set('v', '937');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -5303,4 +5303,36 @@ window.addEventListener('load', stableMobileKeyboardState);
 profileModal?.addEventListener('click', (event) => {
   if (isMobileLayout && isMobileLayout() && event.target === profileModal) closeProfile();
 });
+
+
+
+/* v9.3.7: mobile composer must stay visible when keyboard opens */
+function mobileKeepComposerVisible() {
+  if (!isMobileLayout || !isMobileLayout()) return;
+  stableMobileViewportUpdate?.();
+  const focused = document.activeElement === messageInput;
+  document.body.classList.toggle('keyboard-open', focused);
+  document.body.classList.toggle('composer-focused', focused);
+
+  if (focused) {
+    const form = document.getElementById('messageForm');
+    if (form) {
+      form.style.display = 'grid';
+      form.style.visibility = 'visible';
+      form.style.opacity = '1';
+    }
+    requestAnimationFrame(() => {
+      try { messagesEl.scrollTop = messagesEl.scrollHeight; } catch {}
+    });
+    setTimeout(() => {
+      try { messagesEl.scrollTop = messagesEl.scrollHeight; } catch {}
+    }, 120);
+  }
+}
+
+messageInput?.addEventListener('focus', mobileKeepComposerVisible);
+messageInput?.addEventListener('click', mobileKeepComposerVisible);
+messageInput?.addEventListener('input', mobileKeepComposerVisible);
+window.visualViewport?.addEventListener('resize', mobileKeepComposerVisible);
+window.visualViewport?.addEventListener('scroll', mobileKeepComposerVisible);
 
