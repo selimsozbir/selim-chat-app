@@ -113,6 +113,15 @@ const universePanel = document.getElementById('universePanel');
 const socialPanel = document.getElementById('socialPanel');
 const galleryPanel = document.getElementById('galleryPanel');
 const galleryModal = document.getElementById('galleryModal');
+const friendsCenterModal = document.getElementById('friendsCenterModal');
+const friendsCenterCloseButton = document.getElementById('friendsCenterCloseButton');
+const friendsCenterSearchInput = document.getElementById('friendsCenterSearchInput');
+const friendsCenterSearchButton = document.getElementById('friendsCenterSearchButton');
+const friendsCenterSearchResults = document.getElementById('friendsCenterSearchResults');
+const friendsCenterList = document.getElementById('friendsCenterList');
+const friendsCenterRequestsList = document.getElementById('friendsCenterRequestsList');
+const friendsCenterBlockedList = document.getElementById('friendsCenterBlockedList');
+const friendsCenterTabs = document.querySelectorAll('.friends-center-tab');
 const dailyRewardText = document.getElementById('dailyRewardText');
 const dailyStreakText = document.getElementById('dailyStreakText');
 const dailyClaimButton = document.getElementById('dailyClaimButton');
@@ -290,7 +299,13 @@ document.body.dataset.chatMode = chatMode;
 
 let socket = null;
 let token = localStorage.getItem('chat_token');
-let user = JSON.parse(localStorage.getItem('chat_user') || 'null');
+let user = null;
+try {
+  user = JSON.parse(localStorage.getItem('chat_user') || 'null');
+} catch {
+  user = null;
+  localStorage.removeItem('chat_user');
+}
 let currentRoom = localStorage.getItem('chat_room') || 'genel';
 let unreadNotifications = 0;
 let typingTimer = null;
@@ -744,7 +759,12 @@ messageForm.addEventListener('submit', (event) => {
   closeEmojiPanel();
 
   const text = messageInput.value.trim();
-  if (!text || !socket) return;
+  if (!text) return;
+  if (!socket || !socket.connected) {
+    addSystemMessage('Bağlantı hazırlanıyor, tekrar dene.');
+    connectSocket();
+    return;
+  }
 
   const fiveEggCommand = normalizeFiveEggText(text);
   if (FIVE_EGG_COMMANDS.includes(fiveEggCommand)) {
@@ -1243,11 +1263,6 @@ function bindGamifyControls() {
     universeTabButton.addEventListener('click', () => switchGamifyTab('universe'));
   }
 
-  if (socialTabButton && !socialTabButton.dataset.bound) {
-    socialTabButton.dataset.bound = '1';
-    socialTabButton.addEventListener('click', () => switchGamifyTab('social'));
-  }
-
   if (galleryTabButton && !galleryTabButton.dataset.bound) {
     galleryTabButton.dataset.bound = '1';
     galleryTabButton.addEventListener('click', () => switchGamifyTab('gallery'));
@@ -1256,16 +1271,6 @@ function bindGamifyControls() {
   if (savePresenceButton && !savePresenceButton.dataset.bound) {
     savePresenceButton.dataset.bound = '1';
     savePresenceButton.addEventListener('click', savePresence);
-  }
-
-  if (saveStoryButton && !saveStoryButton.dataset.bound) {
-    saveStoryButton.dataset.bound = '1';
-    saveStoryButton.addEventListener('click', saveStory);
-  }
-
-  if (clearStoryButton && !clearStoryButton.dataset.bound) {
-    clearStoryButton.dataset.bound = '1';
-    clearStoryButton.addEventListener('click', clearStory);
   }
 
   if (refreshGalleryButton && !refreshGalleryButton.dataset.bound) {
@@ -1453,9 +1458,37 @@ function applyLocalSettings() {
   document.body.classList.toggle('bot-compact-mode', settings.botCompact);
 }
 
+
+async function restoreSessionUser() {
+  if (!token) return false;
+  try {
+    const data = await api('/api/me');
+    user = { ...(user || {}), ...(data.user || {}) };
+    localStorage.setItem('chat_user', JSON.stringify(user));
+    return true;
+  } catch (error) {
+    // Token gerçekten geçersizse temizle, geçici network hatasında kullanıcıyı düşürme.
+    if (/401|Token|token|geçersiz|yok/i.test(String(error.message || ''))) {
+      localStorage.removeItem('chat_token');
+      localStorage.removeItem('chat_user');
+      token = null;
+      user = null;
+      return false;
+    }
+    return Boolean(user);
+  }
+}
+
 async function startApp() {
   applyLocalSettings();
-  if (!token || !user) {
+  if (!token) {
+    authScreen.classList.remove('hidden');
+    chatScreen.classList.add('hidden');
+    return;
+  }
+
+  const restored = await restoreSessionUser();
+  if (!restored || !user) {
     authScreen.classList.remove('hidden');
     chatScreen.classList.add('hidden');
     return;
@@ -2380,7 +2413,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1020');
+    url.searchParams.set('v', '1021');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2762,6 +2795,216 @@ async function loadStories() {
     renderStories(data.stories || []);
   } catch (error) {
     storiesList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+
+
+function setFriendsCenterTab(tab = 'friends') {
+  friendsCenterTabs?.forEach((button) => {
+    button.classList.toggle('active', button.dataset.friendsCenterTab === tab);
+  });
+
+  document.getElementById('friendsCenterFriendsPanel')?.classList.toggle('hidden', tab !== 'friends');
+  document.getElementById('friendsCenterRequestsPanel')?.classList.toggle('hidden', tab !== 'requests');
+  document.getElementById('friendsCenterBlockedPanel')?.classList.toggle('hidden', tab !== 'blocked');
+  document.getElementById('friendsCenterSocialPanel')?.classList.toggle('hidden', tab !== 'social');
+
+  if (tab === 'friends') loadFriendsCenterFriends();
+  if (tab === 'requests') loadFriendsCenterRequests();
+  if (tab === 'blocked') loadFriendsCenterBlocked();
+  if (tab === 'social') syncSocialInputs?.();
+}
+
+function openFriendsCenter(tab = 'friends') {
+  friendsCenterModal?.classList.remove('hidden');
+  setFriendsCenterTab(tab);
+}
+
+function closeFriendsCenter() {
+  friendsCenterModal?.classList.add('hidden');
+}
+
+function friendCenterRow({ avatarName, avatarUrl, title, subtitle, actions = [] }) {
+  const item = document.createElement('div');
+  item.className = 'friends-center-item';
+  item.innerHTML = `<div class="mini-left">${avatarHtml(avatarName, avatarUrl)}<div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(subtitle || '')}</span></div></div>`;
+  if (actions.length) {
+    const actionBox = document.createElement('div');
+    actionBox.className = 'mini-actions';
+    actions.forEach((action) => actionBox.appendChild(action));
+    item.appendChild(actionBox);
+  }
+  return item;
+}
+
+async function loadFriendsCenterFriends() {
+  if (!friendsCenterList) return;
+  try {
+    const data = await api('/api/friends');
+    friends = data.friends || [];
+    friendsCenterList.innerHTML = '';
+
+    if (!friends.length) {
+      friendsCenterList.innerHTML = '<div class="mini-item">Henüz arkadaş yok.</div>';
+      return;
+    }
+
+    friends.forEach((friend) => {
+      const dm = document.createElement('button');
+      dm.className = 'action-button';
+      dm.textContent = 'DM';
+      dm.onclick = () => {
+        closeFriendsCenter();
+        setChatMode('dm');
+        openDm(friend);
+      };
+
+      const profile = document.createElement('button');
+      profile.className = 'action-button gray';
+      profile.textContent = 'Profil';
+      profile.onclick = () => openProfile(friend.id);
+
+      const item = friendCenterRow({
+        avatarName: friend.display_name || friend.username,
+        avatarUrl: friend.avatar_url,
+        title: friend.display_name || friend.username,
+        subtitle: formatPresence(friend),
+        actions: [dm, profile]
+      });
+
+      friendsCenterList.appendChild(item);
+    });
+  } catch (error) {
+    friendsCenterList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+async function searchFriendsCenterUsers() {
+  if (!friendsCenterSearchResults) return;
+  const q = String(friendsCenterSearchInput?.value || '').trim();
+  if (q.length < 2) {
+    friendsCenterSearchResults.innerHTML = '<div class="mini-item">Aramak için en az 2 karakter yaz.</div>';
+    return;
+  }
+
+  try {
+    const data = await api(`/api/users/search?q=${encodeURIComponent(q)}`);
+    friendsCenterSearchResults.innerHTML = '';
+
+    if (!data.users?.length) {
+      friendsCenterSearchResults.innerHTML = '<div class="mini-item">Kullanıcı bulunamadı.</div>';
+      return;
+    }
+
+    data.users.forEach((found) => {
+      const add = document.createElement('button');
+      add.className = 'action-button';
+      add.textContent = 'Ekle';
+      add.onclick = async () => {
+        try {
+          await api('/api/friends/request', {
+            method: 'POST',
+            body: JSON.stringify({ username: found.username })
+          });
+          add.textContent = 'Gönderildi';
+          add.disabled = true;
+          loadRequests?.();
+        } catch (error) {
+          addSystemMessage(error.message);
+        }
+      };
+
+      const profile = document.createElement('button');
+      profile.className = 'action-button gray';
+      profile.textContent = 'Profil';
+      profile.onclick = () => openProfile(found.id);
+
+      friendsCenterSearchResults.appendChild(friendCenterRow({
+        avatarName: found.display_name || found.username,
+        avatarUrl: found.avatar_url,
+        title: found.display_name || found.username,
+        subtitle: formatPresence(found),
+        actions: [add, profile]
+      }));
+    });
+  } catch (error) {
+    friendsCenterSearchResults.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+async function loadFriendsCenterRequests() {
+  if (!friendsCenterRequestsList) return;
+  try {
+    const data = await api('/api/friends/requests');
+    friendsCenterRequestsList.innerHTML = '';
+
+    if (!data.requests?.length) {
+      friendsCenterRequestsList.innerHTML = '<div class="mini-item">İstek yok.</div>';
+      return;
+    }
+
+    data.requests.forEach((request) => {
+      const accept = document.createElement('button');
+      accept.className = 'action-button';
+      accept.textContent = 'Kabul';
+      accept.onclick = async () => {
+        await respondFriend(request.id, 'accept');
+        loadFriendsCenterRequests();
+        loadFriendsCenterFriends();
+      };
+
+      const reject = document.createElement('button');
+      reject.className = 'action-button red';
+      reject.textContent = 'Red';
+      reject.onclick = async () => {
+        await respondFriend(request.id, 'reject');
+        loadFriendsCenterRequests();
+      };
+
+      friendsCenterRequestsList.appendChild(friendCenterRow({
+        avatarName: request.display_name || request.username,
+        avatarUrl: request.avatar_url,
+        title: request.display_name || request.username,
+        subtitle: 'Arkadaş isteği',
+        actions: [accept, reject]
+      }));
+    });
+  } catch (error) {
+    friendsCenterRequestsList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+async function loadFriendsCenterBlocked() {
+  if (!friendsCenterBlockedList) return;
+  try {
+    const data = await api('/api/blocked');
+    friendsCenterBlockedList.innerHTML = '';
+
+    if (!data.blocked?.length) {
+      friendsCenterBlockedList.innerHTML = '<div class="mini-item">Engellenen yok.</div>';
+      return;
+    }
+
+    data.blocked.forEach((row) => {
+      const unblock = document.createElement('button');
+      unblock.className = 'action-button';
+      unblock.textContent = 'Kaldır';
+      unblock.onclick = async () => {
+        await unblockUser(row.user_id);
+        loadFriendsCenterBlocked();
+      };
+
+      friendsCenterBlockedList.appendChild(friendCenterRow({
+        avatarName: row.display_name || row.username,
+        avatarUrl: row.avatar_url,
+        title: row.display_name || row.username,
+        subtitle: 'Engellendi',
+        actions: [unblock]
+      }));
+    });
+  } catch (error) {
+    friendsCenterBlockedList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
   }
 }
 
@@ -6378,4 +6621,24 @@ galleryModal?.addEventListener('click', (event) => {
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') closeGalleryModal();
+});
+
+
+railFriendsCenterButton?.addEventListener('click', () => {
+  syncRailActive?.('friends-center');
+  openFriendsCenter('friends');
+});
+
+friendsCenterCloseButton?.addEventListener('click', closeFriendsCenter);
+friendsCenterModal?.addEventListener('click', (event) => {
+  if (event.target === friendsCenterModal) closeFriendsCenter();
+});
+
+friendsCenterTabs?.forEach((button) => {
+  button.addEventListener('click', () => setFriendsCenterTab(button.dataset.friendsCenterTab || 'friends'));
+});
+
+friendsCenterSearchButton?.addEventListener('click', searchFriendsCenterUsers);
+friendsCenterSearchInput?.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') searchFriendsCenterUsers();
 });
