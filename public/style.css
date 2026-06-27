@@ -12285,3 +12285,29 @@ body.admin-panel-visible .admin-panel {
     font-size: 10px;
   }
 }
+
+
+/* =========================================================
+   v9.5.1 — Voice Record Send Fix
+   Gönder butonu kayıt açıksa kaydı durdurup direkt yollar.
+   ========================================================= */
+
+#sendButton.voice-send-ready {
+  background: linear-gradient(135deg, #16a34a, #22c55e) !important;
+  color: white !important;
+  box-shadow: 0 0 20px rgba(34,197,94,.30) !important;
+  animation: voiceSendReadyPulse 1s ease-in-out infinite;
+}
+
+@keyframes voiceSendReadyPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+.voice-record-hud::after {
+  content: "Gönder tuşu kaydı durdurup yollar";
+  grid-column: 2 / 4;
+  color: #86efac;
+  font-size: 11px;
+  margin-top: -4px;
+}
