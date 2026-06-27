@@ -15266,3 +15266,231 @@ body[data-chat-mode="group"] .users-box::after {
     max-width: 100% !important;
   }
 }
+
+
+/* =========================================================
+   v10.3.3 — DM chat list + compact profile + meaningful header
+   ========================================================= */
+
+/* Compact profile card height */
+.profile-box {
+  grid-template-columns: 42px minmax(0, 1fr) !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  min-height: auto !important;
+}
+
+.avatar-wrap,
+.avatar-wrap .avatar,
+.avatar-wrap .avatar-img {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 14px !important;
+}
+
+.current-status-bubble {
+  top: -8px !important;
+  left: 10px !important;
+  right: 10px !important;
+  padding: 4px 9px !important;
+  font-size: 10.5px !important;
+}
+
+.profile-box strong {
+  margin-bottom: 5px !important;
+  font-size: 14px !important;
+  line-height: 1.15 !important;
+}
+
+.profile-box .small-button {
+  padding: 5px 8px !important;
+  margin: 0 4px 4px 0 !important;
+  font-size: 10px !important;
+  line-height: 1.1 !important;
+}
+
+/* Header becomes more useful */
+.chat-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+}
+
+.chat-title-block {
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+.chat-title-copy {
+  min-width: 0 !important;
+}
+
+#chatTitle {
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+}
+
+.chat-subline {
+  align-items: center !important;
+  min-width: 0 !important;
+}
+
+.chat-meta-text {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  color: #a1a1aa !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+}
+
+.connection-status {
+  flex: 0 0 auto !important;
+  padding: 3px 8px !important;
+  border-radius: 999px !important;
+  background: rgba(48,209,88,.08) !important;
+  border: 1px solid rgba(48,209,88,.13) !important;
+  color: #bbf7d0 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+.chat-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  flex: 0 0 auto !important;
+}
+
+.header-action-button {
+  height: 34px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+}
+
+.header-action-button.subtle {
+  color: #a1a1aa !important;
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(255,255,255,.07) !important;
+}
+
+/* DM mode: left panel shows chat list */
+body[data-chat-mode="dm"] .sidebar #roomPanel {
+  display: none !important;
+}
+
+body[data-chat-mode="dm"] .sidebar #friendsPanel {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  min-height: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+body[data-chat-mode="dm"] .sidebar #friendsPanel .friends-box {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  flex: 1 1 auto !important;
+  padding: 14px !important;
+  border-radius: var(--lin-radius-lg, 24px) !important;
+  border: 1px solid var(--lin-line, rgba(255,255,255,.08)) !important;
+  background: rgba(255,255,255,.038) !important;
+}
+
+body[data-chat-mode="dm"] .sidebar #friendsPanel .friends-box h3 {
+  margin: 0 0 10px !important;
+}
+
+body[data-chat-mode="dm"] #friendsList {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  display: grid !important;
+  gap: 7px !important;
+  padding-right: 2px !important;
+}
+
+/* In DM mode only chat list remains; no bulky social/request blocks */
+body[data-chat-mode="dm"] .sidebar #friendsPanel .search-box,
+body[data-chat-mode="dm"] .sidebar #friendsPanel .requests-box,
+body[data-chat-mode="dm"] .sidebar #friendsPanel .friend-activity-box,
+body[data-chat-mode="dm"] .sidebar #friendsPanel .blocked-box {
+  display: none !important;
+}
+
+body[data-chat-mode="dm"] .conversation-item {
+  padding: 10px !important;
+  cursor: pointer !important;
+}
+
+body[data-chat-mode="dm"] .conversation-item.active {
+  border-color: rgba(10,132,255,.28) !important;
+  background: rgba(10,132,255,.12) !important;
+}
+
+body[data-chat-mode="dm"] .conversation-item .mini-actions {
+  opacity: .72 !important;
+}
+
+body[data-chat-mode="dm"] .conversation-item:hover .mini-actions,
+body[data-chat-mode="dm"] .conversation-item.active .mini-actions {
+  opacity: 1 !important;
+}
+
+/* Group mode still clean for now */
+body[data-chat-mode="group"] .sidebar #roomPanel {
+  display: none !important;
+}
+
+body[data-chat-mode="group"] .sidebar #groupsPanel {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  min-height: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+body[data-chat-mode="group"] .sidebar #groupsPanel #groupDetailsBox {
+  display: none !important;
+}
+
+/* Desktop rail can visually calm down because header has shortcuts now */
+@media (min-width: 961px) {
+  .app-rail {
+    opacity: .96 !important;
+  }
+
+  .rail-button[title="Galeri"],
+  .rail-button[title="Arkadaşlar"],
+  .rail-button[title="Ayarlar"] {
+    opacity: .72 !important;
+  }
+}
+
+@media (max-width: 960px) {
+  .chat-header-actions {
+    display: none !important;
+  }
+
+  .profile-box {
+    grid-template-columns: 40px minmax(0, 1fr) !important;
+    padding: 10px !important;
+  }
+
+  .avatar-wrap,
+  .avatar-wrap .avatar,
+  .avatar-wrap .avatar-img {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  body[data-chat-mode="dm"] .sidebar #friendsPanel {
+    display: flex !important;
+  }
+}
