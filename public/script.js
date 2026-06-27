@@ -241,6 +241,7 @@ let user = JSON.parse(localStorage.getItem('chat_user') || 'null');
 let currentRoom = localStorage.getItem('chat_room') || 'genel';
 let unreadNotifications = 0;
 let typingTimer = null;
+let roomReadTimer = null;
 let dmTypingTimer = null;
 let mediaRecorder = null;
 let recordedChunks = [];
@@ -1188,12 +1189,19 @@ function connectSocket() {
     if (!message.room || message.room === currentRoom) {
       addRoomMessage(message);
       maybeRunFiveEggFromMessage(message);
+      if (Number(message.sender_id || message.user_id) !== Number(user.id)) {
+        markRoomMessagesRead([message.id]);
+      }
     }
   });
   socket.on('users', renderUsers);
 
   socket.on('room_message_updated', (msg) => updateMessageElement('room', msg.id, msg.text, true, false));
   socket.on('room_message_deleted', (msg) => updateMessageElement('room', msg.id, msg.text, false, true));
+
+  socket.on('room_read_summary', ({ messageId, readers }) => {
+    updateRoomReadStatus(messageId, readers || []);
+  });
 
   socket.on('dm_message_updated', (msg) => updateMessageElement('dm', msg.id, msg.text, true, false));
   socket.on('dm_message_deleted', (msg) => updateMessageElement('dm', msg.id, msg.text, false, true));
@@ -1502,10 +1510,13 @@ async function loadOldRoomMessages(room) {
         reply_text: message.reply_text,
         edited_at: message.edited_at,
         deleted_at: message.deleted_at,
-        time: formatTime(message.created_at)
+        time: formatTime(message.created_at),
+        user_id: message.user_id,
+        readers: message.readers || []
       });
     });
     scrollToBottom();
+    markVisibleRoomMessagesRead();
   } catch (error) {
     addSystemMessage(error.message);
   }
@@ -1535,6 +1546,7 @@ function addRoomMessage(message) {
     ),
     edited: Boolean(message.edited_at),
     deleted: Boolean(message.deleted_at),
+    readers: message.readers || [],
     bubble_theme: message.bubble_theme,
     name_effect: message.name_effect,
     frame_theme: message.frame_theme || message.active_profile_frame
@@ -1844,7 +1856,7 @@ function addDmMessage(message) {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '881');
+    url.searchParams.set('v', '882');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2373,7 +2385,60 @@ function renderUsers(users) {
   loadModeration();
 }
 
-function addMessage({ type, id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read, bubble_theme, name_effect, frame_theme }) {
+
+function normalizeReaderNames(readers) {
+  const seen = new Set();
+  return (readers || [])
+    .map((reader) => String(reader?.username || '').trim())
+    .filter((name) => {
+      if (!name) return false;
+      const key = name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function formatRoomSeenText(readers) {
+  const names = normalizeReaderNames(readers);
+  if (!names.length) return 'Gönderildi ✓';
+  if (names.length === 1) return `${names[0]} gördü`;
+  if (names.length === 2) return `${names[0]} ve ${names[1]} gördü`;
+  return `${names[0]}, ${names[1]} ve ${names.length - 2} kişi daha gördü`;
+}
+
+function updateRoomReadStatus(messageId, readers) {
+  const el = document.querySelector(`.message[data-type="room"][data-id="${messageId}"]`);
+  if (!el) return;
+  const status = el.querySelector('.room-read-status');
+  if (!status) return;
+
+  const names = normalizeReaderNames(readers);
+  status.dataset.readers = JSON.stringify(names);
+  status.textContent = formatRoomSeenText(readers);
+  status.title = names.length ? names.join(', ') : 'Henüz gören yok';
+}
+
+function markRoomMessagesRead(messageIds) {
+  if (!socket || !socket.connected || chatMode !== 'room') return;
+  const ids = Array.from(new Set((messageIds || []).map(Number).filter(Number.isInteger))).slice(0, 80);
+  if (!ids.length) return;
+  socket.emit('room_messages_read', { room: currentRoom, messageIds: ids });
+}
+
+function markVisibleRoomMessagesRead() {
+  clearTimeout(roomReadTimer);
+  roomReadTimer = setTimeout(() => {
+    if (chatMode !== 'room') return;
+    const ids = Array.from(document.querySelectorAll('.message[data-type="room"]:not(.mine)'))
+      .map((el) => Number(el.dataset.id))
+      .filter(Number.isInteger);
+    markRoomMessagesRead(ids);
+  }, 250);
+}
+
+
+function addMessage({ type, id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read, readers, bubble_theme, name_effect, frame_theme }) {
   const localSettings = getLocalSettings();
   const normalizedUsername = String(username || '').toLowerCase();
   const isBotMessage = ['feiz', 'selimbot', 'bot'].includes(normalizedUsername);
@@ -2466,6 +2531,20 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
     status.className = 'read-status mine';
     status.textContent = read ? 'Görüldü ✓✓' : 'Gönderildi ✓';
     bubble.appendChild(status);
+  }
+
+  if (type === 'room' && mine && !deleted) {
+    const roomStatus = document.createElement('button');
+    roomStatus.type = 'button';
+    roomStatus.className = 'read-status mine room-read-status';
+    roomStatus.textContent = formatRoomSeenText(readers || []);
+    roomStatus.dataset.readers = JSON.stringify(normalizeReaderNames(readers || []));
+    roomStatus.onclick = (event) => {
+      event.stopPropagation();
+      const names = JSON.parse(roomStatus.dataset.readers || '[]');
+      alert(names.length ? `Görenler:\n${names.join('\n')}` : 'Henüz gören yok.');
+    };
+    bubble.appendChild(roomStatus);
   }
 
   div.addEventListener('contextmenu', (event) => {
