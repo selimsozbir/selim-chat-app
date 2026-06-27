@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v8.9.0</title>
-  <link rel="stylesheet" href="style.css?v=890" />
+  <title>Selim Chat v9.0.0</title>
+  <link rel="stylesheet" href="style.css?v=900" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -164,6 +164,12 @@
             </div>
             <button id="refreshGamifyButton" class="small-button" type="button">Yenile</button>
           </div>
+          <div id="polishQuickStats" class="polish-quick-stats">
+            <span>⚡ Full Polish</span>
+            <span>🎁 Daily</span>
+            <span>🎰 Casino</span>
+            <span>📦 Lootbox</span>
+          </div>
 
           <div class="gamify-tabs">
             <button id="dailyTabButton" class="gamify-tab active" type="button">Günlük</button>
@@ -199,6 +205,12 @@
                 <span id="activeCrateInfo">Fiyat ve oranlar burada görünür.</span>
               </div>
               <button id="openLootboxButton" class="small-button" type="button">Kasa Aç</button>
+            </div>
+            <div id="lootboxAnimationStage" class="lootbox-animation-stage hidden">
+              <div class="lootbox-spinner">
+                <span>📦</span>
+              </div>
+              <strong>Kasa açılıyor...</strong>
             </div>
             <div id="lootboxResult" class="lootbox-result">Kasa açılmayı bekliyor.</div>
             <div id="lootboxHistoryList" class="gamify-list"></div>
@@ -656,7 +668,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=890"></script>
+  <script src="script.js?v=900"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
