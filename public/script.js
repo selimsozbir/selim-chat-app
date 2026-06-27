@@ -86,6 +86,7 @@ const blockedList = document.getElementById('blockedList');
 const notificationsList = document.getElementById('notificationsList');
 
 const gamifyStats = document.getElementById('gamifyStats');
+const polishQuickStats = document.getElementById('polishQuickStats');
 const refreshGamifyButton = document.getElementById('refreshGamifyButton');
 const dailyTabButton = document.getElementById('dailyTabButton');
 const questsTabButton = document.getElementById('questsTabButton');
@@ -109,6 +110,7 @@ const activeCrateName = document.getElementById('activeCrateName');
 const activeCrateInfo = document.getElementById('activeCrateInfo');
 const openLootboxButton = document.getElementById('openLootboxButton');
 const lootboxResult = document.getElementById('lootboxResult');
+const lootboxAnimationStage = document.getElementById('lootboxAnimationStage');
 const lootboxHistoryList = document.getElementById('lootboxHistoryList');
 const marketList = document.getElementById('marketList');
 const leaderboardList = document.getElementById('leaderboardList');
@@ -1941,10 +1943,59 @@ function addDmMessage(message) {
 
 
 
+
+function showPolishToast(title, text = '', type = 'info') {
+  const box = notificationList || document.body;
+  const toast = document.createElement('div');
+  toast.className = `polish-toast toast-${type}`;
+  toast.innerHTML = `
+    <strong>${escapeHtml(title || 'Bildirim')}</strong>
+    ${text ? `<span>${escapeHtml(text)}</span>` : ''}
+  `;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 260);
+  }, 3200);
+}
+
+function setButtonBusy(button, busy = true, text = '') {
+  if (!button) return;
+  if (busy) {
+    button.dataset.oldText = button.textContent || '';
+    button.disabled = true;
+    if (text) button.textContent = text;
+    button.classList.add('is-busy');
+  } else {
+    button.disabled = false;
+    if (button.dataset.oldText) button.textContent = button.dataset.oldText;
+    button.classList.remove('is-busy');
+  }
+}
+
+function updatePolishQuickStats(data = {}) {
+  if (!polishQuickStats) return;
+  const u = data.user || user || {};
+  const dailyReady = data.daily?.can_claim ? 'Hazır' : 'Alındı';
+  const inventoryCount = Array.isArray(u.inventory) ? u.inventory.length : 0;
+  polishQuickStats.innerHTML = `
+    <span>⚡ Level ${u.level || 1}</span>
+    <span>✦ ${u.shards || 0} Shards</span>
+    <span>🎁 Daily ${dailyReady}</span>
+    <span>🎒 ${inventoryCount} Item</span>
+  `;
+}
+
+function prefersReducedMotionPolish() {
+  try { return getLocalSettings().reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; }
+}
+
+
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '890');
+    url.searchParams.set('v', '900');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2006,6 +2057,7 @@ async function loadGamify() {
 
     gamifyStats.textContent = `Level ${data.user?.level || 1} · ${data.user?.shards || 0} Shards`;
 
+    updatePolishQuickStats(data);
     renderDailyReward(data.daily);
     renderQuests(data.quests || []);
     renderLootbox(data.lootbox);
@@ -2100,39 +2152,64 @@ function renderLootbox(lootbox) {
 }
 
 async function openLootbox() {
+  if (!openLootboxButton) return;
   try {
-    if (openLootboxButton) openLootboxButton.disabled = true;
-    if (lootboxResult) lootboxResult.innerHTML = '<div class="lootbox-opening">📦 Kasa açılıyor...</div>';
-
-    const data = await api('/api/lootbox/open', { method: 'POST', body: JSON.stringify({ crateId: selectedLootboxCrateId }) });
-    const reward = data.reward || {};
-    let html = '';
-
-    if (reward.type === 'item') {
-      const item = reward.item || {};
-      html = `
-        <div class="lootbox-win ${rarityClass(item.rarity)}">
-          <div class="lootbox-win-icon">${escapeHtml(item.icon || '✦')}</div>
-          <strong>${escapeHtml(item.name || 'Item')}</strong>
-          <span>${escapeHtml(item.rarity || 'common')} item açıldı!</span>
-        </div>
-      `;
-    } else {
-      html = `
-        <div class="lootbox-win rarity-rare">
-          <div class="lootbox-win-icon">💎</div>
-          <strong>${reward.shards || 0} Shards</strong>
-          <span>Shard ödülü çıktı.</span>
-        </div>
-      `;
+    setButtonBusy(openLootboxButton, true, 'Açılıyor...');
+    if (lootboxAnimationStage) {
+      lootboxAnimationStage.classList.remove('hidden');
+      lootboxAnimationStage.classList.add('running');
+    }
+    if (lootboxResult) {
+      lootboxResult.className = 'lootbox-result loading';
+      lootboxResult.textContent = 'Kasa açılıyor...';
     }
 
-    if (lootboxResult) lootboxResult.innerHTML = html;
+    await new Promise((resolve) => setTimeout(resolve, prefersReducedMotionPolish() ? 120 : 850));
+
+    const data = await api('/api/lootbox/open', {
+      method: 'POST',
+      body: JSON.stringify({ crateId: selectedLootboxCrateId })
+    });
+
+    if (lootboxAnimationStage) {
+      lootboxAnimationStage.classList.remove('running');
+      lootboxAnimationStage.classList.add('hidden');
+    }
+
+    const reward = data.reward || {};
+    const rarity = String(reward.rarity || reward.item?.rarity || 'rare').toLowerCase();
+    if (lootboxResult) {
+      lootboxResult.className = `lootbox-result reveal rarity-${rarity}`;
+      if (data.type === 'item' || reward.type === 'item') {
+        const item = reward.item || data.item || reward;
+        lootboxResult.innerHTML = `<strong>${escapeHtml(item.icon || '🎁')} ${escapeHtml(item.name || 'Yeni item')}</strong><span>${escapeHtml(rarityLabel(item.rarity || rarity))} item kazandın.</span>`;
+        showPolishToast('Kasa açıldı', `${item.name || 'Yeni item'} kazandın`, rarity === 'legendary' ? 'legendary' : 'success');
+      } else {
+        const shards = reward.shards || data.shards || 0;
+        lootboxResult.innerHTML = `<strong>✦ ${Number(shards || 0)} Shards</strong><span>Shard refund kazandın.</span>`;
+        showPolishToast('Kasa açıldı', `${Number(shards || 0)} Shards geldi`, 'success');
+      }
+    }
+
+    if (data.user) {
+      user = { ...user, ...data.user };
+      localStorage.setItem('chat_user', JSON.stringify(user));
+      renderProfile();
+    }
+
     await loadGamify();
   } catch (error) {
-    addSystemMessage(error.message);
+    if (lootboxAnimationStage) {
+      lootboxAnimationStage.classList.remove('running');
+      lootboxAnimationStage.classList.add('hidden');
+    }
+    if (lootboxResult) {
+      lootboxResult.className = 'lootbox-result error';
+      lootboxResult.textContent = error.message;
+    }
+    showPolishToast('Kasa açılamadı', error.message, 'error');
   } finally {
-    if (openLootboxButton) openLootboxButton.disabled = false;
+    setButtonBusy(openLootboxButton, false);
   }
 }
 
@@ -3989,6 +4066,7 @@ async function openProfile(userId) {
 
     refreshProfileCoverFileName();
     profileModal.classList.remove('hidden');
+    if (profileCardV2) profileCardV2.scrollTop = 0;
     if (isMe) checkForUnlockedBadges(true);
   } catch (error) {
     addSystemMessage(error.message);
@@ -4988,3 +5066,5 @@ function resizeImage(file, maxSize) {
 }
 
 startApp();
+
+window.addEventListener('load', () => setTimeout(clearFiveEggClasses, 120));
