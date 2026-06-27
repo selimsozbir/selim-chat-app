@@ -762,6 +762,31 @@ async function getServerMember(serverId, userId) {
   return member;
 }
 
+function generateInviteCode(length = 10) {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  let code = '';
+  for (let i = 0; i < length; i += 1) code += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return code;
+}
+
+async function ensureServerInviteCode(serverId) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const existing = await pool.query('SELECT invite_code FROM chat_servers WHERE id = $1', [serverId]);
+    if (existing.rows[0]?.invite_code) return existing.rows[0].invite_code;
+
+    const code = generateInviteCode();
+    try {
+      const updated = await pool.query(
+        'UPDATE chat_servers SET invite_code = $1 WHERE id = $2 AND invite_code IS NULL RETURNING invite_code',
+        [code, serverId]
+      );
+      if (updated.rows[0]?.invite_code) return updated.rows[0].invite_code;
+    } catch {}
+  }
+
+  throw new Error('Davet kodu üretilemedi.');
+}
+
 function serverRoomName(serverId, channelId) {
   return `srv_${Number(serverId)}_${Number(channelId)}`;
 }
@@ -786,7 +811,7 @@ async function ensureDefaultChannel(serverId) {
 
 async function getServerSummary(serverId, userId) {
   const result = await pool.query(
-    `SELECT cs.id, cs.name, cs.description, cs.avatar_url, cs.owner_id, sm.role,
+    `SELECT cs.id, cs.name, cs.description, cs.avatar_url, cs.owner_id, cs.invite_code, sm.role,
             COUNT(DISTINCT sm2.user_id)::int AS member_count,
             COUNT(DISTINCT sc.id)::int AS channel_count
      FROM chat_servers cs
@@ -1228,6 +1253,9 @@ async function initDatabase() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  await pool.query(`ALTER TABLE chat_servers ADD COLUMN IF NOT EXISTS invite_code VARCHAR(32);`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_servers_invite_code ON chat_servers(invite_code);`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS server_members (
@@ -2771,7 +2799,7 @@ app.post('/api/casino/blackjack/stand', authMiddleware, async (req, res) => {
 
 app.get('/api/servers', authMiddleware, async (req, res) => {
   const result = await pool.query(
-    `SELECT cs.id, cs.name, cs.description, cs.avatar_url, cs.owner_id, sm.role,
+    `SELECT cs.id, cs.name, cs.description, cs.avatar_url, cs.owner_id, cs.invite_code, sm.role,
             COUNT(DISTINCT sm2.user_id)::int AS member_count,
             COUNT(DISTINCT sc.id)::int AS channel_count,
             MAX(sc.created_at) AS last_channel_at
@@ -2799,11 +2827,12 @@ app.post('/api/servers', authMiddleware, async (req, res) => {
   if (name.length < 2) return res.status(400).json({ error: 'Sunucu adı en az 2 karakter olmalı.' });
 
   await pool.query('BEGIN');
+  const inviteCode = generateInviteCode();
   const created = await pool.query(
-    `INSERT INTO chat_servers (name, description, owner_id)
-     VALUES ($1, $2, $3)
-     RETURNING id, name, description, avatar_url, owner_id, created_at`,
-    [name, description, req.user.id]
+    `INSERT INTO chat_servers (name, description, owner_id, invite_code)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, name, description, avatar_url, owner_id, invite_code, created_at`,
+    [name, description, req.user.id, inviteCode]
   );
 
   const serverRow = created.rows[0];
@@ -2878,6 +2907,42 @@ app.post('/api/servers/:serverId/channels', authMiddleware, async (req, res) => 
   res.json({ channel: result.rows[0] });
 });
 
+
+
+
+app.post('/api/servers/:serverId/invite', authMiddleware, async (req, res) => {
+  const serverId = Number(req.params.serverId);
+  if (!Number.isInteger(serverId)) return res.status(400).json({ error: 'Geçersiz sunucu.' });
+
+  const member = await getServerMember(serverId, req.user.id);
+  if (!member || !['owner', 'admin'].includes(member.role)) return res.status(403).json({ error: 'Davet linki alma yetkin yok.' });
+
+  const code = await ensureServerInviteCode(serverId);
+  res.json({ ok: true, code, invite_url: `/invite/${code}` });
+});
+
+app.post('/api/servers/join/:code', authMiddleware, async (req, res) => {
+  const code = cleanText(req.params.code, 40);
+  if (!code) return res.status(400).json({ error: 'Davet kodu yok.' });
+
+  const serverResult = await pool.query(
+    'SELECT id, name, owner_id FROM chat_servers WHERE invite_code = $1',
+    [code]
+  );
+
+  if (serverResult.rows.length === 0) return res.status(404).json({ error: 'Davet linki geçersiz.' });
+
+  const srv = serverResult.rows[0];
+  await pool.query(
+    `INSERT INTO server_members (server_id, user_id, role)
+     VALUES ($1, $2, 'member')
+     ON CONFLICT (server_id, user_id) DO NOTHING`,
+    [srv.id, req.user.id]
+  );
+
+  await ensureDefaultChannel(srv.id);
+  res.json({ ok: true, server: await getServerSummary(srv.id, req.user.id) });
+});
 
 
 app.post('/api/servers/:serverId/members', authMiddleware, async (req, res) => {
