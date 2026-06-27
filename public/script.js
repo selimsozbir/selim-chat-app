@@ -85,15 +85,25 @@ const notificationsList = document.getElementById('notificationsList');
 
 const gamifyStats = document.getElementById('gamifyStats');
 const refreshGamifyButton = document.getElementById('refreshGamifyButton');
+const dailyTabButton = document.getElementById('dailyTabButton');
 const questsTabButton = document.getElementById('questsTabButton');
+const lootboxTabButton = document.getElementById('lootboxTabButton');
 const marketTabButton = document.getElementById('marketTabButton');
 const leaderboardTabButton = document.getElementById('leaderboardTabButton');
 const casinoTabButton = document.getElementById('casinoTabButton');
+const dailyPanel = document.getElementById('dailyPanel');
 const questsPanel = document.getElementById('questsPanel');
+const lootboxPanel = document.getElementById('lootboxPanel');
 const marketPanel = document.getElementById('marketPanel');
 const leaderboardPanel = document.getElementById('leaderboardPanel');
 const casinoPanel = document.getElementById('casinoPanel');
+const dailyRewardText = document.getElementById('dailyRewardText');
+const dailyStreakText = document.getElementById('dailyStreakText');
+const dailyClaimButton = document.getElementById('dailyClaimButton');
 const questsList = document.getElementById('questsList');
+const openLootboxButton = document.getElementById('openLootboxButton');
+const lootboxResult = document.getElementById('lootboxResult');
+const lootboxHistoryList = document.getElementById('lootboxHistoryList');
 const marketList = document.getElementById('marketList');
 const leaderboardList = document.getElementById('leaderboardList');
 const slotBetInput = document.getElementById('slotBetInput');
@@ -120,6 +130,8 @@ const mutedMembersList = document.getElementById('mutedMembersList');
 const globalAdminPanel = document.getElementById('globalAdminPanel');
 const refreshAdminButton = document.getElementById('refreshAdminButton');
 const adminUsersList = document.getElementById('adminUsersList');
+const adminLogsList = document.getElementById('adminLogsList');
+const refreshAdminLogsButton = document.getElementById('refreshAdminLogsButton');
 const ipBansList = document.getElementById('ipBansList');
 const ipBanInput = document.getElementById('ipBanInput');
 const ipBanButton = document.getElementById('ipBanButton');
@@ -439,6 +451,7 @@ bindMobileTap(mobileGroupButton, () => {
 });
 
 bindMobileTap(mobilePanelButton, openMobileSidebar);
+if (refreshAdminLogsButton) refreshAdminLogsButton.addEventListener('click', loadAdminLogs);
 if (settingsCloseButton) settingsCloseButton.addEventListener('click', closeSettings);
 if (settingsModal) settingsModal.addEventListener('click', (event) => {
   if (event.target === settingsModal) closeSettings();
@@ -886,9 +899,29 @@ function bindGamifyControls() {
     refreshGamifyButton.addEventListener('click', loadGamify);
   }
 
+  if (dailyTabButton && !dailyTabButton.dataset.bound) {
+    dailyTabButton.dataset.bound = '1';
+    dailyTabButton.addEventListener('click', () => switchGamifyTab('daily'));
+  }
+
   if (questsTabButton && !questsTabButton.dataset.bound) {
     questsTabButton.dataset.bound = '1';
     questsTabButton.addEventListener('click', () => switchGamifyTab('quests'));
+  }
+
+  if (lootboxTabButton && !lootboxTabButton.dataset.bound) {
+    lootboxTabButton.dataset.bound = '1';
+    lootboxTabButton.addEventListener('click', () => switchGamifyTab('lootbox'));
+  }
+
+  if (dailyClaimButton && !dailyClaimButton.dataset.bound) {
+    dailyClaimButton.dataset.bound = '1';
+    dailyClaimButton.addEventListener('click', claimDailyReward);
+  }
+
+  if (openLootboxButton && !openLootboxButton.dataset.bound) {
+    openLootboxButton.dataset.bound = '1';
+    openLootboxButton.addEventListener('click', openLootbox);
   }
 
   if (marketTabButton && !marketTabButton.dataset.bound) {
@@ -1830,16 +1863,20 @@ function activeItemForSlot(slot) {
 }
 
 function switchGamifyTab(tab) {
+  dailyTabButton?.classList.toggle('active', tab === 'daily');
   questsTabButton?.classList.toggle('active', tab === 'quests');
+  lootboxTabButton?.classList.toggle('active', tab === 'lootbox');
   marketTabButton?.classList.toggle('active', tab === 'market');
   leaderboardTabButton?.classList.toggle('active', tab === 'leaderboard');
   casinoTabButton?.classList.toggle('active', tab === 'casino');
+  dailyPanel?.classList.toggle('hidden', tab !== 'daily');
   questsPanel?.classList.toggle('hidden', tab !== 'quests');
+  lootboxPanel?.classList.toggle('hidden', tab !== 'lootbox');
   marketPanel?.classList.toggle('hidden', tab !== 'market');
   leaderboardPanel?.classList.toggle('hidden', tab !== 'leaderboard');
   casinoPanel?.classList.toggle('hidden', tab !== 'casino');
 
-  if (tab === 'market') loadGamify();
+  if (tab === 'market' || tab === 'daily' || tab === 'lootbox') loadGamify();
   if (tab === 'leaderboard') loadLeaderboard();
 
   const box = document.querySelector('.gamify-box');
@@ -1859,13 +1896,109 @@ async function loadGamify() {
 
     gamifyStats.textContent = `Level ${data.user?.level || 1} · ${data.user?.shards || 0} Shards`;
 
+    renderDailyReward(data.daily);
     renderQuests(data.quests || []);
+    renderLootbox(data.lootbox);
     renderMarket(data.market || []);
     if (!leaderboardPanel?.classList.contains('hidden')) loadLeaderboard();
   } catch (error) {
     if (questsList) questsList.innerHTML = `<div class="mini-item">Hub yüklenemedi: ${escapeHtml(error.message)}</div>`;
   }
 }
+
+
+function renderDailyReward(daily) {
+  if (!dailyRewardText || !dailyClaimButton) return;
+
+  const reward = daily?.reward || { shards: 75, xp: 100 };
+  const nextStreak = daily?.next_streak || 1;
+  const currentStreak = daily?.streak || 0;
+
+  dailyRewardText.textContent = daily?.claimed_today
+    ? `Bugünkü ödül alındı. Yarın tekrar gel.`
+    : `Bugün: +${reward.shards} Shards, +${reward.xp} XP`;
+
+  if (dailyStreakText) {
+    dailyStreakText.textContent = `Streak: ${currentStreak} gün · Sıradaki: ${nextStreak}. gün`;
+  }
+
+  dailyClaimButton.textContent = daily?.claimed_today ? 'Alındı' : 'Günlük Al';
+  dailyClaimButton.disabled = Boolean(daily?.claimed_today);
+}
+
+async function claimDailyReward() {
+  try {
+    const data = await api('/api/daily/claim', { method: 'POST' });
+    addSystemMessage(`Günlük ödül alındı: +${data.reward?.shards || 0} Shards, +${data.reward?.xp || 0} XP · Streak ${data.streak}`);
+    await loadGamify();
+    await checkForUnlockedBadges(true);
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+function renderLootbox(lootbox) {
+  if (!lootboxHistoryList) return;
+
+  lootboxHistoryList.innerHTML = '';
+  if (lootboxResult && lootbox?.price) {
+    lootboxResult.dataset.price = lootbox.price;
+  }
+
+  const history = lootbox?.history || [];
+  if (!history.length) {
+    lootboxHistoryList.innerHTML = '<div class="mini-item">Henüz kasa geçmişi yok.</div>';
+    return;
+  }
+
+  history.forEach((entry) => {
+    const item = document.createElement('div');
+    item.className = `lootbox-history ${rarityClass(entry.reward_rarity)}`;
+    const rewardText = entry.reward_type === 'item'
+      ? `${entry.reward_name} · ${entry.reward_rarity}`
+      : `${entry.reward_shards} Shards`;
+    item.innerHTML = `<strong>${escapeHtml(rewardText)}</strong><span>${new Date(entry.created_at).toLocaleString('tr-TR')}</span>`;
+    lootboxHistoryList.appendChild(item);
+  });
+}
+
+async function openLootbox() {
+  try {
+    if (openLootboxButton) openLootboxButton.disabled = true;
+    if (lootboxResult) lootboxResult.innerHTML = '<div class="lootbox-opening">📦 Kasa açılıyor...</div>';
+
+    const data = await api('/api/lootbox/open', { method: 'POST' });
+    const reward = data.reward || {};
+    let html = '';
+
+    if (reward.type === 'item') {
+      const item = reward.item || {};
+      html = `
+        <div class="lootbox-win ${rarityClass(item.rarity)}">
+          <div class="lootbox-win-icon">${escapeHtml(item.icon || '✦')}</div>
+          <strong>${escapeHtml(item.name || 'Item')}</strong>
+          <span>${escapeHtml(item.rarity || 'common')} item açıldı!</span>
+        </div>
+      `;
+    } else {
+      html = `
+        <div class="lootbox-win rarity-rare">
+          <div class="lootbox-win-icon">💎</div>
+          <strong>${reward.shards || 0} Shards</strong>
+          <span>Shard ödülü çıktı.</span>
+        </div>
+      `;
+    }
+
+    if (lootboxResult) lootboxResult.innerHTML = html;
+    await loadGamify();
+  } catch (error) {
+    addSystemMessage(error.message);
+  } finally {
+    if (openLootboxButton) openLootboxButton.disabled = false;
+  }
+}
+
 
 function renderQuests(quests) {
   if (!questsList) return;
@@ -2599,7 +2732,7 @@ async function loadGlobalAdminStatus() {
 async function loadGlobalAdminPanel() {
   if (!canOpenGlobalAdmin) return;
 
-  await Promise.allSettled([loadAdminUsers(), loadIpBans()]);
+  await Promise.allSettled([loadAdminUsers(), loadAdminLogs(), loadIpBans()]);
 }
 
 async function loadAdminUsers() {
@@ -2671,6 +2804,43 @@ async function loadAdminUsers() {
   }
 }
 
+
+async function loadAdminLogs() {
+  if (!adminLogsList) return;
+
+  try {
+    const data = await api('/api/admin/logs');
+    adminLogsList.innerHTML = '';
+
+    if (!data.logs.length) {
+      adminLogsList.innerHTML = '<div class="mini-item">Admin log yok.</div>';
+      return;
+    }
+
+    data.logs.forEach((log) => {
+      const item = document.createElement('div');
+      item.className = 'mini-item admin-log-item';
+      const actor = log.actor_display_name || log.actor_username || 'Sistem';
+      const target = log.target_display_name || log.target_username || '';
+      const details = log.details ? JSON.stringify(log.details) : '{}';
+
+      item.innerHTML = `
+        <div>
+          <strong>${escapeHtml(log.action)}</strong>
+          <span>${escapeHtml(actor)} ${target ? '→ ' + escapeHtml(target) : ''}</span>
+          <span>${escapeHtml(details)}</span>
+          <span>${new Date(log.created_at).toLocaleString('tr-TR')}</span>
+        </div>
+      `;
+
+      adminLogsList.appendChild(item);
+    });
+  } catch (error) {
+    adminLogsList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+
 async function changeDisplayName(u) {
   const displayNameValue = prompt('Yeni görünen ad:', displayName(u));
   if (displayNameValue === null) return;
@@ -2681,6 +2851,7 @@ async function changeDisplayName(u) {
       body: JSON.stringify({ displayName: displayNameValue })
     });
     await loadAdminUsers();
+    await loadAdminLogs();
   } catch (error) {
     addSystemMessage(error.message);
   }
@@ -2696,6 +2867,7 @@ async function changeGlobalRole(u) {
       body: JSON.stringify({ globalRole: role })
     });
     await loadAdminUsers();
+    await loadAdminLogs();
   } catch (error) {
     addSystemMessage(error.message);
   }
@@ -2746,6 +2918,7 @@ async function toggleGlobalBan(u) {
       body: JSON.stringify({ isBanned: !u.is_banned, banReason: reason })
     });
     await loadAdminUsers();
+    await loadAdminLogs();
   } catch (error) {
     addSystemMessage(error.message);
   }
