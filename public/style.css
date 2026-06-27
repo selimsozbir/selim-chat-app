@@ -7125,3 +7125,70 @@ body {
   color: #bae6fd;
   font-size: 11px;
 }
+
+
+/* =========================================================
+   v8.7.0 — Server Roles + Permissions
+   ========================================================= */
+
+.server-permission-info {
+  margin: 8px 0 10px;
+  padding: 8px 10px;
+  border-radius: 13px;
+  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(255,255,255,.035);
+  color: #d4d4d8;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.server-permission-info.server-role-owner {
+  color: #fde68a;
+  border-color: rgba(251,191,36,.28);
+  background: rgba(251,191,36,.08);
+}
+
+.server-permission-info.server-role-admin {
+  color: #fecaca;
+  border-color: rgba(239,68,68,.22);
+  background: rgba(239,68,68,.07);
+}
+
+.server-permission-info.server-role-mod {
+  color: #bae6fd;
+  border-color: rgba(14,165,233,.22);
+  background: rgba(14,165,233,.07);
+}
+
+.server-member-item {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.server-member-item.server-role-owner {
+  border-color: rgba(251,191,36,.25) !important;
+}
+
+.server-member-item.server-role-admin {
+  border-color: rgba(239,68,68,.20) !important;
+}
+
+.server-member-item.server-role-mod {
+  border-color: rgba(14,165,233,.20) !important;
+}
+
+.server-member-actions {
+  gap: 5px !important;
+}
+
+#copyServerInviteButton:disabled,
+#createChannelButton:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+
+/* v8.7.1 — Server Channel Message Delivery Fix */
+.server-channel-item.active {
+  outline: 1px solid rgba(34,211,238,.35);
+}
