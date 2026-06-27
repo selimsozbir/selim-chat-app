@@ -448,6 +448,95 @@ async function getUserInventory(userId) {
   return result.rows;
 }
 
+
+async function logAdminAction(actorId, action, details = {}, targetId = null) {
+  try {
+    await pool.query(
+      `INSERT INTO admin_logs (actor_id, target_id, action, details)
+       VALUES ($1, $2, $3, $4)`,
+      [actorId || null, targetId || null, action, details]
+    );
+  } catch (error) {
+    console.error('Admin log yazılamadı:', error);
+  }
+}
+
+function itemRarityWeight(rarity) {
+  if (rarity === 'legendary') return 4;
+  if (rarity === 'epic') return 3;
+  if (rarity === 'rare') return 2;
+  return 1;
+}
+
+function pickLootboxRarity() {
+  const roll = Math.random() * 100;
+  if (roll < 4) return 'legendary';
+  if (roll < 18) return 'epic';
+  if (roll < 48) return 'rare';
+  return 'common';
+}
+
+function dailyRewardForStreak(streak) {
+  const safe = Math.max(1, Number(streak || 1));
+  const bonus = Math.min(250, (safe - 1) * 15);
+  const weeklyBonus = safe % 7 === 0 ? 300 : 0;
+  return {
+    shards: 75 + bonus + weeklyBonus,
+    xp: 100 + Math.min(400, (safe - 1) * 25) + (safe % 7 === 0 ? 300 : 0)
+  };
+}
+
+async function getDailyRewardInfo(userId) {
+  const today = await pool.query(
+    `SELECT id, streak, reward_shards, reward_xp
+     FROM daily_reward_claims
+     WHERE user_id = $1 AND claim_date = CURRENT_DATE
+     LIMIT 1`,
+    [userId]
+  );
+
+  const recent = await pool.query(
+    `SELECT claim_date, streak
+     FROM daily_reward_claims
+     WHERE user_id = $1
+     ORDER BY claim_date DESC
+     LIMIT 14`,
+    [userId]
+  );
+
+  const yesterday = await pool.query(
+    `SELECT streak
+     FROM daily_reward_claims
+     WHERE user_id = $1 AND claim_date = CURRENT_DATE - INTERVAL '1 day'
+     LIMIT 1`,
+    [userId]
+  );
+
+  const nextStreak = today.rows[0]?.streak || ((yesterday.rows[0]?.streak || 0) + 1);
+  const reward = dailyRewardForStreak(nextStreak);
+
+  return {
+    claimed_today: today.rows.length > 0,
+    streak: Number(today.rows[0]?.streak || yesterday.rows[0]?.streak || 0),
+    next_streak: Number(nextStreak),
+    reward,
+    recent: recent.rows
+  };
+}
+
+async function getLootboxHistory(userId) {
+  const result = await pool.query(
+    `SELECT id, reward_type, reward_id, reward_name, reward_rarity, reward_shards, cost_shards, created_at
+     FROM lootbox_history
+     WHERE user_id = $1
+     ORDER BY created_at DESC
+     LIMIT 10`,
+    [userId]
+  );
+  return result.rows;
+}
+
+
 async function getClaimedQuestsToday(userId) {
   const result = await pool.query('SELECT quest_id FROM daily_quest_claims WHERE user_id = $1 AND claim_date = CURRENT_DATE', [userId]);
   return new Set(result.rows.map((row) => row.quest_id));
@@ -1032,6 +1121,45 @@ async function initDatabase() {
     );
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS daily_reward_claims (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      claim_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      streak INTEGER NOT NULL DEFAULT 1,
+      reward_shards INTEGER NOT NULL DEFAULT 0,
+      reward_xp INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, claim_date)
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS lootbox_history (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      crate_id VARCHAR(80) NOT NULL DEFAULT 'serbia_rift',
+      reward_type VARCHAR(40) NOT NULL,
+      reward_id VARCHAR(80),
+      reward_name TEXT,
+      reward_rarity VARCHAR(40),
+      reward_shards INTEGER DEFAULT 0,
+      cost_shards INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_logs (
+      id SERIAL PRIMARY KEY,
+      actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      target_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      action VARCHAR(80) NOT NULL,
+      details JSONB NOT NULL DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
 
 
   await pool.query(`
@@ -1608,10 +1736,12 @@ app.patch('/api/admin/users/:id', authMiddleware, requireGlobalAdmin, async (req
     if (req.adminUser.global_role !== 'owner') return res.status(403).json({ error: 'Rol değiştirmeyi sadece owner yapabilir.' });
     if (!['owner', 'admin', 'mod', 'user'].includes(globalRole)) return res.status(400).json({ error: 'Geçersiz rol.' });
     await pool.query('UPDATE users SET global_role = $1 WHERE id = $2', [globalRole, targetId]);
+    await logAdminAction(req.adminUser.id, 'role_change', { from: target.global_role, to: globalRole }, targetId);
   }
 
   if (displayName !== undefined) {
     await pool.query('UPDATE users SET display_name = $1 WHERE id = $2', [displayName || target.username, targetId]);
+    await logAdminAction(req.adminUser.id, 'display_name_change', { displayName: displayName || target.username }, targetId);
   }
 
   if (isBanned !== undefined) {
@@ -1620,6 +1750,7 @@ app.patch('/api/admin/users/:id', authMiddleware, requireGlobalAdmin, async (req
     if (isBanned) {
       emitToUser(targetId, 'global_banned', { reason: banReason || 'Banlandı.' });
     }
+    await logAdminAction(req.adminUser.id, isBanned ? 'user_ban' : 'user_unban', { reason: banReason || '' }, targetId);
   } else if (banReason !== undefined) {
     await pool.query('UPDATE users SET ban_reason = $1 WHERE id = $2', [banReason, targetId]);
   }
@@ -1627,6 +1758,7 @@ app.patch('/api/admin/users/:id', authMiddleware, requireGlobalAdmin, async (req
   if (shards !== undefined) {
     await pool.query('UPDATE users SET shards = $1 WHERE id = $2', [shards, targetId]);
     emitToUser(targetId, 'notification', { type: 'system', payload: { text: `Shards bakiyen ${shards} olarak güncellendi.` } });
+    await logAdminAction(req.adminUser.id, 'shards_set', { shards, previous: target.shards }, targetId);
   }
 
   if (shardDelta !== undefined && shardDelta !== 0) {
@@ -1635,10 +1767,30 @@ app.patch('/api/admin/users/:id', authMiddleware, requireGlobalAdmin, async (req
       [shardDelta, targetId]
     );
     emitToUser(targetId, 'notification', { type: 'system', payload: { text: `Shards bakiyen ${result.rows[0]?.shards || 0} oldu.` } });
+    await logAdminAction(req.adminUser.id, 'shards_delta', { delta: shardDelta, final: result.rows[0]?.shards || 0 }, targetId);
   }
 
   res.json({ ok: true, message: 'Kullanıcı güncellendi.' });
 });
+
+
+app.get('/api/admin/logs', authMiddleware, requireGlobalAdmin, async (req, res) => {
+  const result = await pool.query(
+    `SELECT al.id, al.action, al.details, al.created_at,
+            actor.username AS actor_username,
+            actor.display_name AS actor_display_name,
+            target.username AS target_username,
+            target.display_name AS target_display_name
+     FROM admin_logs al
+     LEFT JOIN users actor ON actor.id = al.actor_id
+     LEFT JOIN users target ON target.id = al.target_id
+     ORDER BY al.created_at DESC
+     LIMIT 80`
+  );
+
+  res.json({ logs: result.rows });
+});
+
 
 app.get('/api/admin/ip-bans', authMiddleware, requireGlobalAdmin, async (req, res) => {
   const result = await pool.query(
@@ -1664,6 +1816,7 @@ app.post('/api/admin/ip-bans', authMiddleware, requireGlobalAdmin, async (req, r
     [ip, reason || 'IP banlandı.', req.user.id]
   );
 
+  await logAdminAction(req.adminUser.id, 'ip_ban', { ip, reason: reason || 'IP banlandı.' });
   res.json({ ok: true, message: 'IP banlandı.' });
 });
 
@@ -1672,6 +1825,7 @@ app.delete('/api/admin/ip-bans/:id', authMiddleware, requireGlobalAdmin, async (
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Geçersiz IP ban.' });
 
   await pool.query('DELETE FROM ip_bans WHERE id = $1', [id]);
+  await logAdminAction(req.adminUser.id, 'ip_unban', { id });
   res.json({ ok: true, message: 'IP ban kaldırıldı.' });
 });
 
@@ -2126,12 +2280,21 @@ app.get('/api/gamify/summary', authMiddleware, async (req, res) => {
     const quests = buildDailyQuests(todayStats);
     const claimed = await getClaimedQuestsToday(req.user.id);
     const inventory = await getUserInventory(req.user.id);
+    const daily = await getDailyRewardInfo(req.user.id);
+    const lootboxHistory = await getLootboxHistory(req.user.id);
 
     res.json({
       user: {
         ...me,
         level: profileLevelFromXp(me?.xp || 0),
         inventory
+      },
+      daily,
+      lootbox: {
+        crate_id: 'serbia_rift',
+        name: 'Serbia Rift Crate',
+        price: 250,
+        history: lootboxHistory
       },
       quests: quests.map((q) => ({
         ...q,
@@ -2148,6 +2311,110 @@ app.get('/api/gamify/summary', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Oyun paneli yüklenemedi.' });
   }
 });
+
+
+app.post('/api/daily/claim', authMiddleware, async (req, res) => {
+  try {
+    const already = await pool.query(
+      'SELECT id FROM daily_reward_claims WHERE user_id = $1 AND claim_date = CURRENT_DATE',
+      [req.user.id]
+    );
+
+    if (already.rows.length > 0) return res.status(400).json({ error: 'Bugünkü günlük ödülü zaten aldın.' });
+
+    const yesterday = await pool.query(
+      `SELECT streak
+       FROM daily_reward_claims
+       WHERE user_id = $1 AND claim_date = CURRENT_DATE - INTERVAL '1 day'
+       LIMIT 1`,
+      [req.user.id]
+    );
+
+    const streak = Number(yesterday.rows[0]?.streak || 0) + 1;
+    const reward = dailyRewardForStreak(streak);
+
+    await pool.query('BEGIN');
+    await pool.query(
+      `INSERT INTO daily_reward_claims (user_id, claim_date, streak, reward_shards, reward_xp)
+       VALUES ($1, CURRENT_DATE, $2, $3, $4)`,
+      [req.user.id, streak, reward.shards, reward.xp]
+    );
+    await rewardUserActivity(req.user.id, reward.xp, reward.shards);
+    await pool.query('COMMIT');
+
+    const me = await pool.query('SELECT xp, shards FROM users WHERE id = $1', [req.user.id]);
+    res.json({ ok: true, streak, reward, user: me.rows[0], daily: await getDailyRewardInfo(req.user.id) });
+  } catch (error) {
+    await pool.query('ROLLBACK').catch(() => {});
+    console.error('Daily claim error:', error);
+    res.status(500).json({ error: 'Günlük ödül alınamadı.' });
+  }
+});
+
+app.post('/api/lootbox/open', authMiddleware, async (req, res) => {
+  try {
+    const cost = 250;
+    const balance = await getShardBalance(req.user.id);
+    if (balance < cost) return res.status(400).json({ error: `Yetersiz Shards. Kasa fiyatı: ${cost}` });
+
+    const inventory = await getUserInventory(req.user.id);
+    const ownedIds = new Set(inventory.map((item) => item.item_id));
+    const rarity = pickLootboxRarity();
+
+    let candidates = MARKET_ITEMS
+      .filter((item) => item.rarity === rarity && !ownedIds.has(item.id))
+      .sort((a, b) => itemRarityWeight(b.rarity) - itemRarityWeight(a.rarity));
+
+    if (!candidates.length) {
+      candidates = MARKET_ITEMS
+        .filter((item) => !ownedIds.has(item.id))
+        .sort((a, b) => itemRarityWeight(b.rarity) - itemRarityWeight(a.rarity));
+    }
+
+    await pool.query('BEGIN');
+    await addShards(req.user.id, -cost);
+
+    let reward;
+    if (candidates.length) {
+      const item = candidates[Math.floor(Math.random() * candidates.length)];
+      await pool.query(
+        `INSERT INTO user_items (user_id, item_id, item_type)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (user_id, item_id) DO NOTHING`,
+        [req.user.id, item.id, item.type]
+      );
+
+      await pool.query(
+        `INSERT INTO lootbox_history (user_id, crate_id, reward_type, reward_id, reward_name, reward_rarity, reward_shards, cost_shards)
+         VALUES ($1, 'serbia_rift', 'item', $2, $3, $4, 0, $5)`,
+        [req.user.id, item.id, item.name, item.rarity, cost]
+      );
+
+      reward = { type: 'item', item };
+    } else {
+      const shardReward = 120 + Math.floor(Math.random() * 181);
+      await addShards(req.user.id, shardReward);
+
+      await pool.query(
+        `INSERT INTO lootbox_history (user_id, crate_id, reward_type, reward_name, reward_rarity, reward_shards, cost_shards)
+         VALUES ($1, 'serbia_rift', 'shards', 'Shard Refund', 'rare', $2, $3)`,
+        [req.user.id, shardReward, cost]
+      );
+
+      reward = { type: 'shards', shards: shardReward };
+    }
+
+    await pool.query('COMMIT');
+
+    const me = await pool.query('SELECT xp, shards FROM users WHERE id = $1', [req.user.id]);
+    res.json({ ok: true, cost, reward, user: me.rows[0], history: await getLootboxHistory(req.user.id) });
+  } catch (error) {
+    await pool.query('ROLLBACK').catch(() => {});
+    console.error('Lootbox error:', error);
+    res.status(500).json({ error: 'Kasa açılamadı.' });
+  }
+});
+
 
 app.get('/api/leaderboard', authMiddleware, async (req, res) => {
   try {
