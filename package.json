@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "9.5.2",
-  "description": "Selim Chat v9.5.2 microphone permission and notification list fix",
+  "version": "9.5.3",
+  "description": "Selim Chat v9.5.3 voice send button and clean audio constraints",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
