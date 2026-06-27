@@ -63,6 +63,20 @@ const headerSettingsButton = document.getElementById('headerSettingsButton');
 const focusComposerButton = document.getElementById('focusComposerButton');
 const jumpBottomHeaderButton = document.getElementById('jumpBottomHeaderButton');
 const scrollBottomButton = document.getElementById('scrollBottomButton');
+const commandPaletteModal = document.getElementById('commandPaletteModal');
+const commandPaletteInput = document.getElementById('commandPaletteInput');
+const commandPaletteList = document.getElementById('commandPaletteList');
+const commandPaletteCloseButton = document.getElementById('commandPaletteCloseButton');
+
+const mediaViewerModal = document.getElementById('mediaViewerModal');
+const mediaViewerStage = document.getElementById('mediaViewerStage');
+const mediaViewerTitle = document.getElementById('mediaViewerTitle');
+const mediaViewerMeta = document.getElementById('mediaViewerMeta');
+const mediaViewerOpenLink = document.getElementById('mediaViewerOpenLink');
+const mediaViewerCloseButton = document.getElementById('mediaViewerCloseButton');
+const mediaViewerPrevButton = document.getElementById('mediaViewerPrevButton');
+const mediaViewerNextButton = document.getElementById('mediaViewerNextButton');
+
 const composerHint = document.getElementById('composerHint');
 const sendButton = document.getElementById('sendButton');
 const statusText = document.getElementById('statusText');
@@ -313,6 +327,11 @@ let marketPreviewTimer = null;
 document.body.dataset.chatMode = chatMode;
 
 let socket = null;
+let commandPaletteItems = [];
+let commandPaletteIndex = 0;
+let mediaViewerItems = [];
+let mediaViewerIndex = 0;
+
 let token = localStorage.getItem('chat_token');
 let user = null;
 try {
@@ -2508,7 +2527,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1054');
+    url.searchParams.set('v', '1060');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3169,8 +3188,18 @@ function renderGallery(files = []) {
 
     if (file.message_type === 'image') {
       item.innerHTML = `<img src="${file.file_data}" alt="${escapeHtml(file.file_name || 'foto')}" /><div><strong>${escapeHtml(file.file_name || 'Fotoğraf')}</strong><span>${escapeHtml(file.username)} · ${new Date(file.created_at).toLocaleString('tr-TR')}</span></div>`;
+      item.addEventListener('click', (event) => {
+        event.preventDefault();
+        openMediaViewer(file.file_data, 'image');
+      });
     } else {
       item.innerHTML = `<div class="gallery-file-icon">${galleryIcon(file.message_type)}</div><div><strong>${escapeHtml(file.file_name || file.text || 'Dosya')}</strong><span>${escapeHtml(file.username)} · ${file.file_size ? formatFileSize(file.file_size) + ' · ' : ''}${new Date(file.created_at).toLocaleString('tr-TR')}</span></div>`;
+      if (file.message_type === 'audio') {
+        item.addEventListener('click', (event) => {
+          event.preventDefault();
+          openMediaViewer(file.file_data, 'audio');
+        });
+      }
     }
 
     galleryList.appendChild(item);
@@ -3900,6 +3929,260 @@ function markOwnBubble(row, bubble, activeBubble = '') {
   }
 }
 
+
+function extractFirstUrl(text = '') {
+  const match = String(text || '').match(/https?:\/\/[^\s<>"')]+/i);
+  return match ? match[0] : '';
+}
+
+function linkPreviewMeta(url) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, '');
+    const path = parsed.pathname.replace(/\/$/, '');
+    let icon = '🔗';
+    let title = host;
+    let desc = url;
+
+    if (host.includes('youtube.com') || host.includes('youtu.be')) {
+      icon = '▶️';
+      title = 'YouTube linki';
+      desc = 'Videoyu yeni sekmede aç.';
+    } else if (host.includes('itch.io')) {
+      icon = '🎮';
+      title = 'itch.io linki';
+      desc = 'Oyun sayfası / proje linki.';
+    } else if (host.includes('github.com')) {
+      icon = '💻';
+      title = 'GitHub linki';
+      desc = path ? path.split('/').filter(Boolean).slice(0, 2).join(' / ') : 'Repository veya profil.';
+    } else if (host.includes('netlify.app') || host.includes('render.com') || host.includes('onrender.com')) {
+      icon = '🌐';
+      title = 'Web app linki';
+      desc = 'Deploy edilmiş site linki.';
+    } else if (host.includes('openai.com') || host.includes('chatgpt.com')) {
+      icon = '🤖';
+      title = 'OpenAI / ChatGPT linki';
+      desc = 'AI bağlantısı.';
+    }
+
+    return { url, host, icon, title, desc };
+  } catch {
+    return null;
+  }
+}
+
+function linkifyText(text = '') {
+  const safe = escapeHtml(text || '');
+  return safe.replace(/(https?:\/\/[^\s<>"')]+)/gi, (url) => {
+    const clean = url.replace(/&amp;/g, '&');
+    return `<a class="message-link" href="${escapeHtml(clean)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`;
+  });
+}
+
+function buildLinkPreview(url) {
+  const meta = linkPreviewMeta(url);
+  if (!meta) return null;
+
+  const card = document.createElement('a');
+  card.className = 'link-preview-card';
+  card.href = meta.url;
+  card.target = '_blank';
+  card.rel = 'noopener noreferrer';
+  card.innerHTML = `
+    <div class="link-preview-icon">${escapeHtml(meta.icon)}</div>
+    <div class="link-preview-content">
+      <strong>${escapeHtml(meta.title)}</strong>
+      <span>${escapeHtml(meta.host)}</span>
+      <p>${escapeHtml(meta.desc)}</p>
+    </div>
+    <div class="link-preview-arrow">↗</div>
+  `;
+  return card;
+}
+
+function messageMediaUrl({ file_data, file_path }) {
+  return file_path || file_data || '';
+}
+
+function collectMediaViewerItems() {
+  const nodes = Array.from(document.querySelectorAll('[data-media-viewer-src]'));
+  mediaViewerItems = nodes.map((node) => ({
+    src: node.dataset.mediaViewerSrc,
+    type: node.dataset.mediaViewerType || 'image',
+    title: node.dataset.mediaViewerTitle || 'Medya',
+    meta: node.dataset.mediaViewerMeta || ''
+  })).filter((item) => item.src);
+}
+
+function renderMediaViewer() {
+  if (!mediaViewerModal || !mediaViewerStage) return;
+  const item = mediaViewerItems[mediaViewerIndex];
+  if (!item) return;
+
+  mediaViewerStage.innerHTML = '';
+  mediaViewerTitle.textContent = item.title || 'Medya';
+  mediaViewerMeta.textContent = `${mediaViewerIndex + 1}/${mediaViewerItems.length || 1}${item.meta ? ' · ' + item.meta : ''}`;
+
+  mediaViewerOpenLink.href = item.src;
+  mediaViewerOpenLink.classList.toggle('hidden', !item.src);
+
+  if (item.type === 'audio') {
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.autoplay = true;
+    audio.src = item.src;
+    mediaViewerStage.appendChild(audio);
+  } else if (item.type === 'video') {
+    const video = document.createElement('video');
+    video.controls = true;
+    video.autoplay = true;
+    video.src = item.src;
+    mediaViewerStage.appendChild(video);
+  } else {
+    const img = document.createElement('img');
+    img.src = item.src;
+    img.alt = item.title || 'Medya';
+    mediaViewerStage.appendChild(img);
+  }
+
+  mediaViewerPrevButton?.classList.toggle('hidden', mediaViewerItems.length <= 1);
+  mediaViewerNextButton?.classList.toggle('hidden', mediaViewerItems.length <= 1);
+}
+
+function openMediaViewer(src, type = 'image') {
+  if (!src || !mediaViewerModal) return;
+  collectMediaViewerItems();
+  let index = mediaViewerItems.findIndex((item) => item.src === src);
+  if (index < 0) {
+    mediaViewerItems.push({ src, type, title: type === 'audio' ? 'Ses kaydı' : 'Medya', meta: '' });
+    index = mediaViewerItems.length - 1;
+  }
+  mediaViewerIndex = Math.max(0, index);
+  renderMediaViewer();
+  mediaViewerModal.classList.remove('hidden');
+  mediaViewerModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeMediaViewer() {
+  mediaViewerModal?.classList.add('hidden');
+  mediaViewerModal?.setAttribute('aria-hidden', 'true');
+  if (mediaViewerStage) mediaViewerStage.innerHTML = '';
+}
+
+function moveMediaViewer(delta) {
+  if (!mediaViewerItems.length) return;
+  mediaViewerIndex = (mediaViewerIndex + delta + mediaViewerItems.length) % mediaViewerItems.length;
+  renderMediaViewer();
+}
+
+function commandPaletteBaseItems() {
+  const items = [
+    { icon: '💬', title: 'Genel odayı aç', subtitle: '#genel odasına git', keywords: 'oda genel chat room', run: () => joinRoom('genel') },
+    { icon: '🌀', title: 'Serbia odasını aç', subtitle: '#serbia odasına git', keywords: 'serbia room oda', run: () => joinRoom('serbia') },
+    { icon: '⚫', title: 'Limbo odasını aç', subtitle: '#limbo odasına git', keywords: 'limbo room oda', run: () => joinRoom('limbo') },
+    { icon: '🤝', title: 'Arkadaşlar merkezini aç', subtitle: 'Arkadaşlar / istekler / sosyal', keywords: 'friend friends arkadaş dm sosyal', run: () => openFriendsCenter?.('friends') },
+    { icon: '🗂️', title: 'Galeri aç', subtitle: 'Medya ve dosyalar', keywords: 'gallery galeri medya file', run: () => openGalleryModal?.() },
+    { icon: '⚙️', title: 'Ayarları aç', subtitle: 'Profil, görünüm, bildirim', keywords: 'settings ayar profil', run: () => openSettings?.() },
+    { icon: '🛒', title: 'Market / Gamify', subtitle: 'Shard, lootbox, market alanına git', keywords: 'market shards lootbox casino leaderboard', run: () => { syncRailActive?.('hub'); document.body.classList.add('mobile-right-panel-open'); } },
+    { icon: '🤖', title: 'Feiz paneli', subtitle: 'Mood/personality ayarı', keywords: 'feiz bot ai mood', run: () => { loadFeizPersonality?.(); document.body.classList.add('mobile-right-panel-open'); } },
+    { icon: '🔎', title: 'Mesaj arama', subtitle: 'Mesaj arama kutusuna odaklan', keywords: 'search ara mesaj', run: () => focusHeaderSearch?.() },
+    { icon: '✍️', title: 'Mesaj yaz', subtitle: 'Composer alanına odaklan', keywords: 'write yaz composer', run: () => messageInput?.focus() }
+  ];
+
+  if (Array.isArray(friends)) {
+    friends.slice(0, 20).forEach((friend) => {
+      items.push({
+        icon: '📨',
+        title: `${displayName?.(friend) || friend.username} DM aç`,
+        subtitle: '@' + (friend.username || 'kullanıcı'),
+        keywords: `dm friend arkadaş ${friend.username || ''} ${friend.display_name || ''}`,
+        run: () => openDm(friend)
+      });
+    });
+  }
+
+  if (Array.isArray(groups)) {
+    groups.slice(0, 20).forEach((group) => {
+      items.push({
+        icon: '👥',
+        title: `${group.name} grubunu aç`,
+        subtitle: 'Grup sohbeti',
+        keywords: `group grup ${group.name || ''}`,
+        run: () => openGroup(group)
+      });
+    });
+  }
+
+  return items;
+}
+
+function scoreCommandItem(item, q) {
+  if (!q) return 1;
+  const hay = `${item.title} ${item.subtitle || ''} ${item.keywords || ''}`.toLowerCase();
+  const parts = q.toLowerCase().split(/\s+/).filter(Boolean);
+  return parts.every((part) => hay.includes(part)) ? parts.reduce((sum, part) => sum + (hay.startsWith(part) ? 4 : 1), 0) : 0;
+}
+
+function renderCommandPalette() {
+  if (!commandPaletteList) return;
+  const q = commandPaletteInput?.value || '';
+  commandPaletteItems = commandPaletteBaseItems()
+    .map((item) => ({ ...item, score: scoreCommandItem(item, q) }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 12);
+
+  commandPaletteIndex = Math.min(commandPaletteIndex, Math.max(0, commandPaletteItems.length - 1));
+  commandPaletteList.innerHTML = '';
+
+  if (!commandPaletteItems.length) {
+    commandPaletteList.innerHTML = '<div class="command-empty">Sonuç yok.</div>';
+    return;
+  }
+
+  commandPaletteItems.forEach((item, index) => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = `command-item ${index === commandPaletteIndex ? 'active' : ''}`;
+    row.innerHTML = `
+      <span class="command-icon">${escapeHtml(item.icon || '⌘')}</span>
+      <span class="command-copy">
+        <strong>${escapeHtml(item.title)}</strong>
+        <em>${escapeHtml(item.subtitle || '')}</em>
+      </span>
+    `;
+    row.addEventListener('click', () => runCommandPaletteItem(index));
+    commandPaletteList.appendChild(row);
+  });
+}
+
+function openCommandPalette() {
+  if (!commandPaletteModal) return;
+  commandPaletteModal.classList.remove('hidden');
+  commandPaletteModal.setAttribute('aria-hidden', 'false');
+  commandPaletteIndex = 0;
+  renderCommandPalette();
+  setTimeout(() => {
+    commandPaletteInput?.focus();
+    commandPaletteInput?.select();
+  }, 20);
+}
+
+function closeCommandPalette() {
+  commandPaletteModal?.classList.add('hidden');
+  commandPaletteModal?.setAttribute('aria-hidden', 'true');
+  if (commandPaletteInput) commandPaletteInput.value = '';
+}
+
+function runCommandPaletteItem(index = commandPaletteIndex) {
+  const item = commandPaletteItems[index];
+  if (!item) return;
+  closeCommandPalette();
+  item.run?.();
+}
+
+
 function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read, readers, bubble_theme, name_effect, frame_theme }) {
   const localSettings = getLocalSettings();
   const normalizedUsername = String(username || '').toLowerCase();
@@ -3974,7 +4257,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
 
   const body = document.createElement('div');
   body.className = 'text';
-  body.textContent = text;
+  body.innerHTML = linkifyText(text);
 
   bubble.appendChild(meta);
 
@@ -3986,6 +4269,10 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
   }
 
   bubble.appendChild(body);
+
+  const previewUrl = !deleted ? extractFirstUrl(text) : '';
+  const linkPreview = previewUrl ? buildLinkPreview(previewUrl) : null;
+  if (linkPreview) bubble.appendChild(linkPreview);
 
   if (file_data && !deleted) {
     bubble.appendChild(renderMedia({ message_type, file_name, file_mime, file_data, file_path, file_size }));
@@ -4331,25 +4618,45 @@ function renderMedia({ message_type, file_name, file_mime, file_data, file_path,
   wrap.className = 'message-media';
 
   if (message_type === 'image') {
+    const src = messageMediaUrl({ file_data, file_path });
     const img = document.createElement('img');
-    img.src = file_data;
+    img.src = src;
     img.alt = file_name || 'image';
+    img.dataset.mediaViewerSrc = src;
+    img.dataset.mediaViewerType = 'image';
+    img.dataset.mediaViewerTitle = file_name || 'Fotoğraf';
+    img.dataset.mediaViewerMeta = file_size ? formatFileSize(file_size) : 'Image';
     img.addEventListener('click', (event) => {
       event.stopPropagation();
-      openImageModal(file_data);
+      openMediaViewer(src, 'image');
     });
     wrap.appendChild(img);
     return wrap;
   }
 
   if (message_type === 'audio') {
-    wrap.appendChild(renderVoicePlayer({ file_name, file_data, file_size }));
+    const src = messageMediaUrl({ file_data, file_path });
+    const voice = renderVoicePlayer({ file_name, file_data: src, file_size });
+    voice.dataset.mediaViewerSrc = src;
+    voice.dataset.mediaViewerType = 'audio';
+    voice.dataset.mediaViewerTitle = file_name || 'Ses kaydı';
+    voice.dataset.mediaViewerMeta = file_size ? formatFileSize(file_size) : 'Audio';
+    const openBtn = document.createElement('button');
+    openBtn.type = 'button';
+    openBtn.className = 'voice-open-viewer';
+    openBtn.textContent = 'Büyük aç';
+    openBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openMediaViewer(src, 'audio');
+    });
+    voice.appendChild(openBtn);
+    wrap.appendChild(voice);
     return wrap;
   }
 
   const link = document.createElement('a');
   link.className = 'file-link';
-  link.href = file_data;
+  link.href = messageMediaUrl({ file_data, file_path });
   link.target = '_blank';
   link.rel = 'noopener';
   link.download = file_name || 'dosya';
@@ -6607,6 +6914,69 @@ function resizeImage(file, maxSize) {
     reader.readAsDataURL(file);
   });
 }
+
+
+
+/* v10.6.0 command palette + media viewer bindings */
+commandPaletteInput?.addEventListener('input', () => {
+  commandPaletteIndex = 0;
+  renderCommandPalette();
+});
+
+commandPaletteCloseButton?.addEventListener('click', closeCommandPalette);
+commandPaletteModal?.addEventListener('click', (event) => {
+  if (event.target === commandPaletteModal) closeCommandPalette();
+});
+
+mediaViewerCloseButton?.addEventListener('click', closeMediaViewer);
+mediaViewerModal?.addEventListener('click', (event) => {
+  if (event.target === mediaViewerModal) closeMediaViewer();
+});
+mediaViewerPrevButton?.addEventListener('click', () => moveMediaViewer(-1));
+mediaViewerNextButton?.addEventListener('click', () => moveMediaViewer(1));
+
+document.addEventListener('keydown', (event) => {
+  const key = event.key.toLowerCase();
+  const target = event.target;
+  const isTyping = target && ['INPUT', 'TEXTAREA'].includes(target.tagName);
+
+  if ((event.ctrlKey || event.metaKey) && key === 'k') {
+    event.preventDefault();
+    openCommandPalette();
+    return;
+  }
+
+  if (!commandPaletteModal?.classList.contains('hidden')) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeCommandPalette();
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      commandPaletteIndex = Math.min(commandPaletteIndex + 1, Math.max(0, commandPaletteItems.length - 1));
+      renderCommandPalette();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      commandPaletteIndex = Math.max(0, commandPaletteIndex - 1);
+      renderCommandPalette();
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      runCommandPaletteItem();
+    }
+    return;
+  }
+
+  if (!mediaViewerModal?.classList.contains('hidden')) {
+    if (event.key === 'Escape') closeMediaViewer();
+    if (event.key === 'ArrowLeft') moveMediaViewer(-1);
+    if (event.key === 'ArrowRight') moveMediaViewer(1);
+    return;
+  }
+
+  if (!isTyping && key === '/') {
+    event.preventDefault();
+    openCommandPalette();
+  }
+});
 
 startApp();
 
