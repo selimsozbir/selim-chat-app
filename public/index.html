@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v10.2.0</title>
-  <link rel="stylesheet" href="style.css?v=1020" />
+  <title>Selim Chat v10.2.1</title>
+  <link rel="stylesheet" href="style.css?v=1021" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -44,6 +44,7 @@
         <button id="railDmButton" class="rail-button" type="button" title="DM">💬</button>
         <button id="railGroupButton" class="rail-button" type="button" title="Gruplar">👥</button>
         <button id="railHubButton" class="rail-button" type="button" title="Hub">5</button>
+        <button id="railFriendsCenterButton" class="rail-button" type="button" title="Arkadaşlar">🤝</button>
         <button id="railGalleryButton" class="rail-button" type="button" title="Galeri">🗂️</button>
         <button id="railSettingsButton" class="rail-button rail-bottom" type="button" title="Ayarlar">⚙</button>
       </nav>
@@ -424,25 +425,6 @@
         </div>
 
 
-        <div id="socialPanel" class="social-control-box">
-          <div class="social-control-head">
-            <div>
-              <strong>Sosyal Durum</strong>
-              <span>Online listesinde böyle görünür</span>
-            </div>
-            <button id="savePresenceButton" class="small-button" type="button">Kaydet</button>
-          </div>
-
-          <select id="presenceSelect" class="social-input">
-            <option value="online">🟢 Aktif</option>
-            <option value="idle">🌙 Boşta</option>
-            <option value="dnd">⛔ Rahatsız Etmeyin</option>
-            <option value="invisible">👻 Görünmez</option>
-          </select>
-
-          <input id="customStatusInput" class="social-input" maxlength="80" placeholder="Özel durum: müzik yapıyor, AFK, kod yazıyor..." />
-        </div>
-
         <div class="notifications-box">
           <h3>Bildirimler <span id="notificationBadge"></span></h3>
           <button id="clearNotificationsButton" class="small-button">Bildirimleri temizle</button>
@@ -484,6 +466,69 @@
         </div>
       </div>
 
+
+
+      <div id="friendsCenterModal" class="friends-center-modal hidden">
+        <div class="friends-center-card">
+          <div class="friends-center-head">
+            <div>
+              <strong>Arkadaşlar</strong>
+              <span>Arkadaşlar, istekler, engeller ve sosyal durum</span>
+            </div>
+            <button id="friendsCenterCloseButton" class="small-button gray" type="button">Kapat</button>
+          </div>
+
+          <div class="friends-center-tabs">
+            <button class="friends-center-tab active" data-friends-center-tab="friends" type="button">Arkadaşlar</button>
+            <button class="friends-center-tab" data-friends-center-tab="requests" type="button">İstekler</button>
+            <button class="friends-center-tab" data-friends-center-tab="blocked" type="button">Engellenen</button>
+            <button class="friends-center-tab" data-friends-center-tab="social" type="button">Sosyal</button>
+          </div>
+
+          <div id="friendsCenterFriendsPanel" class="friends-center-panel">
+            <div class="friends-center-search">
+              <input id="friendsCenterSearchInput" type="text" placeholder="Kullanıcı ara..." />
+              <button id="friendsCenterSearchButton" class="small-button" type="button">Ara</button>
+            </div>
+            <div id="friendsCenterSearchResults" class="friends-center-list"></div>
+            <h3>Arkadaşlarım</h3>
+            <div id="friendsCenterList" class="friends-center-list"></div>
+          </div>
+
+          <div id="friendsCenterRequestsPanel" class="friends-center-panel hidden">
+            <h3>Arkadaş İstekleri</h3>
+            <div id="friendsCenterRequestsList" class="friends-center-list"></div>
+          </div>
+
+          <div id="friendsCenterBlockedPanel" class="friends-center-panel hidden">
+            <h3>Engellenenler</h3>
+            <div id="friendsCenterBlockedList" class="friends-center-list"></div>
+          </div>
+
+          <div id="friendsCenterSocialPanel" class="friends-center-panel hidden">
+        <div id="socialPanel" class="social-control-box">
+          <div class="social-control-head">
+            <div>
+              <strong>Sosyal Durum</strong>
+              <span>Online listesinde böyle görünür</span>
+            </div>
+            <button id="savePresenceButton" class="small-button" type="button">Kaydet</button>
+          </div>
+
+          <select id="presenceSelect" class="social-input">
+            <option value="online">🟢 Aktif</option>
+            <option value="idle">🌙 Boşta</option>
+            <option value="dnd">⛔ Rahatsız Etmeyin</option>
+            <option value="invisible">👻 Görünmez</option>
+          </select>
+
+          <input id="customStatusInput" class="social-input" maxlength="80" placeholder="Özel durum: müzik yapıyor, AFK, kod yazıyor..." />
+        </div>
+
+
+          </div>
+        </div>
+      </div>
 
     </section>
   </div>
