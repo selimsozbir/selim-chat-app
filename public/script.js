@@ -2508,7 +2508,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1050');
+    url.searchParams.set('v', '1052');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3874,6 +3874,13 @@ function markVisibleRoomMessagesRead() {
 }
 
 
+
+function markOwnBubble(row, bubble) {
+  if (!row || !bubble) return;
+  row.classList.add('mine', 'own-message', 'self');
+  bubble.classList.add('own-bubble');
+}
+
 function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read, readers, bubble_theme, name_effect, frame_theme }) {
   const localSettings = getLocalSettings();
   const normalizedUsername = String(username || '').toLowerCase();
@@ -3884,7 +3891,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
     (user && String(username || '').trim().toLowerCase() === String(user.username || '').trim().toLowerCase()) ||
     (user && String(username || '').trim().toLowerCase() === String(user.display_name || '').trim().toLowerCase())
   );
-  const activeBubble = isOwnMessage ? '' : (bubble_theme || '');
+  const activeBubble = bubble_theme || (isOwnMessage ? user?.active_bubble_theme : '') || '';
   const activeName = name_effect || (isOwnMessage ? user?.active_name_effect : '') || '';
   const activeFrame = frame_theme || (isOwnMessage ? user?.active_profile_frame : '') || '';
 
@@ -3899,6 +3906,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
   div.classList.add('message-enter');
   div.dataset.type = type;
   div.dataset.id = id;
+  div.dataset.mine = isOwnMessage ? 'true' : 'false';
   const profileTargetId = Number(sender_id || user_id || 0);
   if (Number.isInteger(profileTargetId) && profileTargetId > 0) div.dataset.profileUserId = String(profileTargetId);
 
@@ -3926,7 +3934,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
 
   const bubble = document.createElement('div');
   bubble.className = 'msg-bubble';
-  if (isOwnMessage) bubble.classList.add('own-bubble');
+  if (isOwnMessage) markOwnBubble(div, bubble);
 
   const meta = document.createElement('div');
   meta.className = 'meta';
