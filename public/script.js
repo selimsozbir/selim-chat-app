@@ -3865,6 +3865,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
 
   const div = document.createElement('div');
   div.className = `message ${mine ? 'mine' : ''} ${isBotMessage ? 'bot-message' : ''} ${sameSender ? 'same-sender' : ''} ${activeBubble ? 'cosmetic-' + activeBubble : ''} ${activeName ? 'namefx-' + activeName : ''} ${activeFrame ? 'framefx-' + activeFrame : ''}`;
+  div.classList.add('message-enter');
   div.dataset.type = type;
   div.dataset.id = id;
   const profileTargetId = Number(sender_id || user_id || 0);
@@ -4016,6 +4017,8 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
   div.appendChild(avatar);
   div.appendChild(bubble);
   messagesEl.appendChild(div);
+  requestAnimationFrame(() => div.classList.add('message-enter-active'));
+  setTimeout(() => { div.classList.remove('message-enter', 'message-enter-active'); }, 320);
   loadReactionsForMessage(type, id);
   scrollToBottom();
 }
