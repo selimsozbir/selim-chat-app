@@ -8253,3 +8253,26 @@ body {
     margin-right: 14px !important;
   }
 }
+
+
+/* =========================================================
+   v8.8.9 — Easter Egg Cleanup + Enter Send Fix
+   ========================================================= */
+
+.hidden,
+#fiveEggLayer.hidden {
+  display: none !important;
+}
+
+#fiveEggLayer {
+  pointer-events: none !important;
+}
+
+body:not([class*="egg-"]) #fiveEggLayer {
+  display: none !important;
+}
+
+.message-input textarea,
+#messageInput {
+  overflow-y: auto;
+}
