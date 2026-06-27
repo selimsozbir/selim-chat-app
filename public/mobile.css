@@ -294,3 +294,51 @@
 .message.self > .msg-bubble {
   border-radius: 18px 18px 8px 18px !important;
 }
+
+
+/* v10.6.0 mobile command palette/media viewer */
+@media (max-width: 960px) {
+  .command-palette-modal {
+    place-items: end center;
+    padding: 0;
+  }
+
+  .command-palette-card {
+    width: 100vw;
+    max-height: 86dvh;
+    border-radius: 28px 28px 0 0;
+  }
+
+  .command-palette-search input {
+    font-size: 16px;
+  }
+
+  .media-viewer-stage {
+    padding: 12px 12px calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .media-viewer-nav {
+    width: 42px;
+    height: 58px;
+    font-size: 34px;
+    background: rgba(0,0,0,.26);
+  }
+
+  .media-viewer-prev {
+    left: 6px;
+  }
+
+  .media-viewer-next {
+    right: 6px;
+  }
+
+  .link-preview-card {
+    grid-template-columns: 36px minmax(0,1fr) auto;
+    padding: 9px;
+  }
+
+  .link-preview-icon {
+    width: 36px;
+    height: 36px;
+  }
+}
