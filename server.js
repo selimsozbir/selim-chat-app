@@ -1556,6 +1556,10 @@ async function initDatabase() {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_profile_frame VARCHAR(40) DEFAULT ''`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_name_effect VARCHAR(40) DEFAULT ''`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_profile_theme VARCHAR(40) DEFAULT ''`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS presence_status VARCHAR(20) DEFAULT 'online'`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_status TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS story_text TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS story_expires_at TIMESTAMP`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_items (
@@ -1929,7 +1933,7 @@ app.post('/api/register', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO users (username, password_hash, display_name, last_ip, last_user_agent, last_active)
        VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, presence_status, custom_status, story_text, story_expires_at, xp, shards`,
       [username, passwordHash, username, ip, getClientUserAgent(req)]
     );
 
@@ -1976,6 +1980,10 @@ app.post('/api/login', async (req, res) => {
       avatar_url: dbUser.avatar_url,
       bio: dbUser.bio,
       global_role: dbUser.global_role,
+      presence_status: dbUser.presence_status || 'online',
+      custom_status: dbUser.custom_status || '',
+      story_text: dbUser.story_text || '',
+      story_expires_at: dbUser.story_expires_at,
       last_seen: dbUser.last_seen
     };
     res.json({ token: createToken(user), user });
@@ -1986,7 +1994,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.get('/api/me', authMiddleware, async (req, res) => {
-  const result = await pool.query('SELECT id, username, display_name, avatar_url, bio, global_role, last_seen, last_active FROM users WHERE id = $1', [req.user.id]);
+  const result = await pool.query('SELECT id, username, display_name, avatar_url, bio, global_role, presence_status, custom_status, story_text, story_expires_at, last_seen, last_active FROM users WHERE id = $1', [req.user.id]);
   if (result.rows.length === 0) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
   res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
 });
@@ -1997,7 +2005,7 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
 
   const result = await pool.query(
     `SELECT id, username, display_name, avatar_url, bio, global_role, created_at, last_seen, last_active,
-            profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards
+            profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, presence_status, custom_status, story_text, story_expires_at, xp, shards
      FROM users WHERE id = $1`,
     [id]
   );
@@ -2089,7 +2097,7 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
 app.post('/api/profile/bio', authMiddleware, async (req, res) => {
   const bio = cleanText(req.body.bio, 160);
   const result = await pool.query(
-    'UPDATE users SET bio = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards',
+    'UPDATE users SET bio = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, presence_status, custom_status, story_text, story_expires_at, xp, shards',
     [bio, req.user.id]
   );
 
@@ -2109,7 +2117,7 @@ app.post('/api/profile/badges', authMiddleware, async (req, res) => {
 
     const profileResult = await pool.query(
       `SELECT id, username, display_name, avatar_url, bio, global_role, created_at, last_seen, last_active,
-              profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards
+              profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, presence_status, custom_status, story_text, story_expires_at, xp, shards
        FROM users WHERE id = $1`,
       [req.user.id]
     );
@@ -2167,8 +2175,8 @@ app.post('/api/profile/v2', authMiddleware, async (req, res) => {
            favorite_egg = $2,
            profile_cover_url = COALESCE(NULLIF($3, ''), profile_cover_url)
        WHERE id = $4
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards,
-                 profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, presence_status, custom_status, story_text, story_expires_at, xp, shards,
+                 profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, presence_status, custom_status, story_text, story_expires_at, xp, shards`,
       [profileColor, favoriteEgg, coverData, req.user.id]
     );
 
@@ -2185,8 +2193,8 @@ app.delete('/api/profile/cover', authMiddleware, async (req, res) => {
       `UPDATE users
        SET profile_cover_url = NULL
        WHERE id = $1
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards,
-                 profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, presence_status, custom_status, story_text, story_expires_at, xp, shards,
+                 profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, presence_status, custom_status, story_text, story_expires_at, xp, shards`,
       [req.user.id]
     );
 
@@ -2227,7 +2235,7 @@ app.patch('/api/settings/profile', authMiddleware, async (req, res) => {
            display_name = $2,
            bio = $3
        WHERE id = $4
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, presence_status, custom_status, story_text, story_expires_at, xp, shards`,
       [username, displayName || username, bio, req.user.id]
     );
 
@@ -2426,7 +2434,7 @@ app.post('/api/avatar', authMiddleware, async (req, res) => {
     if (avatarData.length > 1500000) return res.status(400).json({ error: 'Profil fotoğrafı çok büyük. Daha küçük görsel seç.' });
 
     const result = await pool.query(
-      'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards',
+      'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, presence_status, custom_status, story_text, story_expires_at, xp, shards',
       [avatarData, req.user.id]
     );
 
@@ -2440,7 +2448,7 @@ app.post('/api/avatar', authMiddleware, async (req, res) => {
 app.delete('/api/avatar', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'UPDATE users SET avatar_url = NULL WHERE id = $1 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards',
+      'UPDATE users SET avatar_url = NULL WHERE id = $1 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, presence_status, custom_status, story_text, story_expires_at, xp, shards',
       [req.user.id]
     );
 
@@ -2931,6 +2939,131 @@ async function getGroupSummary(groupId, userId) {
 /* GROUP DM */
 
 
+
+
+
+function cleanPresenceStatus(value) {
+  const allowed = new Set(['online', 'idle', 'dnd', 'invisible']);
+  const clean = String(value || 'online').toLowerCase();
+  return allowed.has(clean) ? clean : 'online';
+}
+
+app.patch('/api/presence', authMiddleware, async (req, res) => {
+  try {
+    const presence = cleanPresenceStatus(req.body?.presenceStatus);
+    const custom = cleanText(req.body?.customStatus || '', 80);
+
+    const result = await pool.query(
+      `UPDATE users
+       SET presence_status = $1, custom_status = $2, last_active = CURRENT_TIMESTAMP
+       WHERE id = $3
+       RETURNING id, username, display_name, avatar_url, bio, global_role, presence_status, custom_status, story_text, story_expires_at, last_seen, last_active`,
+      [presence, custom, req.user.id]
+    );
+
+    const updated = result.rows[0];
+    const socketSet = userSockets.get(String(req.user.id));
+    if (socketSet) {
+      for (const sid of socketSet) {
+        const entry = onlineUsers.get(sid);
+        if (entry) {
+          entry.presence_status = presence;
+          entry.custom_status = custom;
+        }
+      }
+    }
+
+    for (const room of new Set(Array.from(onlineUsers.values()).map(u => u.room).filter(Boolean))) {
+      await updateRoomUsers(room);
+    }
+
+    res.json({ user: { ...updated, online: presence !== 'invisible' && userSockets.has(String(req.user.id)) } });
+  } catch (error) {
+    console.error('Presence update error:', error);
+    res.status(500).json({ error: 'Durum güncellenemedi.' });
+  }
+});
+
+app.patch('/api/story', authMiddleware, async (req, res) => {
+  try {
+    const story = cleanText(req.body?.storyText || '', 220);
+    const expiresAt = story ? new Date(Date.now() + 24 * 60 * 60 * 1000) : null;
+
+    const result = await pool.query(
+      `UPDATE users
+       SET story_text = $1, story_expires_at = $2, last_active = CURRENT_TIMESTAMP
+       WHERE id = $3
+       RETURNING id, username, display_name, avatar_url, bio, global_role, presence_status, custom_status, story_text, story_expires_at, last_seen, last_active`,
+      [story, expiresAt, req.user.id]
+    );
+
+    res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
+  } catch (error) {
+    console.error('Story update error:', error);
+    res.status(500).json({ error: 'Story güncellenemedi.' });
+  }
+});
+
+app.delete('/api/story', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE users
+       SET story_text = '', story_expires_at = NULL
+       WHERE id = $1
+       RETURNING id, username, display_name, avatar_url, bio, global_role, presence_status, custom_status, story_text, story_expires_at, last_seen, last_active`,
+      [req.user.id]
+    );
+    res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
+  } catch (error) {
+    res.status(500).json({ error: 'Story silinemedi.' });
+  }
+});
+
+app.get('/api/stories', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, username, display_name, avatar_url, story_text, story_expires_at, presence_status, custom_status
+       FROM users
+       WHERE COALESCE(story_text, '') <> ''
+       AND story_expires_at IS NOT NULL
+       AND story_expires_at > CURRENT_TIMESTAMP
+       ORDER BY story_expires_at DESC
+       LIMIT 50`
+    );
+    res.json({ stories: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Storyler yüklenemedi.' });
+  }
+});
+
+app.get('/api/gallery/room/:room', authMiddleware, async (req, res) => {
+  try {
+    const room = cleanText(req.params.room || '', 50).toLowerCase();
+    const type = String(req.query.type || 'all').toLowerCase();
+    const allowed = ['image', 'audio', 'file'];
+
+    const params = [room];
+    let typeSql = "AND message_type = ANY($2::text[])";
+    params.push(type === 'all' || !allowed.includes(type) ? allowed : [type]);
+
+    const result = await pool.query(
+      `SELECT id, room, username, text, message_type, file_name, file_mime, file_data, file_path, file_size, created_at
+       FROM messages
+       WHERE room = $1
+       ${typeSql}
+       AND deleted_at IS NULL
+       AND file_data IS NOT NULL
+       ORDER BY created_at DESC
+       LIMIT 80`,
+      params
+    );
+
+    res.json({ files: result.rows });
+  } catch (error) {
+    console.error('Gallery error:', error);
+    res.status(500).json({ error: 'Galeri yüklenemedi.' });
+  }
+});
 
 
 app.get('/api/feiz/personality', authMiddleware, async (req, res) => {
@@ -4090,7 +4223,7 @@ io.on('connection', (socket) => {
     socket.emit('room_role', { room: cleanRoom, role });
     socket.emit('system_message', `Hoş geldin ${socket.user.username}. Oda: ${cleanRoom}`);
     socket.to(cleanRoom).emit('system_message', `${socket.user.username} odaya katıldı.`);
-    updateRoomUsers(cleanRoom);
+    await updateRoomUsers(cleanRoom);
   });
 
   socket.on('chat_message', async (message) => {
@@ -4615,7 +4748,7 @@ io.on('connection', (socket) => {
 
     if (user) {
       socket.to(user.room).emit('system_message', `${user.username} çıktı.`);
-      updateRoomUsers(user.room);
+      await updateRoomUsers(user.room);
     }
   });
 });
@@ -4686,12 +4819,48 @@ function startUniverseSchedulers() {
   }, AI_BOT_RANDOM_TALK_MS);
 }
 
-function updateRoomUsers(room) {
-  const users = Array.from(onlineUsers.values())
-    .filter((user) => user.room === room)
-    .map((user) => user.username);
+async function updateRoomUsers(room) {
+  const entries = Array.from(onlineUsers.values()).filter((user) => user.room === room);
+  const ids = Array.from(new Set(entries.map((u) => Number(u.id)).filter(Number.isInteger)));
+  if (!ids.length) {
+    io.to(room).emit('users', []);
+    return;
+  }
 
-  io.to(room).emit('users', users);
+  try {
+    const result = await pool.query(
+      `SELECT id, username, display_name, avatar_url, presence_status, custom_status, story_text, story_expires_at, last_active, last_seen
+       FROM users
+       WHERE id = ANY($1::int[])`,
+      [ids]
+    );
+
+    const byId = new Map(result.rows.map((row) => [Number(row.id), row]));
+    const users = entries
+      .map((entry) => {
+        const row = byId.get(Number(entry.id));
+        if (!row) return null;
+        const invisible = String(row.presence_status || '').toLowerCase() === 'invisible';
+        return {
+          id: row.id,
+          username: row.username,
+          display_name: row.display_name || row.username,
+          avatar_url: row.avatar_url,
+          presence_status: row.presence_status || 'online',
+          custom_status: row.custom_status || '',
+          story_text: row.story_expires_at && new Date(row.story_expires_at).getTime() > Date.now() ? row.story_text : '',
+          story_expires_at: row.story_expires_at,
+          online: !invisible
+        };
+      })
+      .filter(Boolean)
+      .filter((u) => u.online);
+
+    io.to(room).emit('users', users);
+  } catch (error) {
+    console.error('Room users update error:', error);
+    io.to(room).emit('users', entries.map((u) => u.username));
+  }
 }
 
 initDatabase()
