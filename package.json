@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "9.5.1",
-  "description": "Selim Chat v9.5.1 voice recording duration and send button fix",
+  "version": "9.5.2",
+  "description": "Selim Chat v9.5.2 microphone permission and notification list fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
