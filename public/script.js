@@ -98,6 +98,7 @@ const marketTabButton = document.getElementById('marketTabButton');
 const leaderboardTabButton = document.getElementById('leaderboardTabButton');
 const casinoTabButton = document.getElementById('casinoTabButton');
 const shardsHistoryTabButton = document.getElementById('shardsHistoryTabButton');
+const universeTabButton = document.getElementById('universeTabButton');
 const dailyPanel = document.getElementById('dailyPanel');
 const questsPanel = document.getElementById('questsPanel');
 const lootboxPanel = document.getElementById('lootboxPanel');
@@ -105,6 +106,7 @@ const marketPanel = document.getElementById('marketPanel');
 const leaderboardPanel = document.getElementById('leaderboardPanel');
 const casinoPanel = document.getElementById('casinoPanel');
 const shardsHistoryPanel = document.getElementById('shardsHistoryPanel');
+const universePanel = document.getElementById('universePanel');
 const dailyRewardText = document.getElementById('dailyRewardText');
 const dailyStreakText = document.getElementById('dailyStreakText');
 const dailyClaimButton = document.getElementById('dailyClaimButton');
@@ -121,6 +123,20 @@ const marketList = document.getElementById('marketList');
 const marketPreviewBox = document.getElementById('marketPreviewBox');
 const shardsHistoryList = document.getElementById('shardsHistoryList');
 const refreshShardsHistoryButton = document.getElementById('refreshShardsHistoryButton');
+const refreshUniverseButton = document.getElementById('refreshUniverseButton');
+const universeStatusText = document.getElementById('universeStatusText');
+const universeEnergyBar = document.getElementById('universeEnergyBar');
+const universeLevelText = document.getElementById('universeLevelText');
+const universeEnergyText = document.getElementById('universeEnergyText');
+const universeEventText = document.getElementById('universeEventText');
+const liveEventBox = document.getElementById('liveEventBox');
+const inventoryList = document.getElementById('inventoryList');
+const titlesList = document.getElementById('titlesList');
+const profileVisitorsList = document.getElementById('profileVisitorsList');
+const portalDropOverlay = document.getElementById('portalDropOverlay');
+const portalDropTitle = document.getElementById('portalDropTitle');
+const portalDropText = document.getElementById('portalDropText');
+const claimPortalButton = document.getElementById('claimPortalButton');
 const leaderboardList = document.getElementById('leaderboardList');
 const slotBetInput = document.getElementById('slotBetInput');
 const slotSpinButton = document.getElementById('slotSpinButton');
@@ -284,6 +300,8 @@ let activeProfileUser = null;
 let activeProfileAllBadges = [];
 let activeProfileSelectedBadges = [];
 let activeBadgeFilter = 'all';
+let activePortalDrop = null;
+let activeLiveEvent = null;
 
 const contextMenu = document.createElement('div');
 contextMenu.className = 'message-context-menu hidden';
@@ -1198,6 +1216,21 @@ function bindGamifyControls() {
     shardsHistoryTabButton.addEventListener('click', () => switchGamifyTab('shards'));
   }
 
+  if (universeTabButton && !universeTabButton.dataset.bound) {
+    universeTabButton.dataset.bound = '1';
+    universeTabButton.addEventListener('click', () => switchGamifyTab('universe'));
+  }
+
+  if (refreshUniverseButton && !refreshUniverseButton.dataset.bound) {
+    refreshUniverseButton.dataset.bound = '1';
+    refreshUniverseButton.addEventListener('click', loadUniversePanel);
+  }
+
+  if (claimPortalButton && !claimPortalButton.dataset.bound) {
+    claimPortalButton.dataset.bound = '1';
+    claimPortalButton.addEventListener('click', claimActivePortal);
+  }
+
   if (refreshShardsHistoryButton && !refreshShardsHistoryButton.dataset.bound) {
     refreshShardsHistoryButton.dataset.bound = '1';
     refreshShardsHistoryButton.addEventListener('click', loadShardsHistory);
@@ -1418,6 +1451,26 @@ function connectSocket() {
   });
 
   socket.on('system_message', addSystemMessage);
+
+  socket.on('portal_drop', (drop) => {
+    showPortalDrop(drop);
+    showPolishToast?.('Portal açıldı', 'Hızlı tıkla, ödülü kap.', 'info');
+  });
+
+  socket.on('portal_claimed', ({ drop_id, username, reward_shards, reward_xp }) => {
+    if (activePortalDrop?.id === drop_id) {
+      portalDropOverlay?.classList.add('hidden');
+      activePortalDrop = null;
+    }
+    addSystemMessage(`🌀 ${username} portal ödülünü aldı: +${reward_shards} shards / +${reward_xp} XP`);
+  });
+
+  socket.on('live_event_started', ({ event, text }) => {
+    renderLiveEvent(event);
+    addSystemMessage(text || `${event?.name || 'Live Event'} başladı.`);
+    showPolishToast?.('Live Event', event?.name || 'Event başladı', 'info');
+    loadUniversePanel?.();
+  });
 
   socket.on('room_role', ({ role }) => {
     myRoomRole = role;
@@ -2243,7 +2296,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '953');
+    url.searchParams.set('v', '960');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2279,6 +2332,7 @@ function switchGamifyTab(tab) {
   leaderboardTabButton?.classList.toggle('active', tab === 'leaderboard');
   casinoTabButton?.classList.toggle('active', tab === 'casino');
   shardsHistoryTabButton?.classList.toggle('active', tab === 'shards');
+  universeTabButton?.classList.toggle('active', tab === 'universe');
   dailyPanel?.classList.toggle('hidden', tab !== 'daily');
   questsPanel?.classList.toggle('hidden', tab !== 'quests');
   lootboxPanel?.classList.toggle('hidden', tab !== 'lootbox');
@@ -2286,10 +2340,12 @@ function switchGamifyTab(tab) {
   leaderboardPanel?.classList.toggle('hidden', tab !== 'leaderboard');
   casinoPanel?.classList.toggle('hidden', tab !== 'casino');
   shardsHistoryPanel?.classList.toggle('hidden', tab !== 'shards');
+  universePanel?.classList.toggle('hidden', tab !== 'universe');
 
   if (tab === 'market' || tab === 'daily' || tab === 'lootbox') loadGamify();
   if (tab === 'leaderboard') loadLeaderboard();
   if (tab === 'shards') loadShardsHistory();
+  if (tab === 'universe') loadUniversePanel();
 
   const box = document.querySelector('.gamify-box');
   if (box) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -2525,6 +2581,142 @@ function shardReasonIcon(reason = '') {
   if (reason.includes('admin')) return '🛡️';
   return '✦';
 }
+
+
+function universeThemeClass(theme = '') {
+  return ['serbia','limbo','rome','egypt','vertex'].includes(theme) ? `universe-theme-${theme}` : '';
+}
+
+function applyLiveEventTheme(event) {
+  document.body.classList.remove('universe-theme-serbia','universe-theme-limbo','universe-theme-rome','universe-theme-egypt','universe-theme-vertex');
+  if (event?.theme) document.body.classList.add(universeThemeClass(event.theme));
+}
+
+function renderLiveEvent(event) {
+  activeLiveEvent = event || null;
+  applyLiveEventTheme(event);
+
+  if (!liveEventBox) return;
+  if (!event) {
+    liveEventBox.classList.add('hidden');
+    liveEventBox.innerHTML = '';
+    return;
+  }
+
+  const endsAt = Number(event.ends_at || 0);
+  const mins = Math.max(0, Math.ceil((endsAt - Date.now()) / 60000));
+  liveEventBox.className = `live-event-box ${universeThemeClass(event.theme)}`;
+  liveEventBox.innerHTML = `
+    <div class="live-event-icon">${escapeHtml(event.icon || '⚡')}</div>
+    <div>
+      <strong>${escapeHtml(event.name || 'Live Event')}</strong>
+      <span>${mins} dk kaldı · Mesaj at: +${Number(event.shards || 0)} shards / +${Number(event.xp || 0)} XP bonus</span>
+    </div>
+  `;
+  liveEventBox.classList.remove('hidden');
+}
+
+function renderUniverseData(data) {
+  const universe = data.universe || {};
+  const energy = Number(universe.energy || 0);
+  if (universeStatusText) universeStatusText.textContent = universe.active_event ? `${universe.active_event.name} aktif` : 'Evren stabil ama portal sinyali var.';
+  if (universeEnergyBar) universeEnergyBar.style.width = `${Math.max(0, Math.min(100, energy))}%`;
+  if (universeLevelText) universeLevelText.textContent = `Level ${Number(universe.level || 1)}`;
+  if (universeEnergyText) universeEnergyText.textContent = `Energy ${energy}%`;
+  if (universeEventText) universeEventText.textContent = universe.active_event ? universe.active_event.name : 'Event yok';
+
+  renderLiveEvent(universe.active_event || null);
+
+  if (inventoryList) {
+    inventoryList.innerHTML = '';
+    const items = data.inventory || [];
+    if (!items.length) inventoryList.innerHTML = '<span class="empty-pill">Henüz item yok</span>';
+    items.forEach((item) => {
+      const el = document.createElement('div');
+      el.className = 'inventory-pill';
+      el.textContent = `${item.item_name} ×${item.quantity}`;
+      inventoryList.appendChild(el);
+    });
+  }
+
+  if (titlesList) {
+    titlesList.innerHTML = '';
+    const titles = data.titles || [];
+    if (!titles.length) titlesList.innerHTML = '<span class="empty-pill">Henüz title yok</span>';
+    titles.forEach((title) => {
+      const el = document.createElement('div');
+      el.className = 'title-pill';
+      el.textContent = title.title_name;
+      titlesList.appendChild(el);
+    });
+  }
+
+  if (profileVisitorsList) {
+    profileVisitorsList.innerHTML = '';
+    const visitors = data.visitors || [];
+    if (!visitors.length) profileVisitorsList.innerHTML = '<div class="mini-item">Henüz profil ziyaretçisi yok.</div>';
+    visitors.forEach((visitor) => {
+      const item = document.createElement('div');
+      item.className = 'mini-item';
+      item.innerHTML = `<div class="mini-left">${avatarHtml(visitor.display_name || visitor.username, visitor.avatar_url)}<div><strong>${escapeHtml(visitor.display_name || visitor.username)}</strong><span>${new Date(visitor.visited_at).toLocaleString('tr-TR')}</span></div></div>`;
+      profileVisitorsList.appendChild(item);
+    });
+  }
+}
+
+async function loadUniversePanel() {
+  try {
+    const data = await api('/api/universe');
+    renderUniverseData(data);
+  } catch (error) {
+    if (universeStatusText) universeStatusText.textContent = error.message;
+  }
+}
+
+function showPortalDrop(drop) {
+  activePortalDrop = drop;
+  if (!portalDropOverlay) return;
+
+  portalDropTitle.textContent = `${drop.icon || '🌀'} ${drop.name || 'Portal açıldı!'}`;
+  portalDropText.textContent = `İlk tıklayan +${drop.reward_shards || 0} shards ve +${drop.reward_xp || 0} XP alır.`;
+  portalDropOverlay.className = `portal-drop-overlay ${universeThemeClass(drop.theme)}`;
+  portalDropOverlay.classList.remove('hidden');
+
+  setTimeout(() => {
+    if (activePortalDrop?.id === drop.id) {
+      portalDropOverlay.classList.add('hidden');
+      activePortalDrop = null;
+    }
+  }, Math.max(2000, Number(drop.expires_at || 0) - Date.now()));
+}
+
+async function claimActivePortal() {
+  if (!activePortalDrop) return;
+  try {
+    const drop = activePortalDrop;
+    const data = await api('/api/portal/claim', {
+      method: 'POST',
+      body: JSON.stringify({ drop })
+    });
+    portalDropOverlay?.classList.add('hidden');
+    activePortalDrop = null;
+    showPolishToast?.('Portal ödülü alındı', `+${data.reward_shards} shards · +${data.reward_xp} XP`, 'success');
+    loadGamify?.();
+    loadUniversePanel?.();
+  } catch (error) {
+    showPolishToast?.('Portal kaçtı', error.message, 'error');
+    portalDropOverlay?.classList.add('hidden');
+    activePortalDrop = null;
+  }
+}
+
+async function registerProfileVisit(profileId) {
+  try {
+    if (!profileId || Number(profileId) === Number(user?.id)) return;
+    await api(`/api/profile/${profileId}/visit`, { method: 'POST' });
+  } catch {}
+}
+
 
 function renderShardsHistory(history = []) {
   if (!shardsHistoryList) return;
@@ -4542,6 +4734,7 @@ async function exportProfilePng() {
 
 
 async function openProfile(userId) {
+  registerProfileVisit(userId);
   try {
     const data = await api(`/api/profile/${userId}`);
     const profile = data.profile;
