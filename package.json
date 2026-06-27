@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.4.6",
-  "description": "Selim Chat v8.4.6",
+  "version": "8.5.0",
+  "description": "Selim Chat v8.5.0 daily rewards lootbox and admin logs",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
