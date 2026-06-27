@@ -99,6 +99,8 @@ const leaderboardTabButton = document.getElementById('leaderboardTabButton');
 const casinoTabButton = document.getElementById('casinoTabButton');
 const shardsHistoryTabButton = document.getElementById('shardsHistoryTabButton');
 const universeTabButton = document.getElementById('universeTabButton');
+const socialTabButton = document.getElementById('socialTabButton');
+const galleryTabButton = document.getElementById('galleryTabButton');
 const dailyPanel = document.getElementById('dailyPanel');
 const questsPanel = document.getElementById('questsPanel');
 const lootboxPanel = document.getElementById('lootboxPanel');
@@ -107,6 +109,8 @@ const leaderboardPanel = document.getElementById('leaderboardPanel');
 const casinoPanel = document.getElementById('casinoPanel');
 const shardsHistoryPanel = document.getElementById('shardsHistoryPanel');
 const universePanel = document.getElementById('universePanel');
+const socialPanel = document.getElementById('socialPanel');
+const galleryPanel = document.getElementById('galleryPanel');
 const dailyRewardText = document.getElementById('dailyRewardText');
 const dailyStreakText = document.getElementById('dailyStreakText');
 const dailyClaimButton = document.getElementById('dailyClaimButton');
@@ -124,6 +128,15 @@ const marketPreviewBox = document.getElementById('marketPreviewBox');
 const shardsHistoryList = document.getElementById('shardsHistoryList');
 const refreshShardsHistoryButton = document.getElementById('refreshShardsHistoryButton');
 const refreshUniverseButton = document.getElementById('refreshUniverseButton');
+const savePresenceButton = document.getElementById('savePresenceButton');
+const presenceSelect = document.getElementById('presenceSelect');
+const customStatusInput = document.getElementById('customStatusInput');
+const saveStoryButton = document.getElementById('saveStoryButton');
+const storyTextInput = document.getElementById('storyTextInput');
+const clearStoryButton = document.getElementById('clearStoryButton');
+const storiesList = document.getElementById('storiesList');
+const refreshGalleryButton = document.getElementById('refreshGalleryButton');
+const galleryList = document.getElementById('galleryList');
 const universeStatusText = document.getElementById('universeStatusText');
 const universeEnergyBar = document.getElementById('universeEnergyBar');
 const universeLevelText = document.getElementById('universeLevelText');
@@ -307,6 +320,7 @@ let activeProfileAllBadges = [];
 let activeProfileSelectedBadges = [];
 let activeBadgeFilter = 'all';
 let activePortalDrop = null;
+let activeGalleryFilter = 'all';
 let activeLiveEvent = null;
 
 const contextMenu = document.createElement('div');
@@ -1227,6 +1241,38 @@ function bindGamifyControls() {
     universeTabButton.addEventListener('click', () => switchGamifyTab('universe'));
   }
 
+  if (socialTabButton && !socialTabButton.dataset.bound) {
+    socialTabButton.dataset.bound = '1';
+    socialTabButton.addEventListener('click', () => switchGamifyTab('social'));
+  }
+
+  if (galleryTabButton && !galleryTabButton.dataset.bound) {
+    galleryTabButton.dataset.bound = '1';
+    galleryTabButton.addEventListener('click', () => switchGamifyTab('gallery'));
+  }
+
+  if (savePresenceButton && !savePresenceButton.dataset.bound) {
+    savePresenceButton.dataset.bound = '1';
+    savePresenceButton.addEventListener('click', savePresence);
+  }
+
+  if (saveStoryButton && !saveStoryButton.dataset.bound) {
+    saveStoryButton.dataset.bound = '1';
+    saveStoryButton.addEventListener('click', saveStory);
+  }
+
+  if (clearStoryButton && !clearStoryButton.dataset.bound) {
+    clearStoryButton.dataset.bound = '1';
+    clearStoryButton.addEventListener('click', clearStory);
+  }
+
+  if (refreshGalleryButton && !refreshGalleryButton.dataset.bound) {
+    refreshGalleryButton.dataset.bound = '1';
+    refreshGalleryButton.addEventListener('click', loadGallery);
+  }
+
+  bindGalleryFilters();
+
   if (refreshUniverseButton && !refreshUniverseButton.dataset.bound) {
     refreshUniverseButton.dataset.bound = '1';
     refreshUniverseButton.addEventListener('click', loadUniversePanel);
@@ -1444,6 +1490,7 @@ function renderProfile() {
   }
 
   syncAdminPrivacyButton();
+  syncSocialInputs?.();
 }
 
 function connectSocket() {
@@ -2317,7 +2364,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '970');
+    url.searchParams.set('v', '980');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2354,6 +2401,8 @@ function switchGamifyTab(tab) {
   casinoTabButton?.classList.toggle('active', tab === 'casino');
   shardsHistoryTabButton?.classList.toggle('active', tab === 'shards');
   universeTabButton?.classList.toggle('active', tab === 'universe');
+  socialTabButton?.classList.toggle('active', tab === 'social');
+  galleryTabButton?.classList.toggle('active', tab === 'gallery');
   dailyPanel?.classList.toggle('hidden', tab !== 'daily');
   questsPanel?.classList.toggle('hidden', tab !== 'quests');
   lootboxPanel?.classList.toggle('hidden', tab !== 'lootbox');
@@ -2362,11 +2411,15 @@ function switchGamifyTab(tab) {
   casinoPanel?.classList.toggle('hidden', tab !== 'casino');
   shardsHistoryPanel?.classList.toggle('hidden', tab !== 'shards');
   universePanel?.classList.toggle('hidden', tab !== 'universe');
+  socialPanel?.classList.toggle('hidden', tab !== 'social');
+  galleryPanel?.classList.toggle('hidden', tab !== 'gallery');
 
   if (tab === 'market' || tab === 'daily' || tab === 'lootbox') loadGamify();
   if (tab === 'leaderboard') loadLeaderboard();
   if (tab === 'shards') loadShardsHistory();
   if (tab === 'universe') loadUniversePanel();
+  if (tab === 'social') { syncSocialInputs(); loadStories(); }
+  if (tab === 'gallery') loadGallery();
 
   const box = document.querySelector('.gamify-box');
   if (box) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -2590,6 +2643,146 @@ async function claimQuest(questId) {
   } catch (error) {
     addSystemMessage(error.message);
   }
+}
+
+
+
+function syncSocialInputs() {
+  if (presenceSelect) presenceSelect.value = user?.presence_status || 'online';
+  if (customStatusInput) customStatusInput.value = user?.custom_status || '';
+  if (storyTextInput) storyTextInput.value = storyActive(user) ? (user.story_text || '') : '';
+}
+
+async function savePresence() {
+  try {
+    const data = await api('/api/presence', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        presenceStatus: presenceSelect?.value || 'online',
+        customStatus: customStatusInput?.value || ''
+      })
+    });
+    user = data.user;
+    localStorage.setItem('chat_user', JSON.stringify(user));
+    renderProfile();
+    syncSocialInputs();
+    showPolishToast?.('Durum güncellendi', formatPresence(user), 'success');
+  } catch (error) {
+    showPolishToast?.('Durum hata', error.message, 'error');
+  }
+}
+
+async function saveStory() {
+  try {
+    const data = await api('/api/story', {
+      method: 'PATCH',
+      body: JSON.stringify({ storyText: storyTextInput?.value || '' })
+    });
+    user = data.user;
+    localStorage.setItem('chat_user', JSON.stringify(user));
+    syncSocialInputs();
+    await loadStories();
+    showPolishToast?.('Story paylaşıldı', '24 saat görünür kalacak.', 'success');
+  } catch (error) {
+    showPolishToast?.('Story hata', error.message, 'error');
+  }
+}
+
+async function clearStory() {
+  try {
+    const data = await api('/api/story', { method: 'DELETE' });
+    user = data.user;
+    localStorage.setItem('chat_user', JSON.stringify(user));
+    syncSocialInputs();
+    await loadStories();
+    showPolishToast?.('Story silindi', '', 'success');
+  } catch (error) {
+    showPolishToast?.('Story hata', error.message, 'error');
+  }
+}
+
+function renderStories(stories = []) {
+  if (!storiesList) return;
+  storiesList.innerHTML = '';
+  if (!stories.length) {
+    storiesList.innerHTML = '<div class="mini-item">Aktif story yok.</div>';
+    return;
+  }
+
+  stories.forEach((story) => {
+    const item = document.createElement('div');
+    item.className = 'story-card';
+    item.innerHTML = `
+      <div class="mini-left">${avatarHtml(story.display_name || story.username, story.avatar_url)}<div><strong>${escapeHtml(story.display_name || story.username)}</strong><span>${escapeHtml(formatPresence({ ...story, online: true }))}</span></div></div>
+      <p>${escapeHtml(story.story_text || '')}</p>
+      <small>${new Date(story.story_expires_at).toLocaleString('tr-TR')} tarihine kadar</small>
+    `;
+    storiesList.appendChild(item);
+  });
+}
+
+async function loadStories() {
+  if (!storiesList) return;
+  try {
+    const data = await api('/api/stories');
+    renderStories(data.stories || []);
+  } catch (error) {
+    storiesList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function galleryIcon(type) {
+  if (type === 'image') return '🖼️';
+  if (type === 'audio') return '🎙️';
+  return '📄';
+}
+
+function renderGallery(files = []) {
+  if (!galleryList) return;
+  galleryList.innerHTML = '';
+  if (!files.length) {
+    galleryList.innerHTML = '<div class="mini-item">Bu odada dosya yok.</div>';
+    return;
+  }
+
+  files.forEach((file) => {
+    const item = document.createElement('a');
+    item.className = `gallery-item gallery-${file.message_type}`;
+    item.href = file.file_data;
+    item.target = '_blank';
+    item.rel = 'noopener';
+
+    if (file.message_type === 'image') {
+      item.innerHTML = `<img src="${file.file_data}" alt="${escapeHtml(file.file_name || 'foto')}" /><div><strong>${escapeHtml(file.file_name || 'Fotoğraf')}</strong><span>${escapeHtml(file.username)} · ${new Date(file.created_at).toLocaleString('tr-TR')}</span></div>`;
+    } else {
+      item.innerHTML = `<div class="gallery-file-icon">${galleryIcon(file.message_type)}</div><div><strong>${escapeHtml(file.file_name || file.text || 'Dosya')}</strong><span>${escapeHtml(file.username)} · ${file.file_size ? formatFileSize(file.file_size) + ' · ' : ''}${new Date(file.created_at).toLocaleString('tr-TR')}</span></div>`;
+    }
+
+    galleryList.appendChild(item);
+  });
+}
+
+async function loadGallery() {
+  if (!galleryList) return;
+  try {
+    galleryList.innerHTML = '<div class="mini-item">Galeri yükleniyor...</div>';
+    const data = await api(`/api/gallery/room/${encodeURIComponent(currentRoom)}?type=${encodeURIComponent(activeGalleryFilter)}`);
+    renderGallery(data.files || []);
+  } catch (error) {
+    galleryList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function bindGalleryFilters() {
+  document.querySelectorAll('.gallery-filter').forEach((button) => {
+    if (button.dataset.bound) return;
+    button.dataset.bound = '1';
+    button.addEventListener('click', () => {
+      activeGalleryFilter = button.dataset.galleryFilter || 'all';
+      document.querySelectorAll('.gallery-filter').forEach((b) => b.classList.toggle('active', b === button));
+      loadGallery();
+    });
+  });
 }
 
 
@@ -3195,9 +3388,12 @@ function updateBadge() {
 
 function renderUsers(users) {
   usersList.innerHTML = '';
-  users.forEach((username) => {
+  users.forEach((entry) => {
+    const profile = typeof entry === 'string' ? { username: entry, display_name: entry, presence_status: 'online', online: true } : entry;
     const li = document.createElement('li');
-    li.textContent = username;
+    li.className = `room-user-item presence-${String(profile.presence_status || 'online').toLowerCase()}`;
+    li.innerHTML = `<div class="mini-left">${avatarHtml(profile.display_name || profile.username, profile.avatar_url)}<div><strong>${escapeHtml(profile.display_name || profile.username)}</strong><span>${escapeHtml(formatPresence(profile))}</span>${storyActive(profile) ? `<em>${escapeHtml(profile.story_text)}</em>` : ''}</div></div>`;
+    if (profile.id) li.onclick = () => openProfile(profile.id);
     usersList.appendChild(li);
   });
 
@@ -4828,7 +5024,7 @@ async function openProfile(userId) {
     }
     profileAvatar.innerHTML = avatarHtml(profile.username, profile.avatar_url, 'profile-avatar-inner');
     profileUsername.textContent = displayName(profile);
-    profileStatus.textContent = `${formatPresence(profile)} · @${profile.username}`;
+    profileStatus.textContent = `${formatPresence(profile)} · @${profile.username}${storyActive(profile) ? ' · Story: ' + profile.story_text : ''}`;
     profileBio.textContent = profile.bio || 'Bio yok.';
     if (profileRoleBadge) {
       profileRoleBadge.textContent = profileRoleLabel(profile);
@@ -5038,8 +5234,28 @@ function hideMentionPopup() {
   mentionCandidates = [];
 }
 
+function presenceIcon(status = 'online') {
+  const icons = { online: '🟢', idle: '🌙', dnd: '⛔', invisible: '👻' };
+  return icons[String(status || 'online').toLowerCase()] || '🟢';
+}
+
+function presenceLabel(status = 'online') {
+  const labels = { online: 'Aktif', idle: 'Boşta', dnd: 'Rahatsız Etmeyin', invisible: 'Görünmez' };
+  return labels[String(status || 'online').toLowerCase()] || 'Aktif';
+}
+
+function storyActive(profile) {
+  if (!profile?.story_text || !profile?.story_expires_at) return false;
+  return new Date(profile.story_expires_at).getTime() > Date.now();
+}
+
 function formatPresence(profile) {
-  if (profile.online) return 'Çevrimiçi';
+  const status = String(profile?.presence_status || 'online').toLowerCase();
+  if (profile?.online && status !== 'invisible') {
+    const custom = String(profile.custom_status || '').trim();
+    return `${presenceIcon(status)} ${presenceLabel(status)}${custom ? ' · ' + custom : ''}`;
+  }
+
   if (!profile.last_seen) return 'Son görülme yok';
 
   const date = new Date(profile.last_seen);
