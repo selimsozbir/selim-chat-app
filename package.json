@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.5.4",
-  "description": "Selim Chat v10.5.4 market bubble source fix",
+  "version": "10.6.0",
+  "description": "Selim Chat v10.6.0 command palette link preview media viewer",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
