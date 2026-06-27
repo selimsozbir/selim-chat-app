@@ -12581,3 +12581,86 @@ body.universe-theme-vertex .chat-main {
     border-radius: 17px;
   }
 }
+
+
+/* =========================================================
+   v9.7.0 — Feiz Memory + Personality Upgrade
+   ========================================================= */
+
+.feiz-personality-box {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(236,72,153,.16), transparent 36%),
+    rgba(255,255,255,.045);
+  border-color: rgba(236,72,153,.20);
+}
+
+.feiz-personality-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.feiz-personality-head strong,
+.feiz-personality-head span {
+  display: block;
+}
+
+.feiz-personality-head span {
+  margin-top: 3px;
+  color: #f0abfc;
+  font-size: 12px;
+}
+
+.feiz-nickname-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.feiz-nickname-pill {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(236,72,153,.12);
+  border: 1px solid rgba(236,72,153,.18);
+  color: #fbcfe8;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.feiz-admin-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+#feizMoodSelect {
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 13px;
+  background: rgba(3,7,18,.60);
+  border: 1px solid rgba(255,255,255,.10);
+  color: #fff;
+  outline: none;
+}
+
+.feiz-personality-box small {
+  display: block;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .feiz-personality-head,
+  .feiz-admin-controls {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .feiz-personality-head {
+    display: grid;
+  }
+}
