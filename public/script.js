@@ -1392,6 +1392,12 @@ function closeMobileSidebar() {
   mobileBackdrop?.classList.add('hidden');
 }
 
+function closeMobilePanelsAfterSelect() {
+  if (!isMobileLayout?.()) return;
+  closeMobileSidebar?.();
+  document.body.classList.remove('mobile-right-panel-open');
+}
+
 function syncMobileNav() {
   if (!mobileRoomButton || !mobileDmButton || !mobileGroupButton) return;
   mobileRoomButton.classList.toggle('active', chatMode === 'room');
@@ -2407,6 +2413,7 @@ async function openDm(friend) {
     scrollToBottom();
     updateMessengerUi();
     markActiveConversation();
+    closeMobilePanelsAfterSelect?.();
   } catch (error) {
     addSystemMessage(error.message);
   }
@@ -2501,7 +2508,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1038');
+    url.searchParams.set('v', '1050');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
