@@ -7055,3 +7055,13 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+
+/* v8.6.1 — Server Invite + Channel Delete */
+.server-channel-item {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.server-channel-item .mini-left {
+  cursor: pointer;
+}
