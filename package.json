@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.9.1",
-  "description": "Selim Chat v10.9.1 mobile Safari sheet keyboard and profile fixes",
+  "version": "10.9.2",
+  "description": "Selim Chat v10.9.2 mobile composer sidebar and Safari rollback fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
