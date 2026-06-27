@@ -15786,268 +15786,15 @@ button:hover {
 }
 
 
-/* =========================================================
-   v10.3.5 — Own Bubble Visibility + Premium Media Preview
-   ========================================================= */
-
-/* Kendi mesajın kesin bubble olarak görünsün */
-.message.mine {
-  justify-self: end !important;
-  align-self: flex-end !important;
-  margin-left: auto !important;
-  margin-right: 0 !important;
-}
-
-.message.mine .msg-bubble {
-  display: block !important;
-  min-width: 42px !important;
-  max-width: min(100%, 720px) !important;
-  color: #ffffff !important;
-  background:
-    linear-gradient(135deg, rgba(0, 122, 255, 0.98) 0%, rgba(88, 86, 214, 0.96) 58%, rgba(175, 82, 222, 0.94) 100%) !important;
-  border: 1px solid rgba(255,255,255,.16) !important;
-  box-shadow:
-    0 12px 32px rgba(0, 122, 255, .24),
-    inset 0 1px 0 rgba(255,255,255,.16) !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-.message.mine .msg-bubble *,
-.message.mine .text,
-.message.mine .meta,
-.message.mine .read-status,
-.message.mine a {
-  color: #ffffff !important;
-}
-
-/* Premium bubble shape + tail */
-.msg-bubble {
-  border-radius: 21px 21px 21px 9px !important;
-  clip-path: none !important;
-}
-
-.message.mine .msg-bubble {
-  border-radius: 21px 21px 9px 21px !important;
-}
-
-.message:not(.mine):not(.system) .msg-bubble::before,
-.message.mine .msg-bubble::before {
-  width: 12px !important;
-  height: 12px !important;
-  bottom: 8px !important;
-  border-radius: 4px !important;
-  z-index: -1 !important;
-  box-shadow: none !important;
-}
-
-.message:not(.mine):not(.system) .msg-bubble::before {
-  left: -5px !important;
-  background: linear-gradient(180deg, rgba(23,24,31,.96), rgba(19,20,27,.94)) !important;
-  border-left: 1px solid rgba(255,255,255,.08) !important;
-  border-bottom: 1px solid rgba(255,255,255,.08) !important;
-  border-right: 0 !important;
-  border-top: 0 !important;
-  transform: rotate(45deg) skew(-8deg, -8deg) !important;
-}
-
-.message.mine .msg-bubble::before {
-  right: -5px !important;
-  background: linear-gradient(135deg, rgba(88,86,214,.96), rgba(175,82,222,.94)) !important;
-  border-right: 1px solid rgba(255,255,255,.16) !important;
-  border-top: 1px solid rgba(255,255,255,.16) !important;
-  border-left: 0 !important;
-  border-bottom: 0 !important;
-  transform: rotate(45deg) skew(8deg, 8deg) !important;
-}
-
-/* Feiz tail ve kart da bozulmasın */
-.message.bot-message .msg-bubble::before {
-  background: linear-gradient(180deg, rgba(62,38,109,.96), rgba(27,33,55,.96)) !important;
-  border-color: rgba(139,92,246,.30) !important;
-}
-
-.message.same-sender .msg-bubble {
-  border-radius: 17px !important;
-}
-
-.message.mine.same-sender .msg-bubble {
-  border-radius: 17px !important;
-}
-
-/* iMessage / Linear arası fotoğraf preview */
-.message-media {
-  position: relative !important;
-  margin-top: 10px !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-  max-width: min(430px, 72vw) !important;
-  border-radius: 20px !important;
-  border: 1px solid rgba(255,255,255,.10) !important;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035)) !important;
-  box-shadow:
-    0 14px 34px rgba(0,0,0,.18),
-    inset 0 1px 0 rgba(255,255,255,.06) !important;
-}
-
-.message.mine .message-media {
-  border-color: rgba(255,255,255,.18) !important;
-  background: rgba(255,255,255,.10) !important;
-}
-
-.message-media img,
-.message img {
-  display: block !important;
-  width: 100% !important;
-  max-height: 360px !important;
-  object-fit: cover !important;
-  border-radius: 19px !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  transition: transform 180ms cubic-bezier(.22,1,.36,1), filter 180ms cubic-bezier(.22,1,.36,1) !important;
-}
-
-.message-media img:hover,
-.message img:hover {
-  transform: scale(1.012) !important;
-  filter: brightness(1.045) saturate(1.04) !important;
-}
-
-/* Dosya kartları daha modern */
-.message-file,
-.attachment-card {
-  position: relative !important;
-  max-width: 430px !important;
-  margin-top: 10px !important;
-  padding: 12px 13px !important;
-  border-radius: 18px !important;
-  border: 1px solid rgba(255,255,255,.10) !important;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035)) !important;
-  box-shadow:
-    0 12px 28px rgba(0,0,0,.16),
-    inset 0 1px 0 rgba(255,255,255,.06) !important;
-  overflow: hidden !important;
-}
-
-.message.mine .message-file,
-.message.mine .attachment-card {
-  background: rgba(255,255,255,.13) !important;
-  border-color: rgba(255,255,255,.18) !important;
-}
-
-.message-file::before,
-.attachment-card::before {
-  content: "📎" !important;
-  width: 42px !important;
-  height: 42px !important;
-  border-radius: 15px !important;
-  background:
-    linear-gradient(135deg, rgba(0,122,255,.22), rgba(88,86,214,.18)) !important;
-  border: 1px solid rgba(255,255,255,.13) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.08) !important;
-}
-
-.message-file a,
-.attachment-card a {
-  color: #f8fafc !important;
-  font-weight: 900 !important;
-  text-decoration: none !important;
-}
-
-.message-file span,
-.attachment-card span,
-.message-file small,
-.attachment-card small {
-  color: rgba(248,250,252,.72) !important;
-}
-
-/* Audio / voice cards: Linear minimal */
-.audio-card,
-.voice-player,
-.message-media audio {
-  max-width: 430px !important;
-}
-
-.audio-card,
-.voice-player {
-  margin-top: 10px !important;
-  padding: 12px !important;
-  border-radius: 18px !important;
-  border: 1px solid rgba(255,255,255,.10) !important;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035)) !important;
-  box-shadow:
-    0 12px 28px rgba(0,0,0,.16),
-    inset 0 1px 0 rgba(255,255,255,.06) !important;
-}
-
-.message.mine .audio-card,
-.message.mine .voice-player {
-  background: rgba(255,255,255,.13) !important;
-  border-color: rgba(255,255,255,.18) !important;
-}
-
-.voice-bars span,
-.voice-wave span,
-.audio-wave span {
-  background: rgba(0,122,255,.62) !important;
-}
-
-.message.mine .voice-bars span,
-.message.mine .voice-wave span,
-.message.mine .audio-wave span {
-  background: rgba(255,255,255,.72) !important;
-}
-
-/* Medya-only mesajlarda bubble gereksiz büyümesin ama görünür kalsın */
-.msg-bubble:has(.message-media):not(:has(.text:not(:empty))),
-.msg-bubble:has(.message-file):not(:has(.text:not(:empty))),
-.msg-bubble:has(.attachment-card):not(:has(.text:not(:empty))) {
-  padding: 8px !important;
-}
-
-/* Safari/older fallback: :has desteklemezse normal padding kalır, sorun yok */
-
-/* Mobile */
-@media (max-width: 760px) {
-  .message-media,
-  .message-file,
-  .attachment-card,
-  .audio-card,
-  .voice-player {
-    max-width: min(100%, 78vw) !important;
-    border-radius: 17px !important;
-  }
-
-  .message-media img,
-  .message img {
-    max-height: 280px !important;
-    border-radius: 16px !important;
-  }
-
-  .msg-bubble {
-    border-radius: 18px 18px 18px 8px !important;
-  }
-
-  .message.mine .msg-bubble {
-    border-radius: 18px 18px 8px 18px !important;
-  }
-}
 
 
 /* =========================================================
-   v10.3.6 — FORCE Own Bubble Style Fix
-   Some older cosmetic/default bubble rules were overriding .message.mine.
-   This targets every possible own-bubble selector at the very end.
+   v10.5.2 — Own messages use equipped market bubble
+   Structural fix only: no forced blue/mor color.
    ========================================================= */
 
-/* Kendi mesaj satırı sağa kilitlensin */
-#messages .message.mine,
-.messages .message.mine,
-.message.mine,
-.message.own,
+.message[data-mine="true"],
+.message.mine.own-message,
 .message.self {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) 38px !important;
@@ -16060,16 +15807,17 @@ button:hover {
   box-shadow: none !important;
 }
 
-/* Kendi bubble: default/cosmetic ne varsa ez */
-#messages .message.mine > .msg-bubble,
-.messages .message.mine > .msg-bubble,
-#messages .message.mine .msg-bubble,
-.messages .message.mine .msg-bubble,
-.message.mine > .msg-bubble,
-.message.mine .msg-bubble,
-.message.mine .own-bubble,
-.message.own .msg-bubble,
-.message.self .msg-bubble,
+.message[data-mine="true"] > .msg-avatar,
+.message.mine.own-message > .msg-avatar,
+.message.self > .msg-avatar {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+}
+
+.message[data-mine="true"] > .msg-bubble,
+.message[data-mine="true"] .own-bubble,
+.message.mine.own-message > .msg-bubble,
+.message.self > .msg-bubble,
 .msg-bubble.own-bubble {
   grid-column: 1 !important;
   grid-row: 1 !important;
@@ -16081,564 +15829,67 @@ button:hover {
   padding: 11px 13px 10px !important;
   border-radius: 21px 21px 9px 21px !important;
   color: #ffffff !important;
-  background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #bf5af2 100%) !important;
-  background-color: #0a84ff !important;
-  border: 1px solid rgba(255,255,255,.20) !important;
-  box-shadow:
-    0 14px 34px rgba(10,132,255,.28),
-    inset 0 1px 0 rgba(255,255,255,.20) !important;
   filter: none !important;
   mix-blend-mode: normal !important;
 }
 
-/* Kendi mesajın içindeki bütün yazılar beyaz kalsın */
-#messages .message.mine .msg-bubble *,
-.messages .message.mine .msg-bubble *,
-.message.mine .msg-bubble *,
-.message.mine .own-bubble *,
-.msg-bubble.own-bubble *,
-.message.own .msg-bubble *,
-.message.self .msg-bubble * {
-  color: #ffffff !important;
-  text-shadow: none !important;
+/* Eğer kullanıcı bubble kuşanmadıysa sadece o zaman düzgün default kendi bubble göster. */
+.message[data-mine="true"]:not([class*="cosmetic-"]) > .msg-bubble,
+.message.mine.own-message:not([class*="cosmetic-"]) > .msg-bubble,
+.message.self:not([class*="cosmetic-"]) > .msg-bubble {
+  background: linear-gradient(135deg, rgba(10,132,255,.96), rgba(94,92,230,.90)) !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  box-shadow: 0 12px 30px rgba(10,132,255,.20), inset 0 1px 0 rgba(255,255,255,.14) !important;
 }
 
-/* Kendi avatar sağda kalsın */
-#messages .message.mine > .msg-avatar,
-.messages .message.mine > .msg-avatar,
-.message.mine > .msg-avatar,
-.message.own > .msg-avatar,
-.message.self > .msg-avatar {
-  grid-column: 2 !important;
-  grid-row: 1 !important;
-}
-
-/* Kendi bubble tail'i kesin görünür olsun */
-#messages .message.mine > .msg-bubble::before,
-.messages .message.mine > .msg-bubble::before,
-.message.mine > .msg-bubble::before,
-.message.mine .own-bubble::before,
-.msg-bubble.own-bubble::before,
-.message.own .msg-bubble::before,
-.message.self .msg-bubble::before {
-  content: "" !important;
-  display: block !important;
-  position: absolute !important;
-  right: -5px !important;
-  left: auto !important;
-  bottom: 8px !important;
-  width: 12px !important;
-  height: 12px !important;
-  z-index: -1 !important;
+/* Kozmetik varsa background'a dokunma; sadece görünürlük ve okunabilirlik. */
+.message[data-mine="true"][class*="cosmetic-"] > .msg-bubble,
+.message.mine.own-message[class*="cosmetic-"] > .msg-bubble,
+.message.self[class*="cosmetic-"] > .msg-bubble {
   opacity: 1 !important;
   visibility: visible !important;
-  background: linear-gradient(135deg, #5e5ce6 0%, #bf5af2 100%) !important;
-  background-color: #5e5ce6 !important;
-  border-right: 1px solid rgba(255,255,255,.20) !important;
-  border-top: 1px solid rgba(255,255,255,.20) !important;
-  border-left: 0 !important;
-  border-bottom: 0 !important;
-  border-radius: 4px !important;
-  transform: rotate(45deg) skew(8deg, 8deg) !important;
-  box-shadow: none !important;
 }
 
-/* Aynı kişi peş peşe yazınca kendi mesaj default'a dönmesin */
-#messages .message.mine.same-sender > .msg-bubble,
-.messages .message.mine.same-sender > .msg-bubble,
-.message.mine.same-sender > .msg-bubble,
-.message.mine.same-sender .own-bubble {
-  border-radius: 18px !important;
-  background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #bf5af2 100%) !important;
-}
-
-/* Marketten kuşanılan bubble kozmetikleri kendi mesajı default'a çevirmesin.
-   İleride özel kozmetik istiyorsak bu alanı ayrıca tasarlarız. */
-#messages .message.mine[class*="cosmetic-"] > .msg-bubble,
-.messages .message.mine[class*="cosmetic-"] > .msg-bubble,
-.message.mine[class*="cosmetic-"] > .msg-bubble,
-.message.mine[class*="cosmetic-"] .own-bubble {
-  background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #bf5af2 100%) !important;
-  background-color: #0a84ff !important;
-  border-color: rgba(255,255,255,.20) !important;
-}
-
-/* Mobile */
-@media (max-width: 760px) {
-  #messages .message.mine,
-  .messages .message.mine,
-  .message.mine {
-    grid-template-columns: minmax(0, 1fr) 32px !important;
-  }
-
-  #messages .message.mine > .msg-bubble,
-  .messages .message.mine > .msg-bubble,
-  .message.mine > .msg-bubble,
-  .message.mine .own-bubble {
-    border-radius: 18px 18px 8px 18px !important;
-  }
-}
-
-
-/* =========================================================
-   v10.3.7 — REAL Own Bubble Fix + Header Buttons Removed
-   ========================================================= */
-
-/* Headerdaki Ara/Galeri/Arkadaşlar/Ayarlar/Yaz/Bildirim butonları tamamen kapalı */
-.chat-header-actions,
-#headerSearchButton,
-#headerGalleryButton,
-#headerFriendsButton,
-#headerSettingsButton,
-#focusComposerButton,
-#enableNotificationsButton {
-  display: none !important;
-}
-
-/* JS artık own-message/self/own-bubble class basıyor; bunları en üst öncelikle boya */
-#messages .message.own-message,
-.messages .message.own-message,
-.message.own-message,
-#messages .message.self,
-.messages .message.self,
-.message.self {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) 38px !important;
-  justify-items: end !important;
-  align-self: flex-end !important;
-  margin-left: auto !important;
-  margin-right: 0 !important;
-  width: fit-content !important;
-  max-width: min(76%, 800px) !important;
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-
-#messages .message.own-message > .own-bubble,
-.messages .message.own-message > .own-bubble,
-.message.own-message > .own-bubble,
-#messages .message.self > .own-bubble,
-.messages .message.self > .own-bubble,
-.message.self > .own-bubble,
-#messages .own-bubble,
-.messages .own-bubble,
-.own-bubble {
-  grid-column: 1 !important;
-  grid-row: 1 !important;
-  display: block !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  min-width: 44px !important;
-  max-width: 100% !important;
-  padding: 11px 13px 10px !important;
-  border-radius: 21px 21px 9px 21px !important;
-  color: #ffffff !important;
-  background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #bf5af2 100%) !important;
-  background-color: #0a84ff !important;
-  border: 1px solid rgba(255,255,255,.22) !important;
-  box-shadow:
-    0 14px 34px rgba(10,132,255,.30),
-    inset 0 1px 0 rgba(255,255,255,.22) !important;
-  filter: none !important;
-  transform: none !important;
-  mix-blend-mode: normal !important;
-}
-
-/* Old market/cosmetic bubble CSS genelde class selector ile eziyor; her cosmetic'i burada kilitle */
-#messages .message.own-message[class*="cosmetic-"] > .own-bubble,
-.messages .message.own-message[class*="cosmetic-"] > .own-bubble,
-.message.own-message[class*="cosmetic-"] > .own-bubble,
-.message.mine[class*="cosmetic-"] > .own-bubble {
-  background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #bf5af2 100%) !important;
-  background-color: #0a84ff !important;
-  border-color: rgba(255,255,255,.22) !important;
-}
-
-#messages .own-bubble *,
-.messages .own-bubble *,
-.own-bubble *,
-.message.own-message .msg-bubble *,
-.message.self .msg-bubble * {
-  color: #ffffff !important;
-  text-shadow: none !important;
-}
-
-#messages .message.own-message > .msg-avatar,
-.messages .message.own-message > .msg-avatar,
-.message.own-message > .msg-avatar,
-.message.self > .msg-avatar {
-  grid-column: 2 !important;
-  grid-row: 1 !important;
-}
-
-/* Own tail */
-#messages .message.own-message > .own-bubble::before,
-.messages .message.own-message > .own-bubble::before,
-.message.own-message > .own-bubble::before,
-#messages .own-bubble::before,
-.messages .own-bubble::before,
-.own-bubble::before {
-  content: "" !important;
-  display: block !important;
-  position: absolute !important;
-  right: -5px !important;
-  left: auto !important;
-  bottom: 8px !important;
-  width: 12px !important;
-  height: 12px !important;
-  z-index: -1 !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  background: linear-gradient(135deg, #5e5ce6 0%, #bf5af2 100%) !important;
-  background-color: #5e5ce6 !important;
-  border-right: 1px solid rgba(255,255,255,.22) !important;
-  border-top: 1px solid rgba(255,255,255,.22) !important;
-  border-left: 0 !important;
-  border-bottom: 0 !important;
-  border-radius: 4px !important;
-  transform: rotate(45deg) skew(8deg, 8deg) !important;
-  box-shadow: none !important;
-}
-
-/* Same sender yine own gradient olsun */
-.message.own-message.same-sender > .own-bubble,
-.message.self.same-sender > .own-bubble {
-  border-radius: 18px !important;
-  background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #bf5af2 100%) !important;
-}
-
-/* Mobil */
-@media (max-width: 760px) {
-  #messages .message.own-message,
-  .messages .message.own-message,
-  .message.own-message,
-  .message.self {
-    grid-template-columns: minmax(0, 1fr) 32px !important;
-    max-width: 90% !important;
-  }
-
-  #messages .own-bubble,
-  .messages .own-bubble,
-  .own-bubble {
-    border-radius: 18px 18px 8px 18px !important;
-  }
-}
-
-
-/* =========================================================
-   v10.3.8 — Header buttons removed without JS crash + own bubble stable
-   ========================================================= */
-
-.chat-header-actions,
-#headerSearchButton,
-#headerGalleryButton,
-#headerFriendsButton,
-#headerSettingsButton,
-#focusComposerButton,
-#enableNotificationsButton {
-  display: none !important;
-}
-
-/* Own bubble no cosmetic fallback: final absolute override */
-.message.own-message > .msg-bubble,
-.message.own-message > .own-bubble,
-.message.mine.own-message > .msg-bubble,
-.message.mine.own-message > .own-bubble,
-.message.self > .msg-bubble,
-.message.self > .own-bubble {
-  background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #bf5af2 100%) !important;
-  background-color: #0a84ff !important;
-  color: #fff !important;
-  border: 1px solid rgba(255,255,255,.22) !important;
-  border-radius: 21px 21px 9px 21px !important;
-  box-shadow: 0 14px 34px rgba(10,132,255,.30), inset 0 1px 0 rgba(255,255,255,.22) !important;
-}
-
-.message.own-message > .msg-bubble *,
-.message.own-message > .own-bubble *,
+/* Kendi mesaj yazısı okunur kalsın; kozmetiğin arka planına dokunmaz. */
+.message[data-mine="true"] > .msg-bubble *,
 .message.mine.own-message > .msg-bubble *,
 .message.self > .msg-bubble * {
-  color: #fff !important;
+  color: inherit;
 }
 
-.message.own-message.same-sender > .msg-bubble,
-.message.own-message.same-sender > .own-bubble {
-  background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #bf5af2 100%) !important;
+.message[data-mine="true"] .text,
+.message.mine.own-message .text,
+.message.self .text {
+  color: #ffffff !important;
+}
+
+/* Tail: kozmetik yoksa default tail; kozmetik varsa kuşanılan bubble'ın background'ı miras kalsın. */
+.message[data-mine="true"] > .msg-bubble::before,
+.message.mine.own-message > .msg-bubble::before,
+.message.self > .msg-bubble::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  right: -5px !important;
+  left: auto !important;
+  bottom: 8px !important;
+  width: 12px !important;
+  height: 12px !important;
+  z-index: -1 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  background: inherit !important;
+  border-right: inherit !important;
+  border-top: inherit !important;
+  border-left: 0 !important;
+  border-bottom: 0 !important;
+  border-radius: 4px !important;
+  transform: rotate(45deg) skew(8deg, 8deg) !important;
+  box-shadow: none !important;
+}
+
+.message[data-mine="true"].same-sender > .msg-bubble,
+.message.mine.own-message.same-sender > .msg-bubble,
+.message.self.same-sender > .msg-bubble {
   border-radius: 18px !important;
-}
-
-
-
-/* v10.5.0: responsive layout rules moved to desktop.css and mobile.css */
-
-/* Mobile becomes chat-first, not squeezed desktop */
-@media (max-width: 960px) {
-  html,
-  body {
-    height: 100% !important;
-    overflow: hidden !important;
-  }
-
-  .app {
-    height: 100dvh !important;
-    overflow: hidden !important;
-  }
-
-  .chat-screen {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    grid-template-rows: auto minmax(0, 1fr) auto !important;
-    grid-template-areas:
-      "topbar"
-      "chat"
-      "bottomnav" !important;
-    height: 100dvh !important;
-    width: 100vw !important;
-    padding: 0 !important;
-    gap: 0 !important;
-    background: #0b0d12 !important;
-    overflow: hidden !important;
-  }
-
-  .mobile-topbar {
-    grid-area: topbar !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    height: calc(56px + env(safe-area-inset-top)) !important;
-    padding: env(safe-area-inset-top) 12px 0 !important;
-    border-bottom: 1px solid rgba(255,255,255,.08) !important;
-    background: rgba(14,16,22,.94) !important;
-    backdrop-filter: blur(18px) saturate(150%) !important;
-    -webkit-backdrop-filter: blur(18px) saturate(150%) !important;
-    z-index: 80 !important;
-  }
-
-  .chat-main {
-    grid-area: chat !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    display: flex !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    background: #0b0d12 !important;
-    box-shadow: none !important;
-    overflow: hidden !important;
-  }
-
-  .chat-header {
-    display: none !important;
-  }
-
-  .messages {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    overflow-y: auto !important;
-    padding: 14px 12px 10px !important;
-    padding-bottom: 10px !important;
-  }
-
-  .typing,
-  #typingText {
-    min-height: 18px !important;
-    padding: 0 12px !important;
-  }
-
-  .reply-bar {
-    margin: 0 10px 8px !important;
-  }
-
-  .message-form {
-    flex: 0 0 auto !important;
-    margin: 0 8px 8px !important;
-    padding: 8px !important;
-    border-radius: 20px !important;
-    display: grid !important;
-    grid-template-columns: auto auto auto minmax(0, 1fr) auto !important;
-    gap: 6px !important;
-    align-items: center !important;
-  }
-
-  .composer-field {
-    min-width: 0 !important;
-  }
-
-  #messageInput {
-    width: 100% !important;
-    min-width: 0 !important;
-    font-size: 16px !important;
-  }
-
-  #sendButton {
-    min-width: 72px !important;
-    padding-inline: 12px !important;
-  }
-
-  .mobile-bottom-nav {
-    grid-area: bottomnav !important;
-    display: grid !important;
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    gap: 0 !important;
-    height: calc(64px + env(safe-area-inset-bottom)) !important;
-    padding: 6px 6px env(safe-area-inset-bottom) !important;
-    border-top: 1px solid rgba(255,255,255,.08) !important;
-    background: rgba(14,16,22,.96) !important;
-    backdrop-filter: blur(18px) saturate(150%) !important;
-    -webkit-backdrop-filter: blur(18px) saturate(150%) !important;
-    z-index: 90 !important;
-  }
-
-  .mobile-nav-item {
-    display: grid !important;
-    place-items: center !important;
-    gap: 2px !important;
-    min-width: 0 !important;
-    border-radius: 16px !important;
-    color: #9ca3af !important;
-    background: transparent !important;
-    border: 0 !important;
-    font-size: 18px !important;
-  }
-
-  .mobile-nav-item span {
-    font-size: 10.5px !important;
-    font-weight: 800 !important;
-    white-space: nowrap !important;
-  }
-
-  .mobile-nav-item.active {
-    color: #0b0d12 !important;
-    background: #f5f5f7 !important;
-  }
-
-  /* Desktop panels become mobile sheets */
-  .app-rail {
-    display: none !important;
-  }
-
-  .sidebar {
-    position: fixed !important;
-    left: 0 !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    width: min(88vw, 360px) !important;
-    height: 100dvh !important;
-    padding: calc(14px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom)) !important;
-    border-radius: 0 26px 26px 0 !important;
-    border: 1px solid rgba(255,255,255,.10) !important;
-    border-left: 0 !important;
-    background: rgba(14,16,22,.97) !important;
-    backdrop-filter: blur(22px) saturate(150%) !important;
-    -webkit-backdrop-filter: blur(22px) saturate(150%) !important;
-    box-shadow: 24px 0 80px rgba(0,0,0,.42) !important;
-    overflow-y: auto !important;
-    transform: translateX(-104%) !important;
-    transition: transform 260ms cubic-bezier(.22,1,.36,1) !important;
-    z-index: 120 !important;
-  }
-
-  body.mobile-sidebar-open .sidebar {
-    transform: translateX(0) !important;
-  }
-
-  .right-panel {
-    position: fixed !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    top: auto !important;
-    width: 100vw !important;
-    height: min(82dvh, 760px) !important;
-    padding: 14px 12px calc(14px + env(safe-area-inset-bottom)) !important;
-    border-radius: 28px 28px 0 0 !important;
-    border: 1px solid rgba(255,255,255,.10) !important;
-    border-bottom: 0 !important;
-    background: rgba(14,16,22,.98) !important;
-    backdrop-filter: blur(22px) saturate(150%) !important;
-    -webkit-backdrop-filter: blur(22px) saturate(150%) !important;
-    box-shadow: 0 -24px 80px rgba(0,0,0,.44) !important;
-    overflow-y: auto !important;
-    transform: translateY(104%) !important;
-    transition: transform 260ms cubic-bezier(.22,1,.36,1) !important;
-    z-index: 125 !important;
-  }
-
-  body.mobile-right-panel-open .right-panel {
-    transform: translateY(0) !important;
-  }
-
-  .mobile-backdrop {
-    position: fixed !important;
-    inset: 0 !important;
-    display: block !important;
-    background: rgba(0,0,0,.44) !important;
-    backdrop-filter: blur(6px) !important;
-    -webkit-backdrop-filter: blur(6px) !important;
-    z-index: 110 !important;
-  }
-
-  .mobile-backdrop.hidden {
-    display: none !important;
-  }
-
-  body:not(.mobile-sidebar-open):not(.mobile-right-panel-open) .mobile-backdrop {
-    display: none !important;
-  }
-
-  /* Mobile modals are bottom sheets */
-  #friendsCenterModal,
-  .gallery-modal,
-  .profile-modal,
-  .settings-modal {
-    align-items: end !important;
-    place-items: end center !important;
-    padding: 0 !important;
-  }
-
-  .friends-center-card,
-  .gallery-card,
-  .profile-card,
-  .settings-card,
-  .settings-card-v2 {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    max-height: 88dvh !important;
-    border-radius: 28px 28px 0 0 !important;
-    margin: 0 !important;
-  }
-
-  /* Remove desktop leftovers on mobile */
-  body::after {
-    display: none !important;
-  }
-
-  .sidebar-brand span {
-    display: none !important;
-  }
-}
-
-/* Ultra small phones */
-@media (max-width: 430px) {
-  .message-form {
-    grid-template-columns: auto auto minmax(0, 1fr) auto !important;
-  }
-
-  #emojiButton {
-    display: none !important;
-  }
-
-  #voiceButton,
-  #attachButton {
-    width: 40px !important;
-    height: 40px !important;
-  }
-
-  #sendButton {
-    min-width: 62px !important;
-  }
-
-  .mobile-nav-item span {
-    font-size: 10px !important;
-  }
 }
