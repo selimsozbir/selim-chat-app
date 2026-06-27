@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.4.3",
-  "description": "Selim Chat v8.4.3 compact sidebar group fix emoji redesign and balanced market prices",
+  "version": "8.4.4",
+  "description": "Selim Chat v8.4.4 maximum call stack fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
