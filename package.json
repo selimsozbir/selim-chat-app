@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.8.5",
-  "description": "Selim Chat v8.8.5 profile modal visual restore",
+  "version": "8.8.6",
+  "description": "Selim Chat v8.8.6 profile modal size up",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
