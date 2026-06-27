@@ -7109,3 +7109,190 @@ body {
   content: " · hedef item";
   color: #fbbf24;
 }
+
+
+
+/* =========================================================
+   v8.8.1 — Profile Themes Polish
+   Daha temiz, koyu ve premium tema sistemi.
+   Eski v8.8.0 profil tema arka planlarını override eder.
+   ========================================================= */
+
+.profile-card-v2 {
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-card-v2::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 0;
+  transition: opacity .22s ease;
+}
+
+.profile-card-v2 > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Eski çok parlak profile theme arkaplanlarını bastır */
+.profile-card-v2.profile-theme_limbo,
+.profile-card-v2.profile-theme_serbia,
+.profile-card-v2.profile-theme_egypt,
+.profile-card-v2.profile-theme_rome,
+.profile-card-v2.profile-theme_vertex,
+.profile-card-v2.profile-theme_five,
+.active-theme-theme_limbo .profile-card-v2,
+.active-theme-theme_serbia .profile-card-v2,
+.active-theme-theme_egypt .profile-card-v2,
+.active-theme-theme_rome .profile-card-v2,
+.active-theme-theme_vertex .profile-card-v2,
+.active-theme-theme_five .profile-card-v2 {
+  background:
+    linear-gradient(180deg, rgba(15,23,42,.96), rgba(3,7,18,.98)) !important;
+  border: 1px solid rgba(255,255,255,.09) !important;
+  box-shadow:
+    0 18px 55px rgba(0,0,0,.42),
+    inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+
+/* Tema overlayleri: artık tüm kartı boyamak yerine üstten yumuşak atmosfer */
+.profile-card-v2.profile-theme_limbo::before,
+.active-theme-theme_limbo .profile-card-v2::before {
+  opacity: 1;
+  background:
+    radial-gradient(circle at 18% 4%, rgba(148,163,184,.16), transparent 32%),
+    radial-gradient(circle at 84% 10%, rgba(15,23,42,.65), transparent 40%),
+    linear-gradient(135deg, rgba(0,0,0,.28), rgba(24,24,27,.18));
+}
+
+.profile-card-v2.profile-theme_serbia::before,
+.active-theme-theme_serbia .profile-card-v2::before {
+  opacity: 1;
+  background:
+    radial-gradient(circle at 16% 2%, rgba(124,58,237,.34), transparent 34%),
+    radial-gradient(circle at 86% 8%, rgba(220,38,38,.22), transparent 34%),
+    linear-gradient(135deg, rgba(76,29,149,.15), rgba(127,29,29,.10));
+}
+
+.profile-card-v2.profile-theme_egypt::before,
+.active-theme-theme_egypt .profile-card-v2::before {
+  opacity: 1;
+  background:
+    radial-gradient(circle at 18% 2%, rgba(245,158,11,.30), transparent 34%),
+    radial-gradient(circle at 84% 10%, rgba(180,83,9,.16), transparent 34%),
+    linear-gradient(135deg, rgba(120,53,15,.14), rgba(15,23,42,.06));
+}
+
+.profile-card-v2.profile-theme_rome::before,
+.active-theme-theme_rome .profile-card-v2::before {
+  opacity: 1;
+  background:
+    radial-gradient(circle at 18% 2%, rgba(234,179,8,.28), transparent 34%),
+    radial-gradient(circle at 86% 10%, rgba(168,85,247,.12), transparent 34%),
+    linear-gradient(135deg, rgba(113,63,18,.14), rgba(15,23,42,.06));
+}
+
+.profile-card-v2.profile-theme_vertex::before,
+.active-theme-theme_vertex .profile-card-v2::before {
+  opacity: 1;
+  background:
+    radial-gradient(circle at 18% 2%, rgba(239,68,68,.34), transparent 34%),
+    radial-gradient(circle at 86% 8%, rgba(127,29,29,.22), transparent 34%),
+    repeating-linear-gradient(90deg, rgba(239,68,68,.035) 0 1px, transparent 1px 12px);
+}
+
+.profile-card-v2.profile-theme_five::before,
+.active-theme-theme_five .profile-card-v2::before {
+  opacity: 1;
+  background:
+    radial-gradient(circle at 16% 2%, rgba(34,211,238,.30), transparent 34%),
+    radial-gradient(circle at 84% 8%, rgba(236,72,153,.24), transparent 34%),
+    radial-gradient(circle at 50% 0%, rgba(139,92,246,.18), transparent 36%);
+}
+
+/* Temalı cover daha iyi görünsün */
+.profile-card-v2.profile-theme_limbo .profile-cover,
+.active-theme-theme_limbo .profile-card-v2 .profile-cover {
+  filter: saturate(.75) contrast(1.08) brightness(.82);
+}
+
+.profile-card-v2.profile-theme_serbia .profile-cover,
+.active-theme-theme_serbia .profile-card-v2 .profile-cover {
+  filter: saturate(1.15) contrast(1.04) brightness(.92);
+  box-shadow: inset 0 -34px 46px rgba(88,28,135,.38);
+}
+
+.profile-card-v2.profile-theme_egypt .profile-cover,
+.active-theme-theme_egypt .profile-card-v2 .profile-cover,
+.profile-card-v2.profile-theme_rome .profile-cover,
+.active-theme-theme_rome .profile-card-v2 .profile-cover {
+  filter: sepia(.16) saturate(1.12) contrast(1.02) brightness(.96);
+}
+
+.profile-card-v2.profile-theme_vertex .profile-cover,
+.active-theme-theme_vertex .profile-card-v2 .profile-cover {
+  filter: saturate(1.2) contrast(1.08) brightness(.88);
+  box-shadow: inset 0 -34px 46px rgba(127,29,29,.42);
+}
+
+.profile-card-v2.profile-theme_five .profile-cover,
+.active-theme-theme_five .profile-card-v2 .profile-cover {
+  filter: saturate(1.18) contrast(1.04) brightness(.94);
+  box-shadow: inset 0 -34px 46px rgba(14,165,233,.24);
+}
+
+/* Temalı isim alanı: abartısız parlama */
+.profile-card-v2.profile-theme_limbo .profile-name,
+.profile-card-v2.profile-theme_limbo #profileUsername,
+.active-theme-theme_limbo .profile-card-v2 .profile-name,
+.active-theme-theme_limbo .profile-card-v2 #profileUsername {
+  text-shadow: 0 0 18px rgba(148,163,184,.18);
+}
+
+.profile-card-v2.profile-theme_serbia .profile-name,
+.profile-card-v2.profile-theme_serbia #profileUsername,
+.active-theme-theme_serbia .profile-card-v2 .profile-name,
+.active-theme-theme_serbia .profile-card-v2 #profileUsername {
+  text-shadow: 0 0 18px rgba(168,85,247,.30);
+}
+
+.profile-card-v2.profile-theme_egypt .profile-name,
+.profile-card-v2.profile-theme_egypt #profileUsername,
+.active-theme-theme_egypt .profile-card-v2 .profile-name,
+.active-theme-theme_egypt .profile-card-v2 #profileUsername {
+  text-shadow: 0 0 18px rgba(245,158,11,.28);
+}
+
+.profile-card-v2.profile-theme_rome .profile-name,
+.profile-card-v2.profile-theme_rome #profileUsername,
+.active-theme-theme_rome .profile-card-v2 .profile-name,
+.active-theme-theme_rome .profile-card-v2 #profileUsername {
+  text-shadow: 0 0 18px rgba(234,179,8,.28);
+}
+
+.profile-card-v2.profile-theme_vertex .profile-name,
+.profile-card-v2.profile-theme_vertex #profileUsername,
+.active-theme-theme_vertex .profile-card-v2 .profile-name,
+.active-theme-theme_vertex .profile-card-v2 #profileUsername {
+  text-shadow: 0 0 20px rgba(239,68,68,.34);
+}
+
+.profile-card-v2.profile-theme_five .profile-name,
+.profile-card-v2.profile-theme_five #profileUsername,
+.active-theme-theme_five .profile-card-v2 .profile-name,
+.active-theme-theme_five .profile-card-v2 #profileUsername {
+  text-shadow: 0 0 20px rgba(34,211,238,.28);
+}
+
+/* Market tema kartları daha seçilebilir */
+.market-card:has(.market-main small) {
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.market-card:hover {
+  transform: translateY(-1px);
+}
