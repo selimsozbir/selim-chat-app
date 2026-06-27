@@ -101,6 +101,10 @@ const dailyRewardText = document.getElementById('dailyRewardText');
 const dailyStreakText = document.getElementById('dailyStreakText');
 const dailyClaimButton = document.getElementById('dailyClaimButton');
 const questsList = document.getElementById('questsList');
+const lootboxCratesList = document.getElementById('lootboxCratesList');
+const activeCrateIcon = document.getElementById('activeCrateIcon');
+const activeCrateName = document.getElementById('activeCrateName');
+const activeCrateInfo = document.getElementById('activeCrateInfo');
 const openLootboxButton = document.getElementById('openLootboxButton');
 const lootboxResult = document.getElementById('lootboxResult');
 const lootboxHistoryList = document.getElementById('lootboxHistoryList');
@@ -228,6 +232,7 @@ let friends = [];
 let groups = [];
 let groupMembers = [];
 let selectedGroupFriendIds = new Set();
+let selectedLootboxCrateId = 'serbia_rift';
 document.body.dataset.chatMode = chatMode;
 
 let socket = null;
@@ -1113,9 +1118,10 @@ async function startApp() {
 }
 
 function renderProfile() {
-  document.body.classList.remove('active-frame-frame_vertex', 'active-frame-frame_limbo', 'active-frame-frame_five', 'active-frame-frame_ataturk', 'active-name-name_glitch', 'active-name-name_neon', 'active-name-name_legend');
+  document.body.classList.remove('active-frame-frame_vertex', 'active-frame-frame_limbo', 'active-frame-frame_five', 'active-frame-frame_ataturk', 'active-name-name_glitch', 'active-name-name_neon', 'active-name-name_legend', 'active-theme-theme_limbo', 'active-theme-theme_serbia', 'active-theme-theme_egypt', 'active-theme-theme_rome', 'active-theme-theme_vertex', 'active-theme-theme_five');
   if (user?.active_profile_frame) document.body.classList.add('active-frame-' + user.active_profile_frame);
   if (user?.active_name_effect) document.body.classList.add('active-name-' + user.active_name_effect);
+  if (user?.active_profile_theme) document.body.classList.add('active-theme-' + user.active_profile_theme);
 
   currentUsername.textContent = user.display_name || user.username;
   avatarLetter.textContent = (user.display_name || user.username).charAt(0).toUpperCase();
@@ -1838,7 +1844,7 @@ function addDmMessage(message) {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '872');
+    url.searchParams.set('v', '880');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -1853,6 +1859,7 @@ function itemSlotLabel(type) {
   if (type === 'bubble') return 'Mesaj';
   if (type === 'frame') return 'Çerçeve';
   if (type === 'name') return 'İsim';
+  if (type === 'theme') return 'Profil Tema';
   return type || 'Item';
 }
 
@@ -1861,6 +1868,7 @@ function activeItemForSlot(slot) {
   if (slot === 'bubble') return user.active_bubble_theme || '';
   if (slot === 'frame') return user.active_profile_frame || '';
   if (slot === 'name') return user.active_name_effect || '';
+  if (slot === 'theme') return user.active_profile_theme || '';
   return '';
 }
 
@@ -1942,11 +1950,37 @@ async function claimDailyReward() {
 function renderLootbox(lootbox) {
   if (!lootboxHistoryList) return;
 
-  lootboxHistoryList.innerHTML = '';
-  if (lootboxResult && lootbox?.price) {
-    lootboxResult.dataset.price = lootbox.price;
+  const crates = lootbox?.crates || [];
+  if (crates.length && !crates.some((crate) => crate.id === selectedLootboxCrateId)) {
+    selectedLootboxCrateId = crates[0].id;
   }
 
+  if (lootboxCratesList) {
+    lootboxCratesList.innerHTML = '';
+    crates.forEach((crate) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `lootbox-crate-choice ${crate.id === selectedLootboxCrateId ? 'active' : ''}`;
+      btn.innerHTML = `<strong>${escapeHtml(crate.icon || '📦')} ${escapeHtml(crate.name)}</strong><span>${crate.price} Shards</span>`;
+      btn.onclick = () => {
+        selectedLootboxCrateId = crate.id;
+        renderLootbox(lootbox);
+      };
+      lootboxCratesList.appendChild(btn);
+    });
+  }
+
+  const selected = crates.find((crate) => crate.id === selectedLootboxCrateId) || crates[0];
+  if (selected) {
+    if (activeCrateIcon) activeCrateIcon.textContent = selected.icon || '📦';
+    if (activeCrateName) activeCrateName.textContent = selected.name;
+    if (activeCrateInfo) {
+      const odds = selected.rarities || {};
+      activeCrateInfo.textContent = `${selected.price} Shards · Rare ${odds.rare || 0}% · Epic ${odds.epic || 0}% · Legendary ${odds.legendary || 0}%`;
+    }
+  }
+
+  lootboxHistoryList.innerHTML = '';
   const history = lootbox?.history || [];
   if (!history.length) {
     lootboxHistoryList.innerHTML = '<div class="mini-item">Henüz kasa geçmişi yok.</div>';
@@ -1956,10 +1990,11 @@ function renderLootbox(lootbox) {
   history.forEach((entry) => {
     const item = document.createElement('div');
     item.className = `lootbox-history ${rarityClass(entry.reward_rarity)}`;
+    const crateName = crates.find((crate) => crate.id === entry.crate_id)?.name || entry.crate_id || 'Kasa';
     const rewardText = entry.reward_type === 'item'
       ? `${entry.reward_name} · ${entry.reward_rarity}`
       : `${entry.reward_shards} Shards`;
-    item.innerHTML = `<strong>${escapeHtml(rewardText)}</strong><span>${new Date(entry.created_at).toLocaleString('tr-TR')}</span>`;
+    item.innerHTML = `<strong>${escapeHtml(rewardText)}</strong><span>${escapeHtml(crateName)} · ${new Date(entry.created_at).toLocaleString('tr-TR')}</span>`;
     lootboxHistoryList.appendChild(item);
   });
 }
@@ -1969,7 +2004,7 @@ async function openLootbox() {
     if (openLootboxButton) openLootboxButton.disabled = true;
     if (lootboxResult) lootboxResult.innerHTML = '<div class="lootbox-opening">📦 Kasa açılıyor...</div>';
 
-    const data = await api('/api/lootbox/open', { method: 'POST' });
+    const data = await api('/api/lootbox/open', { method: 'POST', body: JSON.stringify({ crateId: selectedLootboxCrateId }) });
     const reward = data.reward || {};
     let html = '';
 
@@ -3632,6 +3667,10 @@ async function openProfile(userId) {
     activeProfileUser = profile;
 
     profileAvatar.className = `profile-avatar-shell ${profile.active_profile_frame ? 'avatar-frame ' + profile.active_profile_frame : ''}`;
+    if (profileCardV2) {
+      profileCardV2.classList.remove('profile-theme_limbo','profile-theme_serbia','profile-theme_egypt','profile-theme_rome','profile-theme_vertex','profile-theme_five');
+      if (profile.active_profile_theme) profileCardV2.classList.add('profile-' + profile.active_profile_theme);
+    }
     profileAvatar.innerHTML = avatarHtml(profile.username, profile.avatar_url, 'profile-avatar-inner');
     profileUsername.textContent = displayName(profile);
     profileStatus.textContent = `${formatPresence(profile)} · @${profile.username}`;
