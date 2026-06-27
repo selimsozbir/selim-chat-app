@@ -573,6 +573,7 @@ function updateMobileViewportHeight() {
 
   document.documentElement.style.setProperty('--mobile-vvh', `${Math.round(height)}px`);
   document.documentElement.style.setProperty('--keyboard-inset', `${keyboardInset}px`);
+  document.documentElement.style.setProperty('--mobile-bottom-inset', `${keyboardInset}px`);
 }
 
 function setMobileKeyboardOpen(open) {
@@ -581,10 +582,7 @@ function setMobileKeyboardOpen(open) {
   document.body.classList.toggle('composer-focused', Boolean(open));
   updateMobileViewportHeight();
   if (open) {
-    setTimeout(() => {
-      scrollToBottom?.();
-      messageInput?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }, 80);
+    setTimeout(() => scrollToBottom?.(), 80);
     setTimeout(() => scrollToBottom?.(), 260);
   }
 }
@@ -2590,7 +2588,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1090');
+    url.searchParams.set('v', '1091');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
