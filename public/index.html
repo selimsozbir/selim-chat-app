@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v10.2.1</title>
-  <link rel="stylesheet" href="style.css?v=1021" />
+  <title>Selim Chat v10.2.2</title>
+  <link rel="stylesheet" href="style.css?v=1022" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -479,10 +479,10 @@
           </div>
 
           <div class="friends-center-tabs">
-            <button class="friends-center-tab active" data-friends-center-tab="friends" type="button">Arkadaşlar</button>
-            <button class="friends-center-tab" data-friends-center-tab="requests" type="button">İstekler</button>
-            <button class="friends-center-tab" data-friends-center-tab="blocked" type="button">Engellenen</button>
-            <button class="friends-center-tab" data-friends-center-tab="social" type="button">Sosyal</button>
+            <button class="friends-center-tab active" data-friends-center-tab="friends" type="button"><span>🤝</span><b>Arkadaşlar</b></button>
+            <button class="friends-center-tab" data-friends-center-tab="requests" type="button"><span>📨</span><b>İstekler</b></button>
+            <button class="friends-center-tab" data-friends-center-tab="blocked" type="button"><span>🚫</span><b>Engellenen</b></button>
+            <button class="friends-center-tab" data-friends-center-tab="social" type="button"><span>✨</span><b>Sosyal</b></button>
           </div>
 
           <div id="friendsCenterFriendsPanel" class="friends-center-panel">
@@ -506,26 +506,51 @@
           </div>
 
           <div id="friendsCenterSocialPanel" class="friends-center-panel hidden">
-        <div id="socialPanel" class="social-control-box">
-          <div class="social-control-head">
-            <div>
-              <strong>Sosyal Durum</strong>
-              <span>Online listesinde böyle görünür</span>
+            <div id="socialPanel" class="social-control-box social-control-box-v2">
+              <div class="social-hero">
+                <div class="social-orb">✨</div>
+                <div>
+                  <strong>Sosyal Durum</strong>
+                  <span>Online listesinde nasıl görüneceğini ayarla.</span>
+                </div>
+              </div>
+
+              <div class="social-preview-card">
+                <div class="social-preview-avatar" id="socialPreviewAvatar">?</div>
+                <div class="social-preview-main">
+                  <strong id="socialPreviewName">Kullanıcı</strong>
+                  <span id="socialPreviewPresence">🟢 Aktif</span>
+                  <em id="socialPreviewCustom" class="hidden">Özel durum yok</em>
+                </div>
+              </div>
+
+              <div class="social-status-grid">
+                <button class="presence-choice active" data-presence-choice="online" type="button"><span>🟢</span><b>Aktif</b><small>Uygun</small></button>
+                <button class="presence-choice" data-presence-choice="idle" type="button"><span>🌙</span><b>Boşta</b><small>AFK</small></button>
+                <button class="presence-choice" data-presence-choice="dnd" type="button"><span>⛔</span><b>Rahatsız Etmeyin</b><small>Sessiz</small></button>
+                <button class="presence-choice" data-presence-choice="invisible" type="button"><span>👻</span><b>Görünmez</b><small>Gizli</small></button>
+              </div>
+
+              <select id="presenceSelect" class="social-input social-hidden-select" aria-label="Online durumu">
+                <option value="online">🟢 Aktif</option>
+                <option value="idle">🌙 Boşta</option>
+                <option value="dnd">⛔ Rahatsız Etmeyin</option>
+                <option value="invisible">👻 Görünmez</option>
+              </select>
+
+              <div class="social-custom-row">
+                <label for="customStatusInput">Özel durum</label>
+                <div class="social-custom-input-wrap">
+                  <input id="customStatusInput" class="social-input" maxlength="80" placeholder="müzik yapıyor, AFK, kod yazıyor..." />
+                  <button id="clearCustomStatusButton" class="small-button gray" type="button">Temizle</button>
+                </div>
+              </div>
+
+              <div class="social-actions-row">
+                <button id="savePresenceButton" class="small-button social-save-button" type="button">Durumu Kaydet</button>
+                <span id="socialSaveHint">Online listesi anında güncellenir.</span>
+              </div>
             </div>
-            <button id="savePresenceButton" class="small-button" type="button">Kaydet</button>
-          </div>
-
-          <select id="presenceSelect" class="social-input">
-            <option value="online">🟢 Aktif</option>
-            <option value="idle">🌙 Boşta</option>
-            <option value="dnd">⛔ Rahatsız Etmeyin</option>
-            <option value="invisible">👻 Görünmez</option>
-          </select>
-
-          <input id="customStatusInput" class="social-input" maxlength="80" placeholder="Özel durum: müzik yapıyor, AFK, kod yazıyor..." />
-        </div>
-
-
           </div>
         </div>
       </div>
