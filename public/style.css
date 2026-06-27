@@ -7941,3 +7941,92 @@ body {
     font-size: 20px !important;
   }
 }
+
+
+/* =========================================================
+   v8.8.6 — Profile Size Up
+   Aynı görünüm korunur, sadece profil kartı biraz büyütülür.
+   ========================================================= */
+
+#profileModal.profile-modal:not(.hidden) {
+  padding: 14px 10px !important;
+}
+
+#profileModal:not(.hidden) .profile-card-v2 {
+  width: min(660px, 96vw) !important;
+  max-height: calc(100vh - 28px) !important;
+}
+
+#profileModal:not(.hidden) .profile-cover-v2 {
+  height: 152px !important;
+  min-height: 152px !important;
+}
+
+#profileModal:not(.hidden) .profile-main-v2 {
+  margin-top: -44px !important;
+  padding: 0 22px 18px !important;
+  gap: 16px !important;
+}
+
+#profileModal:not(.hidden) .profile-avatar-v2 {
+  width: 98px !important;
+  height: 98px !important;
+  flex: 0 0 98px !important;
+}
+
+#profileModal:not(.hidden) .profile-identity-v2 {
+  padding: 14px 16px !important;
+}
+
+#profileModal:not(.hidden) .profile-identity-v2 h2,
+#profileModal:not(.hidden) #profileUsername {
+  font-size: 26px !important;
+}
+
+#profileModal:not(.hidden) .profile-stats-v2,
+#profileModal:not(.hidden) .profile-level-box,
+#profileModal:not(.hidden) .profile-meta-v2,
+#profileModal:not(.hidden) .profile-badges-v2 {
+  padding-left: 22px !important;
+  padding-right: 22px !important;
+}
+
+#profileModal:not(.hidden) .profile-about-box,
+#profileModal:not(.hidden) .profile-edit-panel {
+  margin-left: 22px !important;
+  margin-right: 22px !important;
+}
+
+@media (max-width: 760px) {
+  #profileModal.profile-modal:not(.hidden) {
+    padding: 8px 6px 92px !important;
+    place-items: start center !important;
+  }
+
+  #profileModal:not(.hidden) .profile-card-v2 {
+    width: min(100%, 98vw) !important;
+    max-height: calc(100vh - 104px) !important;
+  }
+
+  #profileModal:not(.hidden) .profile-cover-v2 {
+    height: 126px !important;
+    min-height: 126px !important;
+  }
+
+  #profileModal:not(.hidden) .profile-main-v2 {
+    margin-top: -34px !important;
+    padding: 0 14px 14px !important;
+    gap: 11px !important;
+  }
+
+  #profileModal:not(.hidden) .profile-avatar-v2 {
+    width: 82px !important;
+    height: 82px !important;
+    flex-basis: 82px !important;
+  }
+
+  #profileModal:not(.hidden) .profile-identity-v2 h2,
+  #profileModal:not(.hidden) #profileUsername {
+    font-size: 21px !important;
+  }
+}
