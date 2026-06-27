@@ -79,6 +79,8 @@ const searchButton = document.getElementById('searchButton');
 const searchResults = document.getElementById('searchResults');
 const requestsList = document.getElementById('requestsList');
 const friendsList = document.getElementById('friendsList');
+const friendActivityList = document.getElementById('friendActivityList');
+const refreshFriendActivityButton = document.getElementById('refreshFriendActivityButton');
 const blockedList = document.getElementById('blockedList');
 
 const notificationsList = document.getElementById('notificationsList');
@@ -157,6 +159,8 @@ const profileAllBadgesList = document.getElementById('profileAllBadgesList');
 const profileSaveBadgesButton = document.getElementById('profileSaveBadgesButton');
 const profileBadgeCounter = document.getElementById('profileBadgeCounter');
 const profileBadgeHint = document.getElementById('profileBadgeHint');
+const profileBadgeFilters = document.getElementById('profileBadgeFilters');
+const profileBadgeSummary = document.getElementById('profileBadgeSummary');
 const profileXpText = document.getElementById('profileXpText');
 const profileNextXpText = document.getElementById('profileNextXpText');
 const profileLevelFill = document.getElementById('profileLevelFill');
@@ -262,6 +266,7 @@ let badgeCheckCooldown = 0;
 let activeProfileUser = null;
 let activeProfileAllBadges = [];
 let activeProfileSelectedBadges = [];
+let activeBadgeFilter = 'all';
 
 const contextMenu = document.createElement('div');
 contextMenu.className = 'message-context-menu hidden';
@@ -390,6 +395,7 @@ dmModeButton.addEventListener('click', () => {
   clearReply();
   setChatMode('dm');
   loadFriends();
+  loadFriendActivity();
   loadRequests();
   loadBlocked();
 });
@@ -428,6 +434,7 @@ if (profileExportButton) profileExportButton.addEventListener('click', exportPro
 if (profileSelfExportButton) profileSelfExportButton.addEventListener('click', exportProfilePng);
 if (profileToggleAllBadgesButton) profileToggleAllBadgesButton.addEventListener('click', toggleAllBadgesPanel);
 if (profileSaveBadgesButton) profileSaveBadgesButton.addEventListener('click', saveProfileBadgeShowcase);
+if (refreshFriendActivityButton) refreshFriendActivityButton.addEventListener('click', loadFriendActivity);
 
 if (settingsButton) settingsButton.addEventListener('click', openSettings);
 
@@ -444,6 +451,7 @@ bindMobileTap(mobileRoomButton, () => {
 bindMobileTap(mobileDmButton, () => {
   setChatMode('dm');
   loadFriends();
+  loadFriendActivity();
   loadRequests();
   loadBlocked();
   openMobileSidebar();
@@ -1662,11 +1670,83 @@ async function respondFriend(requestId, action) {
     });
 
     addSystemMessage(data.message);
-    await Promise.allSettled([loadRequests(), loadFriends()]);
+    await Promise.allSettled([loadRequests(), loadFriends(), loadFriendActivity()]);
   } catch (error) {
     addSystemMessage(error.message);
   }
 }
+
+
+function formatShortDateTime(value) {
+  if (!value) return 'aktivite yok';
+  const date = new Date(value);
+  const diff = Date.now() - date.getTime();
+  if (Number.isFinite(diff)) {
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return 'az önce';
+    if (min < 60) return `${min} dk önce`;
+    const hour = Math.floor(min / 60);
+    if (hour < 24) return `${hour} saat önce`;
+    const day = Math.floor(hour / 24);
+    if (day < 7) return `${day} gün önce`;
+  }
+  return date.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function renderFriendActivity(activities = []) {
+  if (!friendActivityList) return;
+  friendActivityList.innerHTML = '';
+
+  if (!activities.length) {
+    friendActivityList.innerHTML = '<div class="mini-item">Arkadaş aktivitesi yok.</div>';
+    return;
+  }
+
+  activities.forEach((friend) => {
+    const item = document.createElement('div');
+    item.className = `friend-activity-item ${friend.online ? 'online' : ''}`;
+    const name = escapeHtml(friend.display_name || friend.username || 'Kullanıcı');
+    const last = friend.last_dm_at
+      ? `${Number(friend.last_dm_sender_id) === Number(user.id) ? 'Sen' : name}: ${escapeHtml(String(friend.last_dm_text || '').slice(0, 42))}`
+      : 'Henüz DM yok';
+    const activeAt = friend.last_active || friend.last_seen || friend.last_dm_at;
+
+    item.innerHTML = `
+      <div class="activity-avatar-wrap">
+        ${avatarHtml(friend.display_name || friend.username, friend.avatar_url)}
+        <span class="activity-dot ${friend.online ? 'on' : ''}"></span>
+      </div>
+      <div class="activity-main">
+        <strong>${name}</strong>
+        <span>${friend.online ? 'Şu an online' : formatShortDateTime(activeAt)} · Level ${friend.level || 1}</span>
+        <small>${last}</small>
+      </div>
+      <button class="activity-open" type="button">Aç</button>
+    `;
+
+    item.querySelector('.activity-avatar-wrap').onclick = () => openProfile(friend.id);
+    item.querySelector('.activity-main').onclick = () => openProfile(friend.id);
+    item.querySelector('.activity-open').onclick = async (event) => {
+      event.stopPropagation();
+      const f = findFriendById(friend.id) || friend;
+      await openDm(f);
+    };
+
+    friendActivityList.appendChild(item);
+  });
+}
+
+async function loadFriendActivity() {
+  if (!token || !friendActivityList) return;
+  try {
+    friendActivityList.innerHTML = '<div class="mini-item">Aktivite yükleniyor...</div>';
+    const data = await api('/api/friends/activity');
+    renderFriendActivity(data.activities || []);
+  } catch (error) {
+    friendActivityList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
 
 async function loadFriends() {
   try {
@@ -1864,7 +1944,7 @@ function addDmMessage(message) {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '889');
+    url.searchParams.set('v', '890');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3530,7 +3610,7 @@ const PROFILE_BADGE_RARITY = {
 };
 
 function badgeRarity(badge) {
-  return PROFILE_BADGE_RARITY[String(badge?.key || '')] || 'common';
+  return String(badge?.rarity || PROFILE_BADGE_RARITY[String(badge?.key || '')] || 'common').toLowerCase();
 }
 
 function rarityLabel(rarity) {
@@ -3667,27 +3747,89 @@ function toggleAllBadgesPanel() {
   profileAllBadgesPanel?.classList.toggle('hidden');
 }
 
-function renderAllBadgesPanel(profile, isMe) {
+function badgeCategoryLabel(badge) {
+  const key = String(badge?.key || '');
+  if (key.includes('level') || key.includes('shard') || key.includes('daily') || key.includes('casino')) return 'Progress';
+  if (key.includes('friend') || key.includes('group') || key.includes('social') || key.includes('network') || key.includes('alliance')) return 'Social';
+  if (key.includes('serbia') || key.includes('vertex') || key.includes('limbo') || key.includes('rome') || key.includes('egypt') || key.includes('anitkabir') || key.includes('cat') || key.includes('reset') || key.includes('rift') || key.includes('five') || key.includes('xara') || key.includes('nico') || key.includes('yasin') || key.includes('jung') || key.includes('feiz')) return 'Easter Egg';
+  if (key.includes('profile') || key.includes('cover') || key.includes('bio') || key.includes('color') || key.includes('frame') || key.includes('name') || key.includes('style')) return 'Profile';
+  if (key.includes('admin') || key.includes('mod') || key.includes('owner')) return 'Staff';
+  return 'Chat';
+}
+
+function badgeProgressText(badge) {
+  if (badge.unlocked) return 'Açıldı';
+  const desc = String(badge.description || '');
+  const match = desc.match(/(\d+)\+/);
+  if (match) return `Hedef: ${match[1]}+`;
+  if (desc.toLowerCase().includes('favori easter egg')) return 'Favori egg değiştir';
+  if (desc.toLowerCase().includes('kuşandı')) return 'Item kuşan';
+  return 'Kilitli';
+}
+
+function setBadgeFilter(filter) {
+  activeBadgeFilter = filter || 'all';
+  profileBadgeFilters?.querySelectorAll('.badge-filter').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.badgeFilter === activeBadgeFilter);
+  });
+  if (activeProfileUser) renderAllBadgesPanel(activeProfileUser, Number(activeProfileUser.id) === Number(user.id), true);
+}
+
+function renderBadgeSummary(allBadges) {
+  if (!profileBadgeSummary) return;
+  const counts = { common: 0, rare: 0, epic: 0, legendary: 0 };
+  const unlocked = allBadges.filter((badge) => badge.unlocked);
+  unlocked.forEach((badge) => {
+    const rarity = badgeRarity(badge);
+    counts[rarity] = (counts[rarity] || 0) + 1;
+  });
+  profileBadgeSummary.innerHTML = `
+    <span>${unlocked.length}/${allBadges.length} açık</span>
+    <span>Common ${counts.common || 0}</span>
+    <span>Rare ${counts.rare || 0}</span>
+    <span>Epic ${counts.epic || 0}</span>
+    <span>Legendary ${counts.legendary || 0}</span>
+  `;
+}
+
+function renderAllBadgesPanel(profile, isMe, keepFilter = false) {
   if (!profileAllBadgesList) return;
 
   activeProfileAllBadges = profile.all_badges || [];
   activeProfileSelectedBadges = Array.isArray(profile.selected_badges) ? [...profile.selected_badges] : [];
   const unlocked = activeProfileAllBadges.filter((badge) => badge.unlocked);
 
+  if (!keepFilter) activeBadgeFilter = 'all';
+
   if (profileBadgeCounter) profileBadgeCounter.textContent = `${unlocked.length} / ${activeProfileAllBadges.length} açık`;
   if (profileBadgeHint) {
     profileBadgeHint.textContent = isMe
-      ? 'Profilinde gözükecek rozetleri seçebilirsin. En fazla 8 rozet.'
-      : 'Bu kullanıcının açtığı ve kilitli rozetler.';
+      ? 'Badges V2: filtrele, detay gör, en fazla 8 rozet vitrine koy.'
+      : 'Badges V2: bu kullanıcının açık ve kilitli rozetleri.';
   }
+
+  renderBadgeSummary(activeProfileAllBadges);
+
+  profileBadgeFilters?.querySelectorAll('.badge-filter').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.badgeFilter === activeBadgeFilter);
+    btn.onclick = () => setBadgeFilter(btn.dataset.badgeFilter);
+  });
 
   profileSaveBadgesButton?.classList.toggle('hidden', !isMe);
   profileAllBadgesList.innerHTML = '';
 
-  activeProfileAllBadges.forEach((badge) => {
+  const filtered = activeProfileAllBadges.filter((badge) => {
+    const rarity = badgeRarity(badge);
+    if (activeBadgeFilter === 'unlocked') return badge.unlocked;
+    if (activeBadgeFilter === 'locked') return !badge.unlocked;
+    if (['common', 'rare', 'epic', 'legendary'].includes(activeBadgeFilter)) return rarity === activeBadgeFilter;
+    return true;
+  });
+
+  filtered.forEach((badge) => {
     const rarity = badgeRarity(badge);
     const item = document.createElement(isMe ? 'label' : 'div');
-    item.className = `profile-all-badge rarity-${rarity} ${badge.unlocked ? 'unlocked' : 'locked'}`;
+    item.className = `profile-all-badge badges-v2-card rarity-${rarity} ${badge.unlocked ? 'unlocked' : 'locked'}`;
 
     const checked = activeProfileSelectedBadges.includes(badge.key);
     item.innerHTML = `
@@ -3696,9 +3838,19 @@ function renderAllBadgesPanel(profile, isMe) {
       <div>
         <strong>${escapeHtml(badge.name || 'Badge')}</strong>
         <small>${escapeHtml(badge.description || '')}</small>
+        <div class="badge-v2-meta">
+          <b>${escapeHtml(badgeCategoryLabel(badge))}</b>
+          <b>${escapeHtml(badgeProgressText(badge))}</b>
+        </div>
       </div>
       <em>${badge.unlocked ? rarityLabel(rarity) : 'Kilitli'}</em>
     `;
+
+    item.onclick = (event) => {
+      if (event.target?.tagName === 'INPUT') return;
+      const info = `${badge.icon || '🏆'} ${badge.name}\\n${rarityLabel(rarity)} · ${badgeCategoryLabel(badge)}\\n\\n${badge.description || ''}\\n\\nDurum: ${badgeProgressText(badge)}`;
+      setTimeout(() => alert(info), 0);
+    };
 
     const checkbox = item.querySelector('input');
     if (checkbox && isMe && badge.unlocked) {
@@ -3713,6 +3865,10 @@ function renderAllBadgesPanel(profile, isMe) {
 
     profileAllBadgesList.appendChild(item);
   });
+
+  if (!filtered.length) {
+    profileAllBadgesList.innerHTML = '<div class="mini-item">Bu filtrede rozet yok.</div>';
+  }
 }
 
 async function saveProfileBadgeShowcase() {
@@ -3809,9 +3965,10 @@ async function openProfile(userId) {
     (profile.badges || []).forEach((badge) => {
       const item = document.createElement('div');
       const rarity = badgeRarity(badge);
-      item.className = `profile-badge rarity-${rarity}`;
+      item.className = `profile-badge badges-v2-showcase rarity-${rarity}`;
       item.title = badge.description || '';
-      item.innerHTML = `<span>${escapeHtml(badge.icon || '🏆')}</span><div><strong>${escapeHtml(badge.name || 'Badge')}</strong><small>${escapeHtml(badge.description || '')}</small></div><label>${rarityLabel(rarity)}</label>`;
+      item.innerHTML = `<span>${escapeHtml(badge.icon || '🏆')}</span><div><strong>${escapeHtml(badge.name || 'Badge')}</strong><small>${escapeHtml(badge.description || '')}</small><em>${escapeHtml(badgeCategoryLabel(badge))}</em></div><label>${rarityLabel(rarity)}</label>`;
+      item.onclick = () => alert(`${badge.icon || '🏆'} ${badge.name}\n${rarityLabel(rarity)} · ${badgeCategoryLabel(badge)}\n\n${badge.description || ''}`);
       profileBadges.appendChild(item);
     });
 
