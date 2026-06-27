@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.8.2",
-  "description": "Selim Chat v10.8.2 persistent replay story one vote inventory pet shop",
+  "version": "10.8.4",
+  "description": "Selim Chat v10.8.4 balanced companion pet prices",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
