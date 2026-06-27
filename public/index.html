@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v10.1.0</title>
-  <link rel="stylesheet" href="style.css?v=1010" />
+  <title>Selim Chat v10.2.0</title>
+  <link rel="stylesheet" href="style.css?v=1020" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -278,7 +278,6 @@
             <button id="casinoTabButton" class="gamify-tab" type="button">Casino</button>
             <button id="shardsHistoryTabButton" class="gamify-tab" type="button">Geçmiş</button>
             <button id="universeTabButton" class="gamify-tab" type="button">Evren</button>
-            <button id="socialTabButton" class="gamify-tab" type="button">Sosyal</button>
           </div>
 
           <div id="dailyPanel" class="gamify-panel">
@@ -331,42 +330,6 @@
               <button id="refreshShardsHistoryButton" class="small-button" type="button">Yenile</button>
             </div>
             <div id="shardsHistoryList" class="gamify-list"></div>
-          </div>
-
-          <div id="socialPanel" class="gamify-panel hidden">
-            <div class="social-card">
-              <div class="social-head">
-                <div>
-                  <strong>Online Durumu</strong>
-                  <span>Arkadaşların seni böyle görür</span>
-                </div>
-                <button id="savePresenceButton" class="small-button" type="button">Kaydet</button>
-              </div>
-              <select id="presenceSelect" class="social-input">
-                <option value="online">🟢 Aktif</option>
-                <option value="idle">🌙 Boşta</option>
-                <option value="dnd">⛔ Rahatsız Etmeyin</option>
-                <option value="invisible">👻 Görünmez</option>
-              </select>
-              <input id="customStatusInput" class="social-input" maxlength="80" placeholder="Özel durum: 5ECROPOLIS üzerinde çalışıyor" />
-            </div>
-
-            <div class="social-card">
-              <div class="social-head">
-                <div>
-                  <strong>Story / Status</strong>
-                  <span>24 saatlik kısa paylaşım</span>
-                </div>
-                <button id="saveStoryButton" class="small-button" type="button">Paylaş</button>
-              </div>
-              <textarea id="storyTextInput" class="social-input social-textarea" maxlength="220" placeholder="Bugün ne yapıyorsun?"></textarea>
-              <button id="clearStoryButton" class="small-button gray" type="button">Story Sil</button>
-            </div>
-
-            <div class="social-card">
-              <strong>Aktif Story'ler</strong>
-              <div id="storiesList" class="stories-list"></div>
-            </div>
           </div>
 
           <div id="universePanel" class="gamify-panel hidden">
@@ -458,6 +421,26 @@
               </div>
             </div>
           </div>
+        </div>
+
+
+        <div id="socialPanel" class="social-control-box">
+          <div class="social-control-head">
+            <div>
+              <strong>Sosyal Durum</strong>
+              <span>Online listesinde böyle görünür</span>
+            </div>
+            <button id="savePresenceButton" class="small-button" type="button">Kaydet</button>
+          </div>
+
+          <select id="presenceSelect" class="social-input">
+            <option value="online">🟢 Aktif</option>
+            <option value="idle">🌙 Boşta</option>
+            <option value="dnd">⛔ Rahatsız Etmeyin</option>
+            <option value="invisible">👻 Görünmez</option>
+          </select>
+
+          <input id="customStatusInput" class="social-input" maxlength="80" placeholder="Özel durum: müzik yapıyor, AFK, kod yazıyor..." />
         </div>
 
         <div class="notifications-box">
