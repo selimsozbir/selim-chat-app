@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v9.4.0</title>
-  <link rel="stylesheet" href="style.css?v=940" />
+  <title>Selim Chat v9.5.0</title>
+  <link rel="stylesheet" href="style.css?v=950" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -218,6 +218,15 @@
           <button id="sendButton" type="submit">Gönder</button>
           <div id="emojiPanel" class="emoji-panel hidden" aria-label="Emoji paneli"></div>
         </form>
+
+        <div id="voiceRecordHud" class="voice-record-hud hidden">
+          <div class="voice-record-pulse">●</div>
+          <div>
+            <strong>Ses kaydediliyor</strong>
+            <span id="voiceRecordTimer">00:00</span>
+          </div>
+          <button id="voiceCancelButton" type="button">İptal</button>
+        </div>
 
         <nav id="mobileBottomNav" class="mobile-bottom-nav">
           <button id="mobileRoomButton" class="mobile-nav-item active" type="button">🏠<span>Oda</span></button>
@@ -721,7 +730,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=940"></script>
+  <script src="script.js?v=950"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
