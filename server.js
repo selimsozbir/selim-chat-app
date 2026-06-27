@@ -2012,45 +2012,111 @@ async function initDatabase() {
 
 const STORY_DECISION_TEMPLATES = [
   {
-    prompt: 'Serbia Rift tekrar açıldı. Ekip ne yapsın?',
+    prompt: 'Serbia Rift tekrar açıldı. Portalın diğer tarafında kırmızı evren görünüyor. Ekip ne yapsın?',
     options: [
-      { key: 'enter', label: 'Portala gir', result: 'Ekip portala girdi. Rift enerjisi yükseldi.' },
-      { key: 'ask_feiz', label: 'Feiz’e sor', result: 'Feiz anlamsız ama faydalı bir kehanet verdi.' },
-      { key: 'seal', label: 'Kapıyı mühürle', result: 'Portal geçici olarak mühürlendi.' }
+      { key: 'enter', label: 'Portala gir', result: 'Ekip portala girdi. Serbia Rift enerjisi yükseldi.' },
+      { key: 'ask_feiz', label: 'Feiz’e sor', result: 'Feiz kısa ama garip bir koordinat verdi.' },
+      { key: 'seal', label: 'Kapıyı mühürle', result: 'Portal geçici olarak mühürlendi ama dip gürültüsü arttı.' }
     ]
   },
   {
-    prompt: 'Limbo Cat odanın köşesinde bir anahtar buldu. Ne yapılsın?',
+    prompt: 'Limbo Cat odanın köşesinde siyah bir anahtar buldu. Anahtar “5” şeklinde parlıyor.',
     options: [
-      { key: 'take', label: 'Anahtarı al', result: 'Anahtar inventory’ye yazılmasa da lore’a işlendi.' },
-      { key: 'follow_cat', label: 'Kediyi takip et', result: 'Kedi gizli bir geçit gösterdi.' },
-      { key: 'ignore', label: 'Dokunma', result: 'Anahtar kendi kendine kayboldu.' }
+      { key: 'take', label: 'Anahtarı al', result: 'Anahtar lore kaydına işlendi. Limbo kapısı titredi.' },
+      { key: 'follow_cat', label: 'Kediyi takip et', result: 'Kedi gizli bir Limbo koridoru gösterdi.' },
+      { key: 'leave_key', label: 'Anahtarı bırak', result: 'Anahtar kendi kendine kayboldu. Feiz bunu not aldı.' }
     ]
   },
   {
-    prompt: 'VERTEX Entity sohbete sinyal gönderdi. Cevap verilsin mi?',
+    prompt: 'VERTEX Entity sohbete kırmızı piksel sinyali gönderdi. Sinyal Selim’in eski parçalanma koduna benziyor.',
     options: [
-      { key: 'reply', label: 'Cevap ver', result: 'VERTEX kısa süreliğine sakinleşti.' },
-      { key: 'spam', label: 'Mesaj yağdır', result: 'Sinyal gürültüye boğuldu.' },
-      { key: 'hide', label: 'Sessiz kal', result: 'Entity başka odaya geçti.' }
+      { key: 'reply', label: 'Sinyale cevap ver', result: 'VERTEX kısa süreliğine sakinleşti.' },
+      { key: 'overload', label: 'Mesaj yağdır', result: 'Sinyal gürültüye boğuldu, oda enerjisi yükseldi.' },
+      { key: 'hide', label: 'Sessiz kal', result: 'Entity başka odaya kaydı ama iz bıraktı.' }
     ]
   },
   {
-    prompt: 'Rome Simulation’da reset düğmesi belirdi. Basalım mı?',
+    prompt: 'Rome Simulation’da reset düğmesi belirdi. Düğmenin üstünde “Genre Switch” yazıyor.',
     options: [
-      { key: 'press', label: 'Bas', result: 'Simülasyon tür değiştirdi.' },
-      { key: 'guard', label: 'Nöbet tut', result: 'Düğme korunmaya alındı.' },
-      { key: 'break', label: 'Düğmeyi kır', result: 'Roma glitch’i kısa süreliğine durdu.' }
+      { key: 'press', label: 'Düğmeye bas', result: 'Simülasyon tür değiştirdi. Absürt bilimkurgu modu açıldı.' },
+      { key: 'guard', label: 'Nöbet tut', result: 'Düğme korumaya alındı. Roma glitch’i stabil kaldı.' },
+      { key: 'break', label: 'Düğmeyi kır', result: 'Düğme çatladı, ama zaman frekansı bozuldu.' }
+    ]
+  },
+  {
+    prompt: 'Egypt Signal çölde Anıtkabir siluetini gösterdi. Kumun altında eski bir portal halkası var.',
+    options: [
+      { key: 'dig', label: 'Kumu kaz', result: 'Altından Egypt Scarab sinyali çıktı.' },
+      { key: 'scan', label: 'Feiz’e tarat', result: 'Feiz: “Bu yapı Roma’dan eski, ama bugünden yeni.” dedi.' },
+      { key: 'wait', label: 'Güneşin batmasını bekle', result: 'Gece olunca portal halkası parladı.' }
+    ]
+  },
+  {
+    prompt: 'Çoklu evren amfisinden dip gürültüsü geliyor. Kablolardan biri Serbia tarafına bağlı.',
+    options: [
+      { key: 'unplug', label: 'Kabloyu çek', result: 'Gürültü azaldı ama Limbo tarafı karardı.' },
+      { key: 'boost', label: 'Sesi yükselt', result: 'Rift frekansı güçlendi, VERTEX bunu fark etti.' },
+      { key: 'record', label: 'Sesi kaydet', result: 'Yeni OST sinyali yakalandı.' }
+    ]
+  },
+  {
+    prompt: 'Boyut çekirdeği ısınmaya başladı. Patlamadan önce bir karar gerekiyor.',
+    options: [
+      { key: 'cool', label: 'Çekirdeği soğut', result: 'Çekirdek stabil kaldı, enerji birikti.' },
+      { key: 'split', label: 'Enerjiyi böl', result: 'Enerji 5 parçaya ayrıldı.' },
+      { key: 'detonate', label: 'Kontrollü patlat', result: 'Küçük bir rift patlaması oldu, oda sarsıldı.' }
+    ]
+  },
+  {
+    prompt: 'Feiz eski bir kayıt buldu: “Sırbistan aslında bekleme salonudur.” Kayıt bozuk.',
+    options: [
+      { key: 'restore', label: 'Kaydı onar', result: 'Kayıttan yeni bir Serbia koordinatı çıktı.' },
+      { key: 'delete', label: 'Kaydı sil', result: 'Kayıt silindi ama Feiz bir kopyasını sakladı.' },
+      { key: 'broadcast', label: 'Odaya yayınla', result: 'Herkes aynı anda rift uğultusunu duydu.' }
+    ]
+  },
+  {
+    prompt: 'Nico kırmızı evrenden gelen bir kapının üstünde “geri dönüş yok” yazdığını gördü.',
+    options: [
+      { key: 'open', label: 'Kapıyı aç', result: 'Kapının ardında kırmızı paralel şehir göründü.' },
+      { key: 'mark', label: 'Kapıyı işaretle', result: 'Kapı haritaya kaydedildi.' },
+      { key: 'call_team', label: 'Ekibi çağır', result: 'Ekip toplandı, karar sonraya bırakıldı.' }
+    ]
+  },
+  {
+    prompt: 'Yasin Menekşe bir Roma kulesinden gelen garip bir frekans yakaladı.',
+    options: [
+      { key: 'climb', label: 'Kuleye çık', result: 'Kulede eski infaz simülasyonunun kontrol noktası bulundu.' },
+      { key: 'jam', label: 'Frekansı boz', result: 'Roma kedileri kısa süreliğine durdu.' },
+      { key: 'trace', label: 'Kaynağı takip et', result: 'Frekans Serbia portalına bağlandı.' }
+    ]
+  },
+  {
+    prompt: 'Xara’nın sıfırlama düğmesi yeniden göründü ama bu kez düğme nefes alıyor gibi.',
+    options: [
+      { key: 'touch', label: 'Dokun', result: 'Düğme Xara’nın elini tanıdı.' },
+      { key: 'scan_button', label: 'Tarama yap', result: 'Düğmenin içinde VERTEX imzası bulundu.' },
+      { key: 'hide_button', label: 'Düğmeyi sakla', result: 'Düğme kayboldu ama odanın arka planı değişti.' }
+    ]
+  },
+  {
+    prompt: 'Limbo’nun ortasında 5 kapı belirdi: Serbia, Rome, Egypt, Vertex ve Unknown.',
+    options: [
+      { key: 'serbia', label: 'Serbia kapısı', result: 'Mor-kırmızı rift tekrar parladı.' },
+      { key: 'vertex', label: 'VERTEX kapısı', result: 'Kırmızı piksel yağmuru başladı.' },
+      { key: 'unknown', label: 'Unknown kapısı', result: 'Feiz ilk kez cevap vermedi.' }
     ]
   }
 ];
 
+const ROOM_STORY_TRIGGER_MESSAGE_COUNT = 500;
+
 const PET_DEFS = {
-  limbo_cat: { icon: '🐈‍⬛', name: 'Limbo Cat' },
-  vertex_drone: { icon: '🔴', name: 'VERTEX Drone' },
-  serbia_crow: { icon: '🪶', name: 'Serbia Crow' },
-  egypt_scarab: { icon: '🪲', name: 'Egypt Scarab' },
-  rome_wolf: { icon: '🐺', name: 'Rome Wolf' }
+  limbo_cat: { icon: '🐈‍⬛', name: 'Limbo Cat', price: 0, desc: 'Default companion' },
+  serbia_crow: { icon: '🪶', name: 'Serbia Crow', price: 250, desc: 'Serbia Rift scout' },
+  egypt_scarab: { icon: '🪲', name: 'Egypt Scarab', price: 450, desc: 'Egypt Signal relic' },
+  rome_wolf: { icon: '🐺', name: 'Rome Wolf', price: 700, desc: 'Rome Simulation guardian' },
+  vertex_drone: { icon: '🔴', name: 'VERTEX Drone', price: 1000, desc: 'High-tier VERTEX anomaly' }
 };
 
 function petLevelFromXp(xp = 0) {
@@ -2360,6 +2426,20 @@ async function emitReplayMessage(room) {
     room,
     text: formatReplayText(replay)
   });
+}
+
+async function maybeEmitStoryDecisionMilestone(room, userId = null) {
+  const countResult = await pool.query(
+    `SELECT COUNT(*)::int AS count
+     FROM messages
+     WHERE room = $1 AND deleted_at IS NULL AND user_id IS NOT NULL AND user_id > 0`,
+    [room]
+  );
+  const total = Number(countResult.rows[0]?.count || 0);
+  if (total > 0 && total % ROOM_STORY_TRIGGER_MESSAGE_COUNT === 0) {
+    return emitStoryDecisionPoll(room, userId, true);
+  }
+  return null;
 }
 
 async function emitStoryDecisionPoll(room, userId = null, force = false) {
@@ -4977,7 +5057,7 @@ io.on('connection', (socket) => {
         room
       }).catch((error) => console.error('Oda AI bot işlem hatası:', error));
 
-      emitStoryDecisionPoll(room, socket.user.id).catch((error) => console.error('Story poll error:', error));
+      maybeEmitStoryDecisionMilestone(room, socket.user.id).catch((error) => console.error('Story milestone error:', error));
     } catch (error) {
       console.error('Mesaj kayıt hatası:', error);
       socket.emit('system_message', 'Mesaj gönderilemedi.');
