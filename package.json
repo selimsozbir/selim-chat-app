@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.7.0",
-  "description": "Selim Chat v10.7.0 profile activity calendar",
+  "version": "10.8.0",
+  "description": "Selim Chat v10.8.0 chat replay story decisions companion pet",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
