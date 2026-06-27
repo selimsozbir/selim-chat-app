@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.3.8",
-  "description": "Selim Chat v10.3.8 login send fix after header button removal",
+  "version": "10.5.0",
+  "description": "Selim Chat v10.5.0 CSS split rebuild with separate desktop and mobile styles",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
