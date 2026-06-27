@@ -12982,3 +12982,29 @@ body.universe-theme-vertex .chat-main {
     grid-template-columns: repeat(5, 1fr) !important;
   }
 }
+
+
+/* =========================================================
+   v9.8.2 — Balance + Level Reward + Online Status Fix
+   ========================================================= */
+
+.room-user-item .mini-left span {
+  color: #cbd5e1 !important;
+  font-weight: 800;
+}
+
+.room-user-item.presence-dnd .mini-left span {
+  color: #fecaca !important;
+}
+
+.room-user-item.presence-idle .mini-left span {
+  color: #fde68a !important;
+}
+
+.room-user-item .mini-left em {
+  color: #a5b4fc !important;
+}
+
+.level-reward-toast {
+  border-color: rgba(34,197,94,.32) !important;
+}
