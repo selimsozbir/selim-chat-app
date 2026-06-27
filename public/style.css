@@ -7008,3 +7008,104 @@ body {
 .message.framefx-frame_ataturk .msg-bubble {
   border-color: rgba(239,68,68,.35) !important;
 }
+
+
+/* =========================================================
+   v8.8.0 — Profile Themes + Lootbox V2
+   ========================================================= */
+
+.lootbox-crates {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.lootbox-crate-choice {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  min-height: 38px;
+  padding: 9px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(255,255,255,.035);
+  color: #e5e7eb;
+  text-align: left;
+}
+
+.lootbox-crate-choice strong {
+  font-size: 12px;
+}
+
+.lootbox-crate-choice span {
+  color: #a1a1aa;
+  font-size: 11px;
+}
+
+.lootbox-crate-choice.active {
+  border-color: rgba(139,92,246,.55);
+  background: linear-gradient(135deg, rgba(139,92,246,.22), rgba(34,211,238,.09));
+  box-shadow: 0 0 22px rgba(139,92,246,.12);
+}
+
+.active-crate-card {
+  border-color: rgba(139,92,246,.25) !important;
+}
+
+.profile-card-v2.profile-theme_limbo,
+.active-theme-theme_limbo .profile-card-v2 {
+  background:
+    radial-gradient(circle at 15% 10%, rgba(255,255,255,.08), transparent 26%),
+    linear-gradient(135deg, #030305, #111118 55%, #000) !important;
+  border-color: rgba(255,255,255,.12) !important;
+}
+
+.profile-card-v2.profile-theme_serbia,
+.active-theme-theme_serbia .profile-card-v2 {
+  background:
+    radial-gradient(circle at 16% 18%, rgba(139,92,246,.38), transparent 30%),
+    radial-gradient(circle at 82% 18%, rgba(239,68,68,.28), transparent 26%),
+    linear-gradient(135deg, #14061f, #240817 55%, #06030a) !important;
+  border-color: rgba(168,85,247,.32) !important;
+}
+
+.profile-card-v2.profile-theme_egypt,
+.active-theme-theme_egypt .profile-card-v2 {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(251,191,36,.36), transparent 32%),
+    linear-gradient(135deg, #2c1805, #7c4a12 55%, #120904) !important;
+  border-color: rgba(251,191,36,.34) !important;
+}
+
+.profile-card-v2.profile-theme_rome,
+.active-theme-theme_rome .profile-card-v2 {
+  background:
+    radial-gradient(circle at 22% 16%, rgba(250,204,21,.32), transparent 28%),
+    linear-gradient(135deg, #1c1204, #60420b 55%, #0b0602) !important;
+  border-color: rgba(234,179,8,.42) !important;
+}
+
+.profile-card-v2.profile-theme_vertex,
+.active-theme-theme_vertex .profile-card-v2 {
+  background:
+    radial-gradient(circle at 18% 14%, rgba(239,68,68,.48), transparent 30%),
+    linear-gradient(135deg, #1b0306, #090409 58%, #000) !important;
+  border-color: rgba(239,68,68,.46) !important;
+  box-shadow: 0 0 34px rgba(239,68,68,.18) !important;
+}
+
+.profile-card-v2.profile-theme_five,
+.active-theme-theme_five .profile-card-v2 {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(34,211,238,.32), transparent 28%),
+    radial-gradient(circle at 82% 16%, rgba(236,72,153,.34), transparent 30%),
+    linear-gradient(135deg, #08031a, #1c0630 55%, #020617) !important;
+  border-color: rgba(34,211,238,.42) !important;
+  box-shadow: 0 0 38px rgba(34,211,238,.15) !important;
+}
+
+.market-card.rarity-legendary .market-main small::after {
+  content: " · hedef item";
+  color: #fbbf24;
+}
