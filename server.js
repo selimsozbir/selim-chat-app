@@ -2056,6 +2056,102 @@ app.get('/api/me', authMiddleware, async (req, res) => {
   res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
 });
 
+
+app.get('/api/activity/:id', authMiddleware, async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId)) return res.status(400).json({ error: 'Geçersiz kullanıcı.' });
+
+    const exists = await pool.query('SELECT id, username, display_name FROM users WHERE id = $1', [userId]);
+    if (exists.rows.length === 0) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+
+    const result = await pool.query(
+      `WITH days AS (
+         SELECT generate_series(CURRENT_DATE - INTERVAL '29 days', CURRENT_DATE, INTERVAL '1 day')::date AS day
+       ),
+       raw AS (
+         SELECT created_at::date AS day, COUNT(*)::int AS count
+         FROM messages
+         WHERE user_id = $1 AND deleted_at IS NULL AND created_at::date >= CURRENT_DATE - INTERVAL '29 days'
+         GROUP BY created_at::date
+
+         UNION ALL
+
+         SELECT created_at::date AS day, COUNT(*)::int AS count
+         FROM dm_messages
+         WHERE sender_id = $1 AND deleted_at IS NULL AND created_at::date >= CURRENT_DATE - INTERVAL '29 days'
+         GROUP BY created_at::date
+
+         UNION ALL
+
+         SELECT created_at::date AS day, COUNT(*)::int AS count
+         FROM group_messages
+         WHERE sender_id = $1 AND deleted_at IS NULL AND created_at::date >= CURRENT_DATE - INTERVAL '29 days'
+         GROUP BY created_at::date
+       ),
+       daily AS (
+         SELECT days.day, COALESCE(SUM(raw.count), 0)::int AS count
+         FROM days
+         LEFT JOIN raw ON raw.day = days.day
+         GROUP BY days.day
+       )
+       SELECT day, count
+       FROM daily
+       ORDER BY day ASC`,
+      [userId]
+    );
+
+    const daily = result.rows.map((row) => ({
+      date: row.day instanceof Date ? row.day.toISOString().slice(0, 10) : String(row.day).slice(0, 10),
+      count: Number(row.count || 0)
+    }));
+
+    const total = daily.reduce((sum, day) => sum + day.count, 0);
+    const activeDays = daily.filter((day) => day.count > 0).length;
+    const bestDay = daily.reduce((best, day) => (day.count > best.count ? day : best), { date: '', count: 0 });
+
+    let currentStreak = 0;
+    for (let i = daily.length - 1; i >= 0; i -= 1) {
+      if (daily[i].count > 0) currentStreak += 1;
+      else break;
+    }
+
+    let longestStreak = 0;
+    let run = 0;
+    daily.forEach((day) => {
+      if (day.count > 0) {
+        run += 1;
+        longestStreak = Math.max(longestStreak, run);
+      } else {
+        run = 0;
+      }
+    });
+
+    const topDays = [...daily]
+      .filter((day) => day.count > 0)
+      .sort((a, b) => b.count - a.count || a.date.localeCompare(b.date))
+      .slice(0, 3);
+
+    res.json({
+      user: exists.rows[0],
+      range_days: 30,
+      daily,
+      summary: {
+        total,
+        active_days: activeDays,
+        current_streak: currentStreak,
+        longest_streak: longestStreak,
+        best_day: bestDay.count > 0 ? bestDay : null,
+        top_days: topDays
+      }
+    });
+  } catch (error) {
+    console.error('Activity calendar error:', error);
+    res.status(500).json({ error: 'Aktivite takvimi yüklenemedi.' });
+  }
+});
+
+
 app.get('/api/profile/:id', authMiddleware, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Geçersiz kullanıcı.' });
