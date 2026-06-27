@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.8.9",
-  "description": "Selim Chat v8.8.9 easter egg cleanup and enter send fix",
+  "version": "8.9.0",
+  "description": "Selim Chat v8.9.0 friend activity and badges v2",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
