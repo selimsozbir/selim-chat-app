@@ -111,6 +111,13 @@ const refreshFriendActivityButton = document.getElementById('refreshFriendActivi
 const blockedList = document.getElementById('blockedList');
 
 const notificationsList = document.getElementById('notificationsList');
+const refreshReplayButton = document.getElementById('refreshReplayButton');
+const chatReplayBox = document.getElementById('chatReplayBox');
+const refreshStoryDecisionButton = document.getElementById('refreshStoryDecisionButton');
+const storyDecisionBox = document.getElementById('storyDecisionBox');
+const refreshCompanionButton = document.getElementById('refreshCompanionButton');
+const companionBox = document.getElementById('companionBox');
+
 
 const gamifyStats = document.getElementById('gamifyStats');
 const polishQuickStats = document.getElementById('polishQuickStats');
@@ -1616,6 +1623,9 @@ async function startApp() {
   ]).then(() => {
     checkForUnlockedBadges(true);
     updateMessengerUi();
+    loadChatReplay?.();
+    loadStoryDecision?.();
+    loadCompanion?.();
   }).catch(() => {});
 }
 
@@ -1739,6 +1749,7 @@ function connectSocket() {
     }
   });
   socket.on('users', renderUsers);
+  socket.on('story_decision_update', renderStoryDecision);
 
   socket.on('room_message_updated', (msg) => updateMessageElement('room', msg.id, msg.text, true, false));
   socket.on('room_message_deleted', (msg) => updateMessageElement('room', msg.id, msg.text, false, true));
@@ -2534,7 +2545,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1070');
+    url.searchParams.set('v', '1080');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -7031,6 +7042,153 @@ function resizeImage(file, maxSize) {
 
 
 
+
+function renderReplay(data) {
+  if (!chatReplayBox) return;
+  const stats = data?.stats || {};
+  const topUsers = Array.isArray(data?.top_users) ? data.top_users : [];
+  const recent = Array.isArray(data?.recent) ? data.recent : [];
+
+  chatReplayBox.innerHTML = `
+    <div class="replay-summary">${escapeHtml(data?.summary || 'Bugün henüz özet yok.')}</div>
+    <div class="replay-stats">
+      <span><b>${Number(stats.total || 0)}</b> mesaj</span>
+      <span><b>${Number(stats.images || 0)}</b> foto</span>
+      <span><b>${Number(stats.audio || 0)}</b> ses</span>
+      <span><b>${stats.top_reaction ? escapeHtml(stats.top_reaction.emoji) : '—'}</b> top reaction</span>
+    </div>
+    <div class="replay-list">
+      <strong>En aktifler</strong>
+      ${topUsers.length ? topUsers.map((u, index) => `<span>#${index + 1} ${escapeHtml(u.username)} · ${Number(u.count || 0)} mesaj</span>`).join('') : '<span>Aktif kullanıcı yok.</span>'}
+    </div>
+    <div class="replay-list">
+      <strong>Son sinyaller</strong>
+      ${recent.length ? recent.map((m) => `<span>${escapeHtml(m.username)}: ${escapeHtml((m.text || m.message_type || '').slice(0, 54))}</span>`).join('') : '<span>Bugün mesaj yok.</span>'}
+    </div>
+  `;
+}
+
+async function loadChatReplay() {
+  if (!chatReplayBox) return;
+  chatReplayBox.innerHTML = '<p>Günün özeti hazırlanıyor...</p>';
+  try {
+    const data = await api(`/api/replay/daily/${encodeURIComponent(currentRoom || 'genel')}`);
+    renderReplay(data);
+  } catch (error) {
+    chatReplayBox.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
+  }
+}
+
+function renderStoryDecision(data) {
+  if (!storyDecisionBox) return;
+  const decision = data?.decision || data;
+  if (!decision) {
+    storyDecisionBox.innerHTML = '<p>Hikaye kararı yok.</p>';
+    return;
+  }
+
+  const total = Number(decision.total_votes || 0);
+  storyDecisionBox.innerHTML = `
+    <div class="story-prompt">${escapeHtml(decision.prompt || 'Karar bekleniyor...')}</div>
+    <div class="story-options">
+      ${(decision.options || []).map((option) => {
+        const votes = Number(option.votes || 0);
+        const pct = total ? Math.round((votes / total) * 100) : 0;
+        return `<button class="story-option" data-story-option="${escapeHtml(option.key)}" type="button">
+          <span>${escapeHtml(option.label)}</span>
+          <b>${votes} oy · ${pct}%</b>
+          <i style="width:${pct}%"></i>
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="story-result">Sonuç: ${escapeHtml(decision.result_text || 'Henüz şekillenmedi.')}</div>
+  `;
+
+  storyDecisionBox.querySelectorAll('[data-story-option]').forEach((button) => {
+    button.addEventListener('click', () => voteStoryDecision(button.dataset.storyOption));
+  });
+}
+
+async function loadStoryDecision() {
+  if (!storyDecisionBox) return;
+  storyDecisionBox.innerHTML = '<p>Hikaye kararı yükleniyor...</p>';
+  try {
+    const data = await api(`/api/story-decision/${encodeURIComponent(currentRoom || 'genel')}`);
+    renderStoryDecision(data);
+  } catch (error) {
+    storyDecisionBox.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
+  }
+}
+
+async function voteStoryDecision(optionKey) {
+  if (!optionKey) return;
+  try {
+    const data = await api(`/api/story-decision/${encodeURIComponent(currentRoom || 'genel')}/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ optionKey })
+    });
+    renderStoryDecision(data);
+    showPolishToast?.('Oy kaydedildi', '+2 shards · companion XP', 'success');
+    loadGamify?.();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+function renderCompanion(data) {
+  if (!companionBox) return;
+  const pet = data?.companion || {};
+  const pets = data?.pets || {};
+  const petOptions = Object.entries(pets).map(([key, def]) => `<button class="pet-choice ${pet.pet_type === key ? 'active' : ''}" data-pet-type="${escapeHtml(key)}" type="button">${escapeHtml(def.icon)} <span>${escapeHtml(def.name)}</span></button>`).join('');
+
+  companionBox.innerHTML = `
+    <div class="pet-main">
+      <div class="pet-orb">${escapeHtml(pet.icon || '🐈‍⬛')}</div>
+      <div>
+        <strong>${escapeHtml(pet.pet_name || 'Companion')}</strong>
+        <span>Level ${Number(pet.level || 1)} · mood: ${escapeHtml(pet.mood || 'curious')}</span>
+      </div>
+    </div>
+    <div class="pet-xp">
+      <div style="width:${Math.max(0, Math.min(100, Number(pet.progress || 0)))}%"></div>
+    </div>
+    <div class="pet-meta">
+      <span>${Number(pet.xp || 0)} XP</span>
+      <span>Next ${Number(pet.next_xp || 0)} XP</span>
+    </div>
+    <div class="pet-choices">${petOptions}</div>
+  `;
+
+  companionBox.querySelectorAll('[data-pet-type]').forEach((button) => {
+    button.addEventListener('click', () => selectCompanion(button.dataset.petType));
+  });
+}
+
+async function loadCompanion() {
+  if (!companionBox) return;
+  companionBox.innerHTML = '<p>Companion yükleniyor...</p>';
+  try {
+    const data = await api('/api/companion/me');
+    renderCompanion(data);
+  } catch (error) {
+    companionBox.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
+  }
+}
+
+async function selectCompanion(petType) {
+  try {
+    const data = await api('/api/companion/select', {
+      method: 'POST',
+      body: JSON.stringify({ petType })
+    });
+    renderCompanion(data);
+    showPolishToast?.('Companion değişti', data?.companion?.pet_name || '', 'success');
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+
 /* v10.6.0 command palette + media viewer bindings */
 commandPaletteInput?.addEventListener('input', () => {
   commandPaletteIndex = 0;
@@ -7091,6 +7249,11 @@ document.addEventListener('keydown', (event) => {
     openCommandPalette();
   }
 });
+
+
+refreshReplayButton?.addEventListener('click', loadChatReplay);
+refreshStoryDecisionButton?.addEventListener('click', loadStoryDecision);
+refreshCompanionButton?.addEventListener('click', loadCompanion);
 
 startApp();
 
