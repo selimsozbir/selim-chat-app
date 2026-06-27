@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.2.2",
-  "description": "Selim Chat v10.2.2 polished social and friends tabs",
+  "version": "10.3.0",
+  "description": "Selim Chat v10.3.0 Minimal Linear Apple style with subtle 5ECROPOLIS details",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
