@@ -13043,3 +13043,189 @@ body.theme-light .online-status-bubble {
   border-color: rgba(99, 102, 241, 0.18);
   color: #4338ca;
 }
+
+
+/* v9.8.5 — Online list polish: separate role, presence, status and story */
+.online-user-row {
+  gap: 10px;
+  padding: 9px 8px;
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.045), rgba(255,255,255,.018));
+  border: 1px solid rgba(255,255,255,.055);
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.online-user-row:hover {
+  transform: translateY(-1px);
+  border-color: rgba(139,92,246,.24);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(139,92,246,.14), transparent 40%),
+    linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.025));
+}
+
+.online-user-row .user-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+
+.online-user-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.online-user-top strong {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.online-role-pill {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 1000;
+  letter-spacing: .02em;
+  border: 1px solid rgba(255,255,255,.10);
+}
+
+.online-role-pill.role-owner {
+  color: #fde68a;
+  background: rgba(234,179,8,.14);
+  border-color: rgba(234,179,8,.28);
+}
+
+.online-role-pill.role-admin {
+  color: #bfdbfe;
+  background: rgba(59,130,246,.14);
+  border-color: rgba(59,130,246,.28);
+}
+
+.online-role-pill.role-mod {
+  color: #bbf7d0;
+  background: rgba(34,197,94,.12);
+  border-color: rgba(34,197,94,.25);
+}
+
+.online-role-pill.role-member {
+  color: #c4b5fd;
+  background: rgba(139,92,246,.12);
+  border-color: rgba(139,92,246,.22);
+}
+
+.online-presence-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.presence-dot-mini {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 12px rgba(34,197,94,.45);
+}
+
+.presence-dot-mini[data-presence="idle"] {
+  background: #eab308;
+  box-shadow: 0 0 12px rgba(234,179,8,.45);
+}
+
+.presence-dot-mini[data-presence="dnd"] {
+  background: #ef4444;
+  box-shadow: 0 0 12px rgba(239,68,68,.45);
+}
+
+.presence-dot-mini[data-presence="invisible"] {
+  background: #94a3b8;
+  box-shadow: 0 0 12px rgba(148,163,184,.30);
+}
+
+.online-custom-status,
+.online-story-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 9px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  line-height: 1.2;
+  font-weight: 850;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.online-custom-status {
+  width: fit-content;
+  max-width: 100%;
+  color: #ddd6fe;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(139,92,246,.18), transparent 45%),
+    rgba(139,92,246,.10);
+  border: 1px solid rgba(139,92,246,.22);
+}
+
+.online-story-status {
+  width: fit-content;
+  max-width: 100%;
+  color: #fbcfe8;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(236,72,153,.16), transparent 45%),
+    rgba(236,72,153,.09);
+  border: 1px solid rgba(236,72,153,.20);
+}
+
+.online-story-status span,
+.online-custom-status span {
+  flex: 0 0 auto;
+  opacity: .95;
+}
+
+body.theme-light .online-user-row {
+  background: rgba(255,255,255,.72);
+  border-color: rgba(15,23,42,.08);
+}
+
+body.theme-light .online-presence-line {
+  color: #475569;
+}
+
+body.theme-light .online-custom-status {
+  color: #5b21b6;
+  background: rgba(124,58,237,.09);
+  border-color: rgba(124,58,237,.18);
+}
+
+body.theme-light .online-story-status {
+  color: #9d174d;
+  background: rgba(219,39,119,.08);
+  border-color: rgba(219,39,119,.16);
+}
+
+@media (max-width: 760px) {
+  .online-user-row {
+    padding: 8px 7px;
+    border-radius: 14px;
+  }
+
+  .online-custom-status,
+  .online-story-status {
+    font-size: 11px;
+    padding: 5px 8px;
+  }
+}
