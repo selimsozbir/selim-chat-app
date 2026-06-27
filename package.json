@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.8.1",
-  "description": "Selim Chat v8.8.1 polished profile themes",
+  "version": "8.8.2",
+  "description": "Selim Chat v8.8.2 profile scroll cover fix and room seen receipts",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
