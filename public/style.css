@@ -15893,3 +15893,78 @@ button:hover {
 .message.self.same-sender > .msg-bubble {
   border-radius: 18px !important;
 }
+
+
+/* =========================================================
+   v10.5.3 — Direct cosmetic bubble support
+   Market bubble can be applied on the message row OR directly on .msg-bubble.
+   ========================================================= */
+
+.msg-bubble.cosmetic-bubble_vertex,
+.cosmetic-bubble_vertex .msg-bubble {
+  background: linear-gradient(135deg, rgba(239, 68, 68, .92), rgba(127, 29, 29, .90)) !important;
+  border-color: rgba(248,113,113,.34) !important;
+  box-shadow: 0 14px 34px rgba(239,68,68,.20), inset 0 1px 0 rgba(255,255,255,.12) !important;
+  color: #fff !important;
+}
+
+.msg-bubble.cosmetic-bubble_limbo,
+.cosmetic-bubble_limbo .msg-bubble {
+  background: linear-gradient(135deg, rgba(17,24,39,.98), rgba(3,7,18,.96)) !important;
+  border-color: rgba(148,163,184,.22) !important;
+  box-shadow: 0 14px 34px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.08) !important;
+  color: #f8fafc !important;
+}
+
+.msg-bubble.cosmetic-bubble_ice,
+.cosmetic-bubble_ice .msg-bubble {
+  background: linear-gradient(135deg, rgba(14,165,233,.86), rgba(59,130,246,.78), rgba(224,242,254,.32)) !important;
+  border-color: rgba(186,230,253,.38) !important;
+  box-shadow: 0 14px 34px rgba(14,165,233,.20), inset 0 1px 0 rgba(255,255,255,.14) !important;
+  color: #f8fafc !important;
+}
+
+.msg-bubble.cosmetic-bubble_gold,
+.cosmetic-bubble_gold .msg-bubble {
+  background: linear-gradient(135deg, rgba(245,158,11,.94), rgba(120,53,15,.90)) !important;
+  border-color: rgba(253,230,138,.38) !important;
+  box-shadow: 0 14px 34px rgba(245,158,11,.22), inset 0 1px 0 rgba(255,255,255,.16) !important;
+  color: #fff7ed !important;
+}
+
+.msg-bubble.cosmetic-bubble_serbia,
+.cosmetic-bubble_serbia .msg-bubble {
+  background: linear-gradient(135deg, rgba(91,33,182,.96), rgba(190,24,93,.88), rgba(30,64,175,.82)) !important;
+  border-color: rgba(216,180,254,.34) !important;
+  box-shadow: 0 14px 34px rgba(168,85,247,.22), inset 0 1px 0 rgba(255,255,255,.14) !important;
+  color: #fff !important;
+}
+
+.msg-bubble[class*="cosmetic-bubble_"] .text,
+.message[class*="cosmetic-bubble_"] .text,
+.msg-bubble[class*="cosmetic-bubble_"] .meta,
+.message[class*="cosmetic-bubble_"] .meta {
+  color: #ffffff !important;
+}
+
+/* Own structural rule must not overwrite market cosmetic backgrounds */
+.message[data-mine="true"][class*="cosmetic-bubble_"] > .msg-bubble,
+.message.mine.own-message[class*="cosmetic-bubble_"] > .msg-bubble,
+.message.self[class*="cosmetic-bubble_"] > .msg-bubble,
+.message[data-mine="true"] > .msg-bubble[class*="cosmetic-bubble_"],
+.message.mine.own-message > .msg-bubble[class*="cosmetic-bubble_"],
+.message.self > .msg-bubble[class*="cosmetic-bubble_"] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+/* Tail inherits whichever equipped bubble background is active */
+.message[data-mine="true"] > .msg-bubble[class*="cosmetic-bubble_"]::before,
+.message.mine.own-message > .msg-bubble[class*="cosmetic-bubble_"]::before,
+.message.self > .msg-bubble[class*="cosmetic-bubble_"]::before {
+  background: inherit !important;
+  border-right: inherit !important;
+  border-top: inherit !important;
+}
