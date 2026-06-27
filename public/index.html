@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v10.3.2</title>
-  <link rel="stylesheet" href="style.css?v=1032" />
+  <title>Selim Chat v10.3.3</title>
+  <link rel="stylesheet" href="style.css?v=1033" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -190,16 +190,19 @@
               <div class="chat-title-copy">
                 <h2 id="chatTitle"># genel</h2>
                 <div class="chat-subline">
-                  <span class="encryption-label">Uçtan uca hissiyat 🔒</span>
-                  <span id="statusText">Bağlanıyor...</span>
+                  <span id="chatMetaText" class="chat-meta-text">0 online · Evren stabil · son aktivite şimdi</span>
+                  <span id="statusText" class="connection-status">Bağlanıyor...</span>
                 </div>
               </div>
             </div>
           </div>
           <div class="chat-header-actions">
-            <button id="focusComposerButton" class="small-button" type="button">Yaz</button>
-            <button id="jumpBottomHeaderButton" class="small-button" type="button">Aşağı</button>
-            <button id="enableNotificationsButton" class="small-button">Bildirim aç</button>
+            <button id="headerSearchButton" class="small-button header-action-button" type="button">Ara</button>
+            <button id="headerGalleryButton" class="small-button header-action-button" type="button">Galeri</button>
+            <button id="headerFriendsButton" class="small-button header-action-button" type="button">Arkadaşlar</button>
+            <button id="headerSettingsButton" class="small-button header-action-button" type="button">Ayarlar</button>
+            <button id="focusComposerButton" class="small-button header-action-button subtle" type="button">Yaz</button>
+            <button id="enableNotificationsButton" class="small-button header-action-button subtle">Bildirim</button>
           </div>
         </header>
 
