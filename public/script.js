@@ -1995,7 +1995,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '900');
+    url.searchParams.set('v', '910');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -5068,3 +5068,5 @@ function resizeImage(file, maxSize) {
 startApp();
 
 window.addEventListener('load', () => setTimeout(clearFiveEggClasses, 120));
+
+window.addEventListener('load', () => requestAnimationFrame(() => document.body.classList.add('ui-ready')));
