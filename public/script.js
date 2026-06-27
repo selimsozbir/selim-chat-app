@@ -2406,8 +2406,8 @@ function addDmMessage(message) {
     id: message.id,
     user_id: message.sender_id,
     sender_id: message.sender_id,
-    username: message.sender_username || (message.sender_id === user.id ? user.username : 'Arkadaş'),
-    avatar_url: message.sender_avatar_url || (message.sender_id === user.id ? user.avatar_url : null),
+    username: message.sender_username || (Number(message.sender_id) === Number(user.id) ? user.username : 'Arkadaş'),
+    avatar_url: message.sender_avatar_url || (Number(message.sender_id) === Number(user.id) ? user.avatar_url : null),
     text: message.text,
     message_type: message.message_type,
     file_name: message.file_name,
@@ -2419,7 +2419,7 @@ function addDmMessage(message) {
     reply_username: message.reply_username,
     reply_text: message.reply_text,
     time: message.time || formatTime(message.created_at),
-    mine: message.sender_id === user.id,
+    mine: Number(message.sender_id) === Number(user.id),
     edited: Boolean(message.edited_at),
     deleted: Boolean(message.deleted_at),
     read: Boolean(message.read_at),
@@ -2483,7 +2483,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1036');
+    url.searchParams.set('v', '1037');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3853,18 +3853,24 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
   const localSettings = getLocalSettings();
   const normalizedUsername = String(username || '').toLowerCase();
   const isBotMessage = ['feiz', 'selimbot', 'bot'].includes(normalizedUsername);
-  const activeBubble = bubble_theme || (mine ? user?.active_bubble_theme : '') || '';
-  const activeName = name_effect || (mine ? user?.active_name_effect : '') || '';
-  const activeFrame = frame_theme || (mine ? user?.active_profile_frame : '') || '';
+  const isOwnMessage = Boolean(
+    mine ||
+    (user && Number(sender_id || user_id || 0) === Number(user.id)) ||
+    (user && String(username || '').trim().toLowerCase() === String(user.username || '').trim().toLowerCase()) ||
+    (user && String(username || '').trim().toLowerCase() === String(user.display_name || '').trim().toLowerCase())
+  );
+  const activeBubble = bubble_theme || (isOwnMessage ? user?.active_bubble_theme : '') || '';
+  const activeName = name_effect || (isOwnMessage ? user?.active_name_effect : '') || '';
+  const activeFrame = frame_theme || (isOwnMessage ? user?.active_profile_frame : '') || '';
 
   if (isBotMessage && localSettings.botHide) return;
 
   const wasNearBottom = isNearBottom();
-  const senderKey = `${type}:${mine ? 'me' : normalizedUsername}`;
+  const senderKey = `${type}:${isOwnMessage ? 'me' : normalizedUsername}`;
   const sameSender = senderKey === lastRenderedSenderKey && type === lastRenderedMessageType;
 
   const div = document.createElement('div');
-  div.className = `message ${mine ? 'mine' : ''} ${isBotMessage ? 'bot-message' : ''} ${sameSender ? 'same-sender' : ''} ${activeBubble ? 'cosmetic-' + activeBubble : ''} ${activeName ? 'namefx-' + activeName : ''} ${activeFrame ? 'framefx-' + activeFrame : ''}`;
+  div.className = `message ${isOwnMessage ? 'mine own-message self' : ''} ${isBotMessage ? 'bot-message' : ''} ${sameSender ? 'same-sender' : ''} ${activeBubble ? 'cosmetic-' + activeBubble : ''} ${activeName ? 'namefx-' + activeName : ''} ${activeFrame ? 'framefx-' + activeFrame : ''}`;
   div.classList.add('message-enter');
   div.dataset.type = type;
   div.dataset.id = id;
@@ -3895,7 +3901,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
 
   const bubble = document.createElement('div');
   bubble.className = 'msg-bubble';
-  if (mine) bubble.classList.add('own-bubble');
+  if (isOwnMessage) bubble.classList.add('own-bubble');
 
   const meta = document.createElement('div');
   meta.className = 'meta';
@@ -3933,7 +3939,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
     bubble.appendChild(renderMedia({ message_type, file_name, file_mime, file_data, file_path, file_size }));
   }
 
-  if (mine && !deleted) {
+  if (isOwnMessage && !deleted) {
     const actions = document.createElement('div');
     actions.className = 'message-actions';
 
@@ -3960,14 +3966,14 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
 
   addReactionPicker(bubble, type, id);
 
-  if (type === 'dm' && mine) {
+  if (type === 'dm' && isOwnMessage) {
     const status = document.createElement('span');
     status.className = 'read-status mine';
     status.textContent = read ? 'Görüldü ✓✓' : 'Gönderildi ✓';
     bubble.appendChild(status);
   }
 
-  if (type === 'room' && mine && !deleted) {
+  if (type === 'room' && isOwnMessage && !deleted) {
     const roomStatus = document.createElement('button');
     roomStatus.type = 'button';
     roomStatus.className = 'read-status mine room-read-status';
@@ -3988,7 +3994,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
       id,
       text: body.textContent,
       username,
-      mine,
+      mine: isOwnMessage,
       deleted
     });
   });
@@ -6040,7 +6046,7 @@ function addGroupMessage(message) {
     reply_username: message.reply_display_name || message.reply_username,
     reply_text: message.reply_text,
     time: message.time || formatTime(message.created_at),
-    mine: message.sender_id === user.id,
+    mine: Number(message.sender_id) === Number(user.id),
     edited: message.edited_at,
     deleted: message.deleted_at,
     bubble_theme: message.bubble_theme,
