@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v10.8.0</title>
-  <link rel="stylesheet" href="style.css?v=1080" />
+  <title>Selim Chat v10.8.1</title>
+  <link rel="stylesheet" href="style.css?v=1081" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -281,6 +281,7 @@
             <button id="casinoTabButton" class="gamify-tab" type="button">Casino</button>
             <button id="shardsHistoryTabButton" class="gamify-tab" type="button">Geçmiş</button>
             <button id="universeTabButton" class="gamify-tab" type="button">Evren</button>
+            <button id="inventoryTabButton" class="gamify-tab" type="button">Envanter</button>
           </div>
 
           <div id="dailyPanel" class="gamify-panel">
@@ -389,6 +390,26 @@
             </div>
           </div>
 
+
+          <div id="inventoryPanel" class="gamify-panel hidden">
+            <div class="inventory-page-head">
+              <div>
+                <strong>Envanter</strong>
+                <span>Event itemleri, companion ve pet seçimi</span>
+              </div>
+              <button id="refreshInventoryButton" class="small-button" type="button">Yenile</button>
+            </div>
+
+            <div id="inventoryCompanionBox" class="inventory-companion-box">
+              <p>Companion yükleniyor...</p>
+            </div>
+
+            <div class="inventory-page-section">
+              <strong>Itemler</strong>
+              <div id="inventoryItemsList" class="inventory-items-list"></div>
+            </div>
+          </div>
+
           <div id="leaderboardPanel" class="gamify-panel hidden">
             <div class="leaderboard-filters">
               <button class="leaderboard-filter active" data-leaderboard="level" type="button">Level</button>
@@ -425,51 +446,7 @@
             </div>
           </div>
         </div>
-
-
-
-        <div class="story-pet-grid">
-          <section class="replay-card hub-feature-card">
-            <div class="hub-feature-head">
-              <div>
-                <strong>Chat Replay</strong>
-                <span>Bugünün oda özeti</span>
-              </div>
-              <button id="refreshReplayButton" class="small-button" type="button">Özetle</button>
-            </div>
-            <div id="chatReplayBox" class="chat-replay-box">
-              <p>Bugünün özetini görmek için yenile.</p>
-            </div>
-          </section>
-
-          <section class="story-decision-card hub-feature-card">
-            <div class="hub-feature-head">
-              <div>
-                <strong>Mini Hikaye Kararı</strong>
-                <span>Oda kaderini seçsin</span>
-              </div>
-              <button id="refreshStoryDecisionButton" class="small-button" type="button">Yenile</button>
-            </div>
-            <div id="storyDecisionBox" class="story-decision-box">
-              <p>Hikaye kararı yükleniyor...</p>
-            </div>
-          </section>
-
-          <section class="companion-card hub-feature-card">
-            <div class="hub-feature-head">
-              <div>
-                <strong>Companion Pet</strong>
-                <span>Mesaj attıkça gelişir</span>
-              </div>
-              <button id="refreshCompanionButton" class="small-button" type="button">Yenile</button>
-            </div>
-            <div id="companionBox" class="companion-box">
-              <p>Companion yükleniyor...</p>
-            </div>
-          </section>
-        </div>
-
-        <div class="notifications-box">
+<div class="notifications-box">
           <h3>Bildirimler <span id="notificationBadge"></span></h3>
           <button id="clearNotificationsButton" class="small-button">Bildirimleri temizle</button>
           <div id="notificationsList" class="mini-list"></div>
@@ -1007,6 +984,6 @@
 
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=1080"></script>
+  <script src="script.js?v=1081"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div></body>
 </html>
