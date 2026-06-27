@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.3.5",
-  "description": "Selim Chat v10.3.5 own bubble visibility and premium media previews",
+  "version": "10.3.6",
+  "description": "Selim Chat v10.3.6 force own bubble style fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
