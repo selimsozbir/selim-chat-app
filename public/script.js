@@ -137,6 +137,12 @@ const portalDropOverlay = document.getElementById('portalDropOverlay');
 const portalDropTitle = document.getElementById('portalDropTitle');
 const portalDropText = document.getElementById('portalDropText');
 const claimPortalButton = document.getElementById('claimPortalButton');
+const feizMoodText = document.getElementById('feizMoodText');
+const feizNicknamesList = document.getElementById('feizNicknamesList');
+const feizAdminControls = document.getElementById('feizAdminControls');
+const feizMoodSelect = document.getElementById('feizMoodSelect');
+const saveFeizMoodButton = document.getElementById('saveFeizMoodButton');
+const refreshFeizButton = document.getElementById('refreshFeizButton');
 const leaderboardList = document.getElementById('leaderboardList');
 const slotBetInput = document.getElementById('slotBetInput');
 const slotSpinButton = document.getElementById('slotSpinButton');
@@ -1231,6 +1237,16 @@ function bindGamifyControls() {
     claimPortalButton.addEventListener('click', claimActivePortal);
   }
 
+  if (refreshFeizButton && !refreshFeizButton.dataset.bound) {
+    refreshFeizButton.dataset.bound = '1';
+    refreshFeizButton.addEventListener('click', loadFeizPersonality);
+  }
+
+  if (saveFeizMoodButton && !saveFeizMoodButton.dataset.bound) {
+    saveFeizMoodButton.dataset.bound = '1';
+    saveFeizMoodButton.addEventListener('click', saveFeizMood);
+  }
+
   if (refreshShardsHistoryButton && !refreshShardsHistoryButton.dataset.bound) {
     refreshShardsHistoryButton.dataset.bound = '1';
     refreshShardsHistoryButton.addEventListener('click', loadShardsHistory);
@@ -1470,6 +1486,11 @@ function connectSocket() {
     addSystemMessage(text || `${event?.name || 'Live Event'} başladı.`);
     showPolishToast?.('Live Event', event?.name || 'Event başladı', 'info');
     loadUniversePanel?.();
+  });
+
+  socket.on('feiz_mood_changed', ({ mood }) => {
+    showPolishToast?.('feiz mood değişti', moodLabel(mood), 'info');
+    loadFeizPersonality?.();
   });
 
   socket.on('room_role', ({ role }) => {
@@ -2296,7 +2317,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '960');
+    url.searchParams.set('v', '970');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2664,10 +2685,67 @@ function renderUniverseData(data) {
   }
 }
 
+
+function moodLabel(mood = 'calm') {
+  const labels = {
+    calm: 'sakin',
+    aggressive: 'agresif',
+    cursed: 'cursed',
+    serious: 'serious',
+    lore: 'lore'
+  };
+  return labels[mood] || mood;
+}
+
+function renderFeizPersonality(data) {
+  const state = data.state || {};
+  const canAdmin = ['owner', 'admin'].includes(String(user?.global_role || user?.role || '').toLowerCase());
+
+  if (feizMoodText) feizMoodText.textContent = `Mood: ${moodLabel(state.mood)} · Senin lakabın: ${data.my_nickname || '-'}`;
+  if (feizMoodSelect) feizMoodSelect.value = state.mood || 'calm';
+  feizAdminControls?.classList.toggle('hidden', !canAdmin);
+
+  if (feizNicknamesList) {
+    feizNicknamesList.innerHTML = '';
+    const list = data.nicknames || [];
+    if (!list.length) feizNicknamesList.innerHTML = '<span class="empty-pill">Henüz lakap yok</span>';
+    list.forEach((item) => {
+      const pill = document.createElement('div');
+      pill.className = 'feiz-nickname-pill';
+      pill.textContent = `${item.display_name || item.username}: ${item.nickname}`;
+      feizNicknamesList.appendChild(pill);
+    });
+  }
+}
+
+async function loadFeizPersonality() {
+  try {
+    const data = await api('/api/feiz/personality');
+    renderFeizPersonality(data);
+  } catch (error) {
+    if (feizMoodText) feizMoodText.textContent = error.message;
+  }
+}
+
+async function saveFeizMood() {
+  try {
+    const data = await api('/api/feiz/personality', {
+      method: 'PATCH',
+      body: JSON.stringify({ mood: feizMoodSelect?.value || 'calm' })
+    });
+    renderFeizPersonality(data);
+    showPolishToast?.('feiz mood güncellendi', moodLabel(data.state?.mood), 'success');
+  } catch (error) {
+    showPolishToast?.('feiz mood hata', error.message, 'error');
+  }
+}
+
+
 async function loadUniversePanel() {
   try {
     const data = await api('/api/universe');
     renderUniverseData(data);
+    loadFeizPersonality?.();
   } catch (error) {
     if (universeStatusText) universeStatusText.textContent = error.message;
   }
