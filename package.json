@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "9.3.0",
-  "description": "Selim Chat v9.3.0 modern settings interface redesign",
+  "version": "9.3.1",
+  "description": "Selim Chat v9.3.1 hidden admin panel privacy mode",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
