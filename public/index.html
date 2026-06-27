@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v8.5.0</title>
-  <link rel="stylesheet" href="style.css?v=850" />
+  <title>Selim Chat v8.6.0</title>
+  <link rel="stylesheet" href="style.css?v=860" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -57,6 +57,7 @@
 
         <div class="nav-buttons">
           <button id="roomModeButton" class="nav active">Oda</button>
+          <button id="serverModeButton" class="nav">Sunucu</button>
           <button id="dmModeButton" class="nav">DM</button>
           <button id="groupModeButton" class="nav">Grup</button>
         </div>
@@ -92,6 +93,37 @@
             <div id="mutedMembersList" class="mini-list"></div>
           </div>
         </div>
+
+        <div id="serversPanel" class="friends-panel hidden">
+          <h3>Sunucu Sistemi</h3>
+          <div class="server-create-box">
+            <div class="room-row">
+              <input id="newServerNameInput" type="text" placeholder="Sunucu adı" maxlength="80" />
+              <button id="createServerButton" type="button">Kur</button>
+            </div>
+            <input id="newServerDescriptionInput" type="text" placeholder="Açıklama / konu" maxlength="160" />
+          </div>
+
+          <h3>Sunucularım</h3>
+          <div id="serversList" class="mini-list"></div>
+
+          <div id="serverDetailsBox" class="server-details hidden">
+            <h3>Aktif Sunucu</h3>
+            <div id="activeServerInfo" class="mini-list"></div>
+
+            <div class="room-row">
+              <input id="newChannelNameInput" type="text" placeholder="kanal-adı" maxlength="60" />
+              <button id="createChannelButton" type="button">Kanal</button>
+            </div>
+
+            <h3>Kanallar</h3>
+            <div id="serverChannelsList" class="mini-list"></div>
+
+            <h3>Üyeler</h3>
+            <div id="serverMembersList" class="mini-list"></div>
+          </div>
+        </div>
+
         <div id="groupsPanel" class="friends-panel hidden">
           <h3>Grup DM</h3>
           <div class="room-row">
@@ -303,6 +335,7 @@
 
         <nav id="mobileBottomNav" class="mobile-bottom-nav">
           <button id="mobileRoomButton" class="mobile-nav-item active" type="button">🏠<span>Oda</span></button>
+          <button id="mobileServerButton" class="mobile-nav-item" type="button">🌐<span>Sunucu</span></button>
           <button id="mobileDmButton" class="mobile-nav-item" type="button">💬<span>DM</span></button>
           <button id="mobileGroupButton" class="mobile-nav-item" type="button">👥<span>Grup</span></button>
           <button id="mobilePanelButton" class="mobile-nav-item" type="button">📋<span>Panel</span></button>
@@ -635,7 +668,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=850"></script>
+  <script src="script.js?v=860"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
