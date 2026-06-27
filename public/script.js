@@ -438,6 +438,49 @@ if (profileToggleAllBadgesButton) profileToggleAllBadgesButton.addEventListener(
 if (profileSaveBadgesButton) profileSaveBadgesButton.addEventListener('click', saveProfileBadgeShowcase);
 if (refreshFriendActivityButton) refreshFriendActivityButton.addEventListener('click', loadFriendActivity);
 
+
+function syncRailActive(mode = chatMode) {
+  document.getElementById('railRoomButton')?.classList.toggle('active', mode === 'room');
+  document.getElementById('railDmButton')?.classList.toggle('active', mode === 'dm');
+  document.getElementById('railGroupButton')?.classList.toggle('active', mode === 'group');
+}
+
+function scrollRightPanelToHub() {
+  const panel = document.querySelector('.right-panel');
+  const hub = document.querySelector('.gamify-box');
+  if (panel && hub) panel.scrollTo({ top: Math.max(0, hub.offsetTop - 12), behavior: 'smooth' });
+}
+
+document.getElementById('railRoomButton')?.addEventListener('click', () => {
+  setChatMode('room');
+  syncRailActive('room');
+});
+
+document.getElementById('railDmButton')?.addEventListener('click', () => {
+  setChatMode('dm');
+  loadFriends();
+  loadFriendActivity?.();
+  loadRequests();
+  loadBlocked();
+  syncRailActive('dm');
+});
+
+document.getElementById('railGroupButton')?.addEventListener('click', () => {
+  setChatMode('group');
+  loadGroups();
+  renderNewGroupFriends();
+  syncRailActive('group');
+});
+
+document.getElementById('railHubButton')?.addEventListener('click', () => {
+  scrollRightPanelToHub();
+  loadGamify?.();
+});
+
+document.getElementById('railSettingsButton')?.addEventListener('click', () => {
+  openSettings?.();
+});
+
 if (settingsButton) settingsButton.addEventListener('click', openSettings);
 
 bindMobileTap(mobileMenuButton, openMobileSidebar);
@@ -1995,7 +2038,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '910');
+    url.searchParams.set('v', '920');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
