@@ -1345,7 +1345,7 @@ function updateComposerState() {
 function updateMessengerUi() {
   updateChatHeaderAvatar();
   updateComposerState();
-  updateMessengerUi();
+  syncMobileHeader();
   markActiveConversation();
 }
 
