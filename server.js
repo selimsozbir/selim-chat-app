@@ -263,6 +263,16 @@ function buildAllProfileBadges({ user, stats, xp, shards, level }) {
     badgeDefinition('parallel_yasin', '💜', 'Parallel Yasin', 'Favori easter egg: Parallel Yasin.', 'epic', fav === '/pyasin'),
     badgeDefinition('respect_protocol', '🇹🇷', 'Respect Protocol', 'Favori easter egg: Atatürk.', 'legendary', fav === '/ataturk'),
 
+
+    badgeDefinition('daily_regular', '🎁', 'Daily Regular', 'Günlük ödül sistemini kullandı.', 'rare', shards >= 50 && level >= 2),
+    badgeDefinition('market_user', '🛒', 'Market User', 'Market ekonomisine giriş yaptı.', 'rare', Boolean(user.active_bubble_theme || user.active_profile_frame || user.active_name_effect || user.active_profile_theme)),
+    badgeDefinition('style_owner', '💅', 'Style Owner', 'En az bir kozmetik item kuşandı.', 'epic', Boolean(user.active_bubble_theme || user.active_profile_frame || user.active_name_effect || user.active_profile_theme)),
+    badgeDefinition('profile_theme_user', '🪪', 'Profile Theme User', 'Profil teması kuşandı.', 'epic', Boolean(user.active_profile_theme)),
+    badgeDefinition('frame_bearer', '🖼️', 'Frame Bearer', 'Profil çerçevesi kuşandı.', 'rare', Boolean(user.active_profile_frame)),
+    badgeDefinition('name_effect_user', '✨', 'Name Effect User', 'İsim efekti kuşandı.', 'rare', Boolean(user.active_name_effect)),
+    badgeDefinition('casino_signal', '🎰', 'Casino Signal', 'Casino / shard ekonomisinde aktif.', 'epic', shards >= 777),
+    badgeDefinition('legendary_presence', '🌟', 'Legendary Presence', 'Legendary seviyeye yaklaşan güçlü profil.', 'legendary', level >= 15 || shards >= 2500 || total >= 1500),
+
     badgeDefinition('owner_core', '👑', 'Owner Core', 'Platform sahibi.', 'legendary', role === 'owner'),
     badgeDefinition('admin_core', '🛡️', 'Admin Core', 'Global admin yetkisi var.', 'legendary', role === 'admin'),
     badgeDefinition('mod_signal', '🔧', 'Mod Signal', 'Moderatör yetkisi var.', 'epic', role === 'mod')
@@ -2192,6 +2202,70 @@ app.delete('/api/friends/:friendId', authMiddleware, async (req, res) => {
   emitToUser(friendId, 'friend_removed', { byId: req.user.id, byUsername: req.user.username });
   res.json({ ok: true, message: 'Arkadaş silindi.' });
 });
+
+
+app.get('/api/friends/activity', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `WITH accepted_friends AS (
+         SELECT CASE WHEN requester_id = $1 THEN addressee_id ELSE requester_id END AS friend_id
+         FROM friendships
+         WHERE status = 'accepted'
+         AND (requester_id = $1 OR addressee_id = $1)
+       ),
+       last_dm AS (
+         SELECT DISTINCT ON (
+           CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END
+         )
+           CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END AS friend_id,
+           text,
+           created_at,
+           sender_id
+         FROM dm_messages
+         WHERE (sender_id = $1 OR receiver_id = $1)
+         AND deleted_at IS NULL
+         ORDER BY CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END, created_at DESC
+       ),
+       friend_stats AS (
+         SELECT af.friend_id,
+                (SELECT COUNT(*)::int FROM dm_messages dm
+                 WHERE deleted_at IS NULL
+                 AND ((dm.sender_id = $1 AND dm.receiver_id = af.friend_id)
+                   OR (dm.sender_id = af.friend_id AND dm.receiver_id = $1))) AS dm_count
+         FROM accepted_friends af
+       )
+       SELECT u.id, u.username, u.display_name, u.avatar_url, u.last_seen, u.last_active,
+              COALESCE(u.xp, 0) AS xp,
+              COALESCE(u.shards, 0) AS shards,
+              ld.text AS last_dm_text,
+              ld.created_at AS last_dm_at,
+              ld.sender_id AS last_dm_sender_id,
+              fs.dm_count
+       FROM accepted_friends af
+       JOIN users u ON u.id = af.friend_id
+       LEFT JOIN last_dm ld ON ld.friend_id = af.friend_id
+       LEFT JOIN friend_stats fs ON fs.friend_id = af.friend_id
+       ORDER BY
+         CASE WHEN u.last_active IS NULL THEN u.last_seen ELSE u.last_active END DESC NULLS LAST,
+         ld.created_at DESC NULLS LAST,
+         u.username ASC
+       LIMIT 12`,
+      [req.user.id]
+    );
+
+    const activities = result.rows.map((row) => ({
+      ...row,
+      online: userSockets.has(String(row.id)),
+      level: profileLevelFromXp(row.xp || 0)
+    }));
+
+    res.json({ activities });
+  } catch (error) {
+    console.error('Friend activity error:', error);
+    res.status(500).json({ error: 'Friend Activity yüklenemedi.' });
+  }
+});
+
 
 app.get('/api/friends/requests', authMiddleware, async (req, res) => {
   const result = await pool.query(
