@@ -16370,3 +16370,203 @@ button:hover {
 .media-viewer-modal:not(.hidden) {
   display: grid !important;
 }
+
+
+/* =========================================================
+   v10.7.0 — Profile Activity Calendar
+   ========================================================= */
+
+.profile-activity-box {
+  margin: 14px 16px 0;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+}
+
+.profile-activity-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.profile-activity-head h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 15px;
+  letter-spacing: -.01em;
+}
+
+.profile-activity-head p {
+  margin: 3px 0 0;
+  color: rgba(255,255,255,.56);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.activity-streak-pill {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.07);
+  color: rgba(255,255,255,.78);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.activity-streak-pill[data-active="true"] {
+  color: #fff;
+  background: linear-gradient(135deg, rgba(34,197,94,.24), rgba(59,130,246,.18));
+  border-color: rgba(74,222,128,.24);
+}
+
+.profile-activity-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.profile-activity-stats div {
+  min-width: 0;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(0,0,0,.16);
+  border: 1px solid rgba(255,255,255,.075);
+}
+
+.profile-activity-stats strong {
+  display: block;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 950;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-activity-stats span {
+  display: block;
+  margin-top: 2px;
+  color: rgba(255,255,255,.50);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.activity-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.activity-day {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  min-height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(255,255,255,.045);
+  overflow: hidden;
+}
+
+.activity-day::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: .12;
+  background: radial-gradient(circle at 30% 20%, #fff, transparent 52%);
+}
+
+.activity-day[data-level="1"] {
+  background: rgba(34,197,94,.20);
+  border-color: rgba(74,222,128,.18);
+}
+
+.activity-day[data-level="2"] {
+  background: rgba(34,197,94,.34);
+  border-color: rgba(74,222,128,.25);
+}
+
+.activity-day[data-level="3"] {
+  background: rgba(16,185,129,.48);
+  border-color: rgba(110,231,183,.34);
+}
+
+.activity-day[data-level="4"] {
+  background: linear-gradient(135deg, rgba(34,197,94,.70), rgba(59,130,246,.42));
+  border-color: rgba(187,247,208,.45);
+  box-shadow: 0 10px 24px rgba(34,197,94,.16);
+}
+
+.activity-day span,
+.activity-day strong {
+  position: relative;
+  z-index: 1;
+}
+
+.activity-day span {
+  align-self: start;
+  justify-self: start;
+  padding: 5px 0 0 6px;
+  color: rgba(255,255,255,.48);
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.activity-day strong {
+  align-self: end;
+  justify-self: end;
+  padding: 0 6px 5px 0;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.activity-day.loading {
+  animation: activityPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes activityPulse {
+  from { opacity: .45; }
+  to { opacity: .95; }
+}
+
+.activity-top-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.activity-top-days span {
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.08);
+  color: rgba(255,255,255,.70);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.activity-top-days b {
+  color: #fff;
+}
+
+.activity-error {
+  grid-column: 1 / -1;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(239,68,68,.12);
+  border: 1px solid rgba(248,113,113,.18);
+  color: #fecaca;
+  font-size: 12px;
+  font-weight: 800;
+}
