@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.8.4",
-  "description": "Selim Chat v8.8.4 profile modal startup visibility fix",
+  "version": "8.8.5",
+  "description": "Selim Chat v8.8.5 profile modal visual restore",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
