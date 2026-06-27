@@ -2527,7 +2527,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1060');
+    url.searchParams.set('v', '1061');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3943,11 +3943,22 @@ function linkPreviewMeta(url) {
     let icon = '🔗';
     let title = host;
     let desc = url;
+    let image = '';
 
-    if (host.includes('youtube.com') || host.includes('youtu.be')) {
+    const directImage = /\.(png|jpe?g|gif|webp|avif)(\?.*)?$/i.test(parsed.pathname);
+    if (directImage) {
+      icon = '🖼️';
+      title = 'Görsel linki';
+      desc = host;
+      image = url;
+    } else if (host.includes('youtube.com') || host.includes('youtu.be')) {
       icon = '▶️';
       title = 'YouTube linki';
       desc = 'Videoyu yeni sekmede aç.';
+      const videoId = host.includes('youtu.be')
+        ? parsed.pathname.split('/').filter(Boolean)[0]
+        : parsed.searchParams.get('v');
+      if (videoId) image = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
     } else if (host.includes('itch.io')) {
       icon = '🎮';
       title = 'itch.io linki';
@@ -3966,7 +3977,7 @@ function linkPreviewMeta(url) {
       desc = 'AI bağlantısı.';
     }
 
-    return { url, host, icon, title, desc };
+    return { url, host, icon, title, desc, image };
   } catch {
     return null;
   }
@@ -3985,12 +3996,12 @@ function buildLinkPreview(url) {
   if (!meta) return null;
 
   const card = document.createElement('a');
-  card.className = 'link-preview-card';
+  card.className = `link-preview-card ${meta.image ? 'has-thumb' : ''}`;
   card.href = meta.url;
   card.target = '_blank';
   card.rel = 'noopener noreferrer';
   card.innerHTML = `
-    <div class="link-preview-icon">${escapeHtml(meta.icon)}</div>
+    ${meta.image ? `<img class="link-preview-thumb" src="${escapeHtml(meta.image)}" alt="" loading="lazy" />` : `<div class="link-preview-icon">${escapeHtml(meta.icon)}</div>`}
     <div class="link-preview-content">
       <strong>${escapeHtml(meta.title)}</strong>
       <span>${escapeHtml(meta.host)}</span>
@@ -4002,7 +4013,11 @@ function buildLinkPreview(url) {
 }
 
 function messageMediaUrl({ file_data, file_path }) {
-  return file_path || file_data || '';
+  const data = String(file_data || '').trim();
+  const path = String(file_path || '').trim();
+  if (data) return data;
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  return '';
 }
 
 function collectMediaViewerItems() {
@@ -4051,7 +4066,7 @@ function renderMediaViewer() {
 }
 
 function openMediaViewer(src, type = 'image') {
-  if (!src || !mediaViewerModal) return;
+  if (!src || !mediaViewerModal) { addSystemMessage?.('Medya URL bulunamadı.'); return; }
   collectMediaViewerItems();
   let index = mediaViewerItems.findIndex((item) => item.src === src);
   if (index < 0) {
@@ -4626,6 +4641,10 @@ function renderMedia({ message_type, file_name, file_mime, file_data, file_path,
     img.dataset.mediaViewerType = 'image';
     img.dataset.mediaViewerTitle = file_name || 'Fotoğraf';
     img.dataset.mediaViewerMeta = file_size ? formatFileSize(file_size) : 'Image';
+    img.addEventListener('error', () => {
+      img.classList.add('broken-media');
+      img.alt = `${file_name || 'Görsel'} yüklenemedi`;
+    });
     img.addEventListener('click', (event) => {
       event.stopPropagation();
       openMediaViewer(src, 'image');
