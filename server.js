@@ -1847,6 +1847,7 @@ async function initDatabase() {
   await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS file_size INTEGER`);
 
   await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to_id INTEGER`);
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS extra_data JSONB NOT NULL DEFAULT '{}'::jsonb`);
   await pool.query(`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS reply_to_id INTEGER`);
 
   await pool.query(`
@@ -1951,6 +1952,16 @@ async function initDatabase() {
   `);
 
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_story_decisions_room_time ON story_decisions(room, created_at DESC);`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS story_decision_votes (
+      decision_id INTEGER REFERENCES story_decisions(id) ON DELETE CASCADE,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      option_key VARCHAR(60) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (decision_id, user_id)
+    );
+  `);
 
 
   await pool.query(`
@@ -2059,7 +2070,29 @@ function petMoodFromStats({ level = 1, xp = 0 } = {}) {
   return 'loyal';
 }
 
+async function getOwnedPetTypes(userId) {
+  const inv = await pool.query(
+    `SELECT item_key FROM user_inventory WHERE user_id = $1 AND item_key LIKE 'pet_%'`,
+    [userId]
+  );
+  const owned = new Set(['limbo_cat']);
+  inv.rows.forEach((row) => owned.add(String(row.item_key || '').replace(/^pet_/, '')));
+  return owned;
+}
+
+function serializePetsForUser(ownedTypes = new Set(['limbo_cat'])) {
+  return Object.fromEntries(Object.entries(PET_DEFS).map(([key, def]) => [
+    key,
+    {
+      ...def,
+      owned: key === 'limbo_cat' || ownedTypes.has(key),
+      item_key: `pet_${key}`
+    }
+  ]));
+}
+
 async function ensureCompanion(userId) {
+  await addInventoryItem(userId, 'pet_limbo_cat', 'Limbo Cat', 1);
   const existing = await pool.query('SELECT * FROM user_companions WHERE user_id = $1', [userId]);
   if (existing.rows.length) return existing.rows[0];
 
@@ -2322,16 +2355,10 @@ function formatReplayText(replay) {
 
 async function emitReplayMessage(room) {
   const replay = await buildDailyReplay(room);
-  io.to(room).emit('chat_message', {
-    id: `replay_${Date.now()}`,
+  await sendAiBotMessage({
+    scope: 'room',
     room,
-    user_id: 0,
-    sender_id: 0,
-    username: AI_BOT_NAME,
-    avatar_url: null,
-    text: formatReplayText(replay),
-    message_type: 'text',
-    time: nowTime()
+    text: formatReplayText(replay)
   });
 }
 
@@ -2339,21 +2366,31 @@ async function emitStoryDecisionPoll(room, userId = null, force = false) {
   if (!force && Math.random() > 0.07) return null;
   const decision = await getOrCreateStoryDecision(room, userId);
   const payload = serializeStoryDecision(decision);
+  const bot = await ensureAiBotUser();
+  const botDisplayName = bot.display_name || AI_BOT_NAME;
+
+  const saved = await pool.query(
+    `INSERT INTO messages (room, user_id, username, text, message_type, extra_data)
+     VALUES ($1, $2, $3, $4, 'story_decision', $5::jsonb)
+     RETURNING id, room, username, text, created_at, edited_at, deleted_at, message_type, extra_data`,
+    [room, bot.id, bot.username, 'Mini Hikaye Kararı', JSON.stringify({ story_decision: payload })]
+  );
+
+  const msg = saved.rows[0];
   io.to(room).emit('chat_message', {
-    id: `story_${decision.id}_${Date.now()}`,
+    id: msg.id,
     room,
-    user_id: 0,
-    sender_id: 0,
-    username: AI_BOT_NAME,
-    avatar_url: null,
-    text: 'Mini Hikaye Kararı',
+    user_id: bot.id,
+    sender_id: bot.id,
+    username: botDisplayName,
+    avatar_url: bot.avatar_url || null,
+    text: msg.text,
     message_type: 'story_decision',
     story_decision: payload,
     time: nowTime()
   });
   return payload;
 }
-
 
 app.get('/api/replay/daily/:room', authMiddleware, async (req, res) => {
   try {
@@ -2369,7 +2406,10 @@ app.get('/api/story-decision/:room', authMiddleware, async (req, res) => {
   try {
     const room = cleanText(req.params.room, 50).toLowerCase() || 'genel';
     const decision = await getOrCreateStoryDecision(room, req.user.id);
-    res.json({ decision: serializeStoryDecision(decision) });
+    const myVote = await pool.query('SELECT option_key FROM story_decision_votes WHERE decision_id = $1 AND user_id = $2', [decision.id, req.user.id]);
+    const payload = serializeStoryDecision(decision);
+    payload.voted_by_me = myVote.rows[0]?.option_key || '';
+    res.json({ decision: payload });
   } catch (error) {
     console.error('Story decision error:', error);
     res.status(500).json({ error: 'Hikaye kararı yüklenemedi.' });
@@ -2384,6 +2424,14 @@ app.post('/api/story-decision/:room/vote', authMiddleware, async (req, res) => {
     const options = Array.isArray(decision.options) ? decision.options : [];
     if (!options.some((opt) => opt.key === optionKey)) return res.status(400).json({ error: 'Geçersiz seçenek.' });
 
+    const existingVote = await pool.query('SELECT option_key FROM story_decision_votes WHERE decision_id = $1 AND user_id = $2', [decision.id, req.user.id]);
+    if (existingVote.rows.length) return res.status(409).json({ error: 'Bu hikaye kararında zaten oy kullandın.' });
+
+    await pool.query(
+      'INSERT INTO story_decision_votes (decision_id, user_id, option_key) VALUES ($1, $2, $3)',
+      [decision.id, req.user.id, optionKey]
+    );
+
     const updated = await pool.query(
       `UPDATE story_decisions
        SET votes = jsonb_set(COALESCE(votes, '{}'::jsonb), ARRAY[$1], to_jsonb(COALESCE((votes->>$1)::int, 0) + 1), true)
@@ -2396,19 +2444,24 @@ app.post('/api/story-decision/:room/vote', authMiddleware, async (req, res) => {
     await logShardTransaction(req.user.id, 2, 'story_vote', 'Mini hikaye kararı oyu', { room, decisionId: decision.id, optionKey });
     await rewardCompanionXp(req.user.id, 2);
 
-    const payload = { decision: serializeStoryDecision(updated.rows[0]) };
-    io.to(room).emit('story_decision_update', payload);
-    res.json(payload);
+    const broadcastPayload = { decision: serializeStoryDecision(updated.rows[0]) };
+    io.to(room).emit('story_decision_update', broadcastPayload);
+
+    const personal = serializeStoryDecision(updated.rows[0]);
+    personal.voted_by_me = optionKey;
+    res.json({ decision: personal });
   } catch (error) {
     console.error('Story vote error:', error);
-    res.status(500).json({ error: 'Oy kaydedilemedi.' });
+    res.status(error.status || 500).json({ error: error.message || 'Oy kaydedilemedi.' });
   }
 });
 
 app.get('/api/companion/me', authMiddleware, async (req, res) => {
   try {
     const companion = await ensureCompanion(req.user.id);
-    res.json({ companion: serializeCompanion(companion), pets: PET_DEFS });
+    const ownedTypes = await getOwnedPetTypes(req.user.id);
+    const balance = await getShardBalance(req.user.id);
+    res.json({ companion: serializeCompanion(companion), pets: serializePetsForUser(ownedTypes), balance });
   } catch (error) {
     console.error('Companion error:', error);
     res.status(500).json({ error: 'Companion yüklenemedi.' });
@@ -2420,10 +2473,13 @@ app.get('/api/inventory/me', authMiddleware, async (req, res) => {
   try {
     const items = await getUserInventory(req.user.id);
     const companion = await ensureCompanion(req.user.id);
+    const ownedTypes = await getOwnedPetTypes(req.user.id);
+    const balance = await getShardBalance(req.user.id);
     res.json({
       items,
+      balance,
       companion: serializeCompanion(companion),
-      pets: PET_DEFS
+      pets: serializePetsForUser(ownedTypes)
     });
   } catch (error) {
     console.error('Inventory error:', error);
@@ -2439,6 +2495,18 @@ app.post('/api/companion/select', authMiddleware, async (req, res) => {
     if (!def) return res.status(400).json({ error: 'Geçersiz companion.' });
 
     await ensureCompanion(req.user.id);
+    const ownedTypes = await getOwnedPetTypes(req.user.id);
+    const isOwned = petType === 'limbo_cat' || ownedTypes.has(petType);
+    const price = Number(def.price || 0);
+
+    if (!isOwned) {
+      const balance = await getShardBalance(req.user.id);
+      if (balance < price) return res.status(400).json({ error: `Yetersiz Shards. Bu companion ${price} Shards.` });
+      await addShards(req.user.id, -price);
+      await logShardTransaction(req.user.id, -price, 'companion_buy', `${def.name} companion satın alındı`, { petType, price });
+      await addInventoryItem(req.user.id, `pet_${petType}`, def.name, 1);
+    }
+
     const updated = await pool.query(
       `UPDATE user_companions
        SET pet_type = $1, pet_name = $2, updated_at = CURRENT_TIMESTAMP
@@ -2446,13 +2514,15 @@ app.post('/api/companion/select', authMiddleware, async (req, res) => {
        RETURNING *`,
       [petType, def.name, req.user.id]
     );
-    res.json({ companion: serializeCompanion(updated.rows[0]), pets: PET_DEFS });
+
+    const refreshedOwned = await getOwnedPetTypes(req.user.id);
+    const balance = await getShardBalance(req.user.id);
+    res.json({ companion: serializeCompanion(updated.rows[0]), pets: serializePetsForUser(refreshedOwned), balance });
   } catch (error) {
     console.error('Companion select error:', error);
     res.status(500).json({ error: 'Companion değiştirilemedi.' });
   }
 });
-
 
 app.get('/api/activity/:id', authMiddleware, async (req, res) => {
   try {
@@ -3069,7 +3139,7 @@ app.get('/api/messages/:room', authMiddleware, async (req, res) => {
 
   const result = await pool.query(
     `SELECT m.id, m.room, m.user_id, m.username, m.text, m.created_at, m.edited_at, m.deleted_at,
-            m.message_type, m.file_name, m.file_mime, m.file_data, m.file_path, m.file_size, m.reply_to_id,
+            m.message_type, m.file_name, m.file_mime, m.file_data, m.file_path, m.file_size, m.reply_to_id, m.extra_data,
             u.avatar_url,
             u.display_name,
             u.active_bubble_theme AS bubble_theme,
