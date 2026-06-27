@@ -446,6 +446,54 @@ function syncRailActive(mode = chatMode) {
 }
 
 
+
+function isOwnerOrAdminUser() {
+  const role = String(user?.global_role || user?.role || '').toLowerCase();
+  return role === 'owner' || role === 'admin';
+}
+
+function syncAdminPrivacyButton() {
+  const btn = document.getElementById('adminPrivacyToggleButton');
+  if (!btn) return;
+  const canSee = isOwnerOrAdminUser();
+  btn.classList.toggle('hidden', !canSee);
+  const visible = document.body.classList.contains('admin-panel-visible');
+  btn.textContent = visible ? '🔓' : '🔒';
+  btn.title = visible ? 'Admin panelini gizle' : 'Admin panelini göster';
+}
+
+function setAdminPanelVisible(visible) {
+  if (!isOwnerOrAdminUser()) {
+    document.body.classList.remove('admin-panel-visible');
+    syncAdminPrivacyButton();
+    return;
+  }
+
+  document.body.classList.toggle('admin-panel-visible', Boolean(visible));
+  syncAdminPrivacyButton();
+
+  if (visible) {
+    loadGlobalAdminPanel?.();
+    loadAdminLogs?.();
+    showPolishToast?.('Admin panel açıldı', 'Yayında görünmemesi için Ctrl+Shift+A ile tekrar gizle.', 'info');
+  } else {
+    showPolishToast?.('Admin panel gizlendi', 'Yayın/ekran paylaşımı için güvenli mod.', 'success');
+  }
+}
+
+function toggleAdminPanelPrivacy() {
+  setAdminPanelVisible(!document.body.classList.contains('admin-panel-visible'));
+}
+
+document.getElementById('adminPrivacyToggleButton')?.addEventListener('click', toggleAdminPanelPrivacy);
+
+document.addEventListener('keydown', (event) => {
+  if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a') {
+    event.preventDefault();
+    toggleAdminPanelPrivacy();
+  }
+});
+
 function setSettingsCategory(category = 'account') {
   const target = category || 'account';
   document.querySelectorAll('.settings-nav-item').forEach((button) => {
@@ -1207,6 +1255,8 @@ function renderProfile() {
     avatarImg.classList.add('hidden');
     avatarLetter.classList.remove('hidden');
   }
+
+  syncAdminPrivacyButton();
 }
 
 function connectSocket() {
@@ -2055,7 +2105,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '930');
+    url.searchParams.set('v', '931');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -5131,3 +5181,5 @@ startApp();
 window.addEventListener('load', () => setTimeout(clearFiveEggClasses, 120));
 
 window.addEventListener('load', () => requestAnimationFrame(() => document.body.classList.add('ui-ready')));
+
+window.addEventListener('load', () => setTimeout(() => setAdminPanelVisible(false), 80));
