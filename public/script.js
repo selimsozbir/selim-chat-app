@@ -68,6 +68,9 @@ const emojiButton = document.getElementById('emojiButton');
 const emojiPanel = document.getElementById('emojiPanel');
 const attachButton = document.getElementById('attachButton');
 const voiceButton = document.getElementById('voiceButton');
+const voiceRecordHud = document.getElementById('voiceRecordHud');
+const voiceRecordTimer = document.getElementById('voiceRecordTimer');
+const voiceCancelButton = document.getElementById('voiceCancelButton');
 const fileInput = document.getElementById('fileInput');
 const replyBar = document.getElementById('replyBar');
 const replyUsername = document.getElementById('replyUsername');
@@ -259,6 +262,10 @@ let dmTypingTimer = null;
 let mediaRecorder = null;
 let recordedChunks = [];
 let isRecording = false;
+let voiceRecordingStartedAt = 0;
+let voiceRecordingTimer = null;
+let voiceRecordingStream = null;
+let cancelVoiceRecording = false;
 let contextTarget = null;
 let longPressTimer = null;
 let replyingTo = null;
@@ -838,11 +845,16 @@ fileInput.addEventListener('change', async () => {
 
 voiceButton.addEventListener('click', async () => {
   if (isRecording) {
-    stopVoiceRecording();
+    stopVoiceRecording(false);
     return;
   }
 
   await startVoiceRecording();
+});
+
+voiceCancelButton?.addEventListener('click', () => {
+  if (!isRecording) return;
+  stopVoiceRecording(true);
 });
 
 async function sendFileMessage(file) {
@@ -967,9 +979,23 @@ async function startVoiceRecording() {
   }
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
+
+    voiceRecordingStream = stream;
     recordedChunks = [];
-    mediaRecorder = new MediaRecorder(stream);
+    cancelVoiceRecording = false;
+
+    const preferredType = MediaRecorder.isTypeSupported?.('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : 'audio/webm';
+
+    mediaRecorder = new MediaRecorder(stream, { mimeType: preferredType });
 
     mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) recordedChunks.push(event.data);
@@ -977,34 +1003,53 @@ async function startVoiceRecording() {
 
     mediaRecorder.onstop = async () => {
       stream.getTracks().forEach(track => track.stop());
+      voiceRecordingStream = null;
 
-      const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-      const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+      if (cancelVoiceRecording) {
+        recordedChunks = [];
+        cancelVoiceRecording = false;
+        showPolishToast?.('Ses kaydı iptal edildi', '', 'info');
+        return;
+      }
+
+      const duration = voiceRecordingStartedAt ? (Date.now() - voiceRecordingStartedAt) / 1000 : 0;
+      if (duration < 0.7 || !recordedChunks.length) {
+        recordedChunks = [];
+        addSystemMessage('Ses kaydı çok kısa.');
+        return;
+      }
+
+      const blob = new Blob(recordedChunks, { type: preferredType });
+      const file = new File([blob], `voice-${Date.now()}.webm`, { type: preferredType });
 
       try {
+        showPolishToast?.('Ses yükleniyor', `${formatVoiceTime(duration)} kayıt gönderiliyor.`, 'info');
         await sendFileMessage(file);
       } catch (error) {
         addSystemMessage(error.message);
+      } finally {
+        recordedChunks = [];
       }
     };
 
-    mediaRecorder.start();
-    isRecording = true;
-    voiceButton.classList.add('recording');
-    voiceButton.textContent = '⏹️';
-    addSystemMessage('Ses kaydı başladı. Durdurmak için kırmızı butona bas.');
+    mediaRecorder.start(500);
+    setVoiceRecordingUi(true);
+    showPolishToast?.('Ses kaydı başladı', 'Durdurmak için kırmızı butona bas.', 'info');
   } catch {
     addSystemMessage('Mikrofon izni verilmedi.');
   }
 }
 
-function stopVoiceRecording() {
+function stopVoiceRecording(cancel = false) {
   if (!mediaRecorder || !isRecording) return;
 
-  mediaRecorder.stop();
-  isRecording = false;
-  voiceButton.classList.remove('recording');
-  voiceButton.textContent = '🎙️';
+  cancelVoiceRecording = Boolean(cancel);
+  try {
+    mediaRecorder.stop();
+  } catch {}
+
+  voiceRecordingStream?.getTracks?.().forEach(track => track.stop());
+  setVoiceRecordingUi(false);
 }
 
 
@@ -2182,7 +2227,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '940');
+    url.searchParams.set('v', '950');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3186,6 +3231,157 @@ function clearReply() {
   replyText.textContent = '';
 }
 
+
+function formatVoiceTime(seconds = 0) {
+  const n = Math.max(0, Math.floor(Number(seconds) || 0));
+  const m = Math.floor(n / 60);
+  const s = n % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function updateVoiceRecordTimer() {
+  if (!voiceRecordTimer || !voiceRecordingStartedAt) return;
+  const elapsed = (Date.now() - voiceRecordingStartedAt) / 1000;
+  voiceRecordTimer.textContent = formatVoiceTime(elapsed);
+}
+
+function setVoiceRecordingUi(recording) {
+  isRecording = Boolean(recording);
+  voiceButton?.classList.toggle('recording', isRecording);
+  if (voiceButton) {
+    voiceButton.textContent = isRecording ? '⏹️' : '🎙️';
+    voiceButton.title = isRecording ? 'Kaydı durdur' : 'Sesli mesaj kaydet';
+  }
+
+  voiceRecordHud?.classList.toggle('hidden', !isRecording);
+
+  clearInterval(voiceRecordingTimer);
+  voiceRecordingTimer = null;
+
+  if (isRecording) {
+    voiceRecordingStartedAt = Date.now();
+    updateVoiceRecordTimer();
+    voiceRecordingTimer = setInterval(updateVoiceRecordTimer, 500);
+  } else {
+    voiceRecordingStartedAt = 0;
+    if (voiceRecordTimer) voiceRecordTimer.textContent = '00:00';
+  }
+}
+
+function buildVoiceBars(seedText = '') {
+  const bars = document.createElement('div');
+  bars.className = 'voice-wave';
+  let seed = 0;
+  String(seedText || '').split('').forEach(ch => seed += ch.charCodeAt(0));
+  for (let i = 0; i < 24; i++) {
+    const bar = document.createElement('span');
+    const h = 8 + ((seed + i * 13) % 24);
+    bar.style.height = `${h}px`;
+    bars.appendChild(bar);
+  }
+  return bars;
+}
+
+function renderVoicePlayer({ file_name, file_data, file_size }) {
+  const player = document.createElement('div');
+  player.className = 'voice-player';
+
+  const audio = document.createElement('audio');
+  audio.src = file_data;
+  audio.preload = 'metadata';
+
+  const play = document.createElement('button');
+  play.type = 'button';
+  play.className = 'voice-play';
+  play.textContent = '▶';
+
+  const speed = document.createElement('button');
+  speed.type = 'button';
+  speed.className = 'voice-speed';
+  speed.textContent = '1x';
+
+  const info = document.createElement('div');
+  info.className = 'voice-info';
+
+  const top = document.createElement('div');
+  top.className = 'voice-top';
+  top.innerHTML = `<strong>Sesli mesaj</strong><span class="voice-time">00:00</span>`;
+
+  const wave = buildVoiceBars(file_name || file_data);
+  const progress = document.createElement('input');
+  progress.type = 'range';
+  progress.min = '0';
+  progress.max = '1000';
+  progress.value = '0';
+  progress.className = 'voice-progress';
+
+  const meta = document.createElement('small');
+  meta.textContent = file_size ? formatFileSize(file_size) : 'Audio';
+
+  info.appendChild(top);
+  info.appendChild(wave);
+  info.appendChild(progress);
+  info.appendChild(meta);
+
+  const timeEl = top.querySelector('.voice-time');
+  const speeds = [1, 1.25, 1.5, 2];
+  let speedIndex = 0;
+
+  audio.addEventListener('loadedmetadata', () => {
+    if (Number.isFinite(audio.duration)) timeEl.textContent = formatVoiceTime(audio.duration);
+  });
+
+  audio.addEventListener('timeupdate', () => {
+    if (!audio.duration) return;
+    progress.value = String(Math.round((audio.currentTime / audio.duration) * 1000));
+    timeEl.textContent = `${formatVoiceTime(audio.currentTime)} / ${formatVoiceTime(audio.duration)}`;
+    const active = Math.round((audio.currentTime / audio.duration) * 24);
+    wave.querySelectorAll('span').forEach((bar, idx) => bar.classList.toggle('active', idx <= active));
+  });
+
+  audio.addEventListener('play', () => {
+    play.textContent = '⏸';
+    player.classList.add('playing');
+  });
+
+  audio.addEventListener('pause', () => {
+    play.textContent = '▶';
+    player.classList.remove('playing');
+  });
+
+  audio.addEventListener('ended', () => {
+    play.textContent = '▶';
+    player.classList.remove('playing');
+    progress.value = '0';
+    wave.querySelectorAll('span').forEach(bar => bar.classList.remove('active'));
+  });
+
+  play.onclick = (event) => {
+    event.stopPropagation();
+    if (audio.paused) audio.play().catch(() => addSystemMessage('Ses oynatılamadı.'));
+    else audio.pause();
+  };
+
+  speed.onclick = (event) => {
+    event.stopPropagation();
+    speedIndex = (speedIndex + 1) % speeds.length;
+    audio.playbackRate = speeds[speedIndex];
+    speed.textContent = `${speeds[speedIndex]}x`;
+  };
+
+  progress.oninput = () => {
+    if (!audio.duration) return;
+    audio.currentTime = (Number(progress.value) / 1000) * audio.duration;
+  };
+
+  player.appendChild(play);
+  player.appendChild(info);
+  player.appendChild(speed);
+  player.appendChild(audio);
+  return player;
+}
+
+
 function renderMedia({ message_type, file_name, file_mime, file_data, file_path, file_size }) {
   const wrap = document.createElement('div');
   wrap.className = 'message-media';
@@ -3203,10 +3399,7 @@ function renderMedia({ message_type, file_name, file_mime, file_data, file_path,
   }
 
   if (message_type === 'audio') {
-    const audio = document.createElement('audio');
-    audio.controls = true;
-    audio.src = file_data;
-    wrap.appendChild(audio);
+    wrap.appendChild(renderVoicePlayer({ file_name, file_data, file_size }));
     return wrap;
   }
 
