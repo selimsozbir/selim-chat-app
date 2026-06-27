@@ -14847,3 +14847,422 @@ body[data-chat-mode="group"] .users-box::after {
     display: none !important;
   }
 }
+
+
+/* =========================================================
+   v10.3.2 — Message Bubble Polish
+   Cleaner spacing, avatars, bot card, premium media/audio preview
+   ========================================================= */
+
+.messages {
+  padding: 22px 24px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+}
+
+/* Standard message rhythm */
+.message {
+  width: fit-content !important;
+  max-width: min(74%, 780px) !important;
+  display: grid !important;
+  grid-template-columns: 38px minmax(0, 1fr) !important;
+  align-items: end !important;
+  column-gap: 10px !important;
+  margin: 0 0 14px !important;
+  padding: 0 !important;
+}
+
+.message.mine {
+  grid-template-columns: minmax(0, 1fr) 38px !important;
+  margin-left: auto !important;
+  justify-items: end !important;
+}
+
+.message.same-sender {
+  margin-top: -8px !important;
+}
+
+.message.same-sender .msg-avatar {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.message.system {
+  width: 100% !important;
+  max-width: 100% !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  justify-items: center !important;
+  margin: 8px 0 16px !important;
+}
+
+/* Avatar alignment */
+.msg-avatar {
+  width: 38px !important;
+  height: 38px !important;
+  align-self: end !important;
+  border-radius: 14px !important;
+  object-fit: cover !important;
+  border: 1px solid rgba(255,255,255,.09) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.035)) !important;
+  color: #f5f5f7 !important;
+  font-weight: 900 !important;
+  box-shadow: none !important;
+}
+
+.message.mine .msg-avatar {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+}
+
+.message.mine .msg-bubble {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+}
+
+/* Bubble base */
+.msg-bubble {
+  position: relative !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  padding: 11px 13px 10px !important;
+  border-radius: 18px 18px 18px 7px !important;
+  border: 1px solid rgba(255,255,255,.075) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.062), rgba(255,255,255,.038)) !important;
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.14),
+    inset 0 1px 0 rgba(255,255,255,.045) !important;
+  overflow: visible !important;
+}
+
+.message.mine .msg-bubble {
+  border-radius: 18px 18px 7px 18px !important;
+  border-color: rgba(10,132,255,.22) !important;
+  background:
+    linear-gradient(180deg, rgba(10,132,255,.22), rgba(10,132,255,.145)) !important;
+  box-shadow:
+    0 10px 26px rgba(10,132,255,.09),
+    inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+
+.message:not(.mine):not(.system) .msg-bubble::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  bottom: 10px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  border-left: 1px solid rgba(255,255,255,.075);
+  border-bottom: 1px solid rgba(255,255,255,.075);
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+.message.mine .msg-bubble::before {
+  content: "";
+  position: absolute;
+  right: -5px;
+  bottom: 10px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  border-right: 1px solid rgba(10,132,255,.22);
+  border-top: 1px solid rgba(10,132,255,.22);
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+/* Text hierarchy */
+.message .meta {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-bottom: 6px !important;
+  color: #a1a1aa !important;
+  font-size: 11.5px !important;
+  line-height: 1.2 !important;
+  font-weight: 850 !important;
+  letter-spacing: -.01em !important;
+}
+
+.message.mine .meta {
+  justify-content: flex-end !important;
+  color: rgba(219,234,254,.86) !important;
+}
+
+.message .text {
+  color: #f5f5f7 !important;
+  font-size: 14px !important;
+  line-height: 1.58 !important;
+  overflow-wrap: anywhere !important;
+  white-space: pre-wrap !important;
+}
+
+.message.mine .text {
+  color: #f8fbff !important;
+}
+
+.read-status {
+  display: block !important;
+  margin-top: 7px !important;
+  color: rgba(219,234,254,.72) !important;
+  font-size: 10.5px !important;
+  font-weight: 800 !important;
+  text-align: right !important;
+}
+
+/* System messages */
+.message.system .msg-bubble {
+  width: fit-content !important;
+  max-width: min(680px, 92%) !important;
+  border-radius: 999px !important;
+  padding: 8px 13px !important;
+  border-color: rgba(255,255,255,.08) !important;
+  background: rgba(255,255,255,.035) !important;
+  box-shadow: none !important;
+}
+
+.message.system .msg-bubble::before {
+  display: none !important;
+}
+
+.message.system .meta {
+  display: none !important;
+}
+
+.message.system .text {
+  color: #a1a1aa !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+}
+
+/* Feiz / bot card */
+.message.bot-message {
+  max-width: min(78%, 820px) !important;
+}
+
+.message.bot-message .msg-avatar {
+  border-color: rgba(139,92,246,.22) !important;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(139,92,246,.28), transparent 45%),
+    rgba(139,92,246,.10) !important;
+  color: #e9d5ff !important;
+}
+
+.message.bot-message .msg-bubble {
+  padding: 13px 14px !important;
+  border-radius: 20px !important;
+  border-color: rgba(139,92,246,.22) !important;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(139,92,246,.13), transparent 35%),
+    linear-gradient(180deg, rgba(139,92,246,.105), rgba(255,255,255,.038)) !important;
+  box-shadow:
+    0 14px 34px rgba(139,92,246,.08),
+    inset 0 1px 0 rgba(255,255,255,.055) !important;
+}
+
+.message.bot-message .msg-bubble::before {
+  border-color: rgba(139,92,246,.22) !important;
+}
+
+.message.bot-message .meta {
+  color: #c4b5fd !important;
+  text-transform: lowercase !important;
+}
+
+.message.bot-message .meta::before {
+  content: "✦ AI";
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(139,92,246,.14);
+  border: 1px solid rgba(139,92,246,.18);
+  color: #ddd6fe;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+/* Reply preview */
+.reply-preview {
+  margin: 2px 0 9px !important;
+  padding: 8px 10px !important;
+  border-radius: 13px !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  background: rgba(0,0,0,.13) !important;
+}
+
+.reply-preview strong {
+  color: #dbeafe !important;
+  font-size: 11px !important;
+}
+
+.reply-preview span {
+  color: #a1a1aa !important;
+  font-size: 12px !important;
+}
+
+/* Message actions */
+.message-actions,
+.reaction-picker {
+  margin-top: 8px !important;
+}
+
+.message-action,
+.reaction-button,
+.reaction-picker button {
+  border-radius: 999px !important;
+  padding: 5px 8px !important;
+  background: rgba(255,255,255,.055) !important;
+  border: 1px solid rgba(255,255,255,.07) !important;
+  color: #d1d5db !important;
+  font-size: 11px !important;
+}
+
+/* Media cards */
+.message-media,
+.attachment-card,
+.message-file,
+.audio-card,
+.voice-player {
+  width: 100% !important;
+  max-width: 420px !important;
+  margin-top: 9px !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(255,255,255,.085) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.032)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 10px 24px rgba(0,0,0,.12) !important;
+  overflow: hidden !important;
+}
+
+.message-media img,
+.message img,
+.message-media video {
+  display: block !important;
+  max-width: 100% !important;
+  border-radius: 15px !important;
+  border: 1px solid rgba(255,255,255,.075) !important;
+  box-shadow: none !important;
+}
+
+.message-media img:hover {
+  transform: none !important;
+  filter: brightness(1.04) !important;
+}
+
+.message-file,
+.attachment-card {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 11px !important;
+  color: #e5e7eb !important;
+}
+
+.message-file::before,
+.attachment-card::before {
+  content: "📄";
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  background: rgba(10,132,255,.12);
+  border: 1px solid rgba(10,132,255,.18);
+}
+
+/* Premium audio / voice */
+.voice-player,
+.audio-card {
+  padding: 11px !important;
+  display: grid !important;
+  gap: 8px !important;
+}
+
+.voice-player audio,
+.audio-card audio,
+.message-media audio {
+  width: 100% !important;
+  height: 36px !important;
+  border-radius: 999px !important;
+  filter: saturate(.9) contrast(1.02) !important;
+}
+
+.voice-bars,
+.voice-wave,
+.audio-wave {
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  min-height: 24px !important;
+}
+
+.voice-bars span,
+.voice-wave span,
+.audio-wave span {
+  width: 3px !important;
+  min-height: 6px !important;
+  border-radius: 999px !important;
+  background: rgba(10,132,255,.45) !important;
+}
+
+.message.mine .voice-bars span,
+.message.mine .voice-wave span,
+.message.mine .audio-wave span {
+  background: rgba(245,245,247,.60) !important;
+}
+
+/* Mobile message polish */
+@media (max-width: 760px) {
+  .messages {
+    padding: 14px 12px 10px !important;
+  }
+
+  .message {
+    max-width: 88% !important;
+    grid-template-columns: 32px minmax(0, 1fr) !important;
+    column-gap: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .message.mine {
+    grid-template-columns: minmax(0, 1fr) 32px !important;
+  }
+
+  .msg-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 12px !important;
+  }
+
+  .msg-bubble {
+    padding: 10px 11px !important;
+    border-radius: 17px 17px 17px 7px !important;
+  }
+
+  .message.mine .msg-bubble {
+    border-radius: 17px 17px 7px 17px !important;
+  }
+
+  .message .text {
+    font-size: 13.5px !important;
+  }
+
+  .message-media,
+  .attachment-card,
+  .message-file,
+  .audio-card,
+  .voice-player {
+    max-width: 100% !important;
+  }
+}
