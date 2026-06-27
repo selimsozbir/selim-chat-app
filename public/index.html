@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v10.7.0</title>
-  <link rel="stylesheet" href="style.css?v=1070" />
+  <title>Selim Chat v10.8.0</title>
+  <link rel="stylesheet" href="style.css?v=1080" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -426,6 +426,48 @@
           </div>
         </div>
 
+
+
+        <div class="story-pet-grid">
+          <section class="replay-card hub-feature-card">
+            <div class="hub-feature-head">
+              <div>
+                <strong>Chat Replay</strong>
+                <span>Bugünün oda özeti</span>
+              </div>
+              <button id="refreshReplayButton" class="small-button" type="button">Özetle</button>
+            </div>
+            <div id="chatReplayBox" class="chat-replay-box">
+              <p>Bugünün özetini görmek için yenile.</p>
+            </div>
+          </section>
+
+          <section class="story-decision-card hub-feature-card">
+            <div class="hub-feature-head">
+              <div>
+                <strong>Mini Hikaye Kararı</strong>
+                <span>Oda kaderini seçsin</span>
+              </div>
+              <button id="refreshStoryDecisionButton" class="small-button" type="button">Yenile</button>
+            </div>
+            <div id="storyDecisionBox" class="story-decision-box">
+              <p>Hikaye kararı yükleniyor...</p>
+            </div>
+          </section>
+
+          <section class="companion-card hub-feature-card">
+            <div class="hub-feature-head">
+              <div>
+                <strong>Companion Pet</strong>
+                <span>Mesaj attıkça gelişir</span>
+              </div>
+              <button id="refreshCompanionButton" class="small-button" type="button">Yenile</button>
+            </div>
+            <div id="companionBox" class="companion-box">
+              <p>Companion yükleniyor...</p>
+            </div>
+          </section>
+        </div>
 
         <div class="notifications-box">
           <h3>Bildirimler <span id="notificationBadge"></span></h3>
@@ -965,6 +1007,6 @@
 
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=1070"></script>
+  <script src="script.js?v=1080"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div></body>
 </html>
