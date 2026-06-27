@@ -746,141 +746,6 @@ async function areFriends(userA, userB) {
   return result.rows.length > 0;
 }
 
-
-async function getServerMember(serverId, userId) {
-  const result = await pool.query(
-    `SELECT sm.server_id, sm.user_id, sm.role, cs.owner_id
-     FROM server_members sm
-     JOIN chat_servers cs ON cs.id = sm.server_id
-     WHERE sm.server_id = $1 AND sm.user_id = $2`,
-    [serverId, userId]
-  );
-
-  if (result.rows.length === 0) return null;
-  const member = result.rows[0];
-  if (Number(member.owner_id) === Number(userId)) member.role = 'owner';
-  return member;
-}
-
-function generateInviteCode(length = 10) {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-  let code = '';
-  for (let i = 0; i < length; i += 1) code += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return code;
-}
-
-async function ensureServerInviteCode(serverId) {
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const existing = await pool.query('SELECT invite_code FROM chat_servers WHERE id = $1', [serverId]);
-    if (existing.rows[0]?.invite_code) return existing.rows[0].invite_code;
-
-    const code = generateInviteCode();
-    try {
-      const updated = await pool.query(
-        'UPDATE chat_servers SET invite_code = $1 WHERE id = $2 AND invite_code IS NULL RETURNING invite_code',
-        [code, serverId]
-      );
-      if (updated.rows[0]?.invite_code) return updated.rows[0].invite_code;
-    } catch {}
-  }
-
-  throw new Error('Davet kodu üretilemedi.');
-}
-
-function serverPermissionSet(role) {
-  const r = String(role || 'member');
-  return {
-    can_manage_roles: r === 'owner',
-    can_create_channels: ['owner', 'admin'].includes(r),
-    can_delete_channels: ['owner', 'admin'].includes(r),
-    can_create_invites: ['owner', 'admin', 'mod'].includes(r),
-    can_kick_members: ['owner', 'admin'].includes(r),
-    can_write: ['owner', 'admin', 'mod', 'member'].includes(r)
-  };
-}
-
-function canSetServerRole(actorRole, targetRole, newRole) {
-  if (actorRole !== 'owner') return false;
-  if (targetRole === 'owner') return false;
-  return ['admin', 'mod', 'member'].includes(newRole);
-}
-
-function serverRoleLabel(role) {
-  if (role === 'owner') return 'Owner';
-  if (role === 'admin') return 'Admin';
-  if (role === 'mod') return 'Mod';
-  return 'Üye';
-}
-
-function serverRoomName(serverId, channelId) {
-  return `srv_${Number(serverId)}_${Number(channelId)}`;
-}
-
-function parseServerRoomName(room) {
-  const match = String(room || '').match(/^srv_(\d+)_(\d+)$/);
-  if (!match) return null;
-  return { serverId: Number(match[1]), channelId: Number(match[2]) };
-}
-
-async function canUseServerChannelRoom(room, userId) {
-  const parsed = parseServerRoomName(room);
-  if (!parsed) return { ok: false };
-
-  const result = await pool.query(
-    `SELECT sc.id, sc.name, sc.server_id, sm.role, cs.owner_id
-     FROM server_channels sc
-     JOIN chat_servers cs ON cs.id = sc.server_id
-     JOIN server_members sm ON sm.server_id = sc.server_id AND sm.user_id = $3
-     WHERE sc.server_id = $1 AND sc.id = $2
-     LIMIT 1`,
-    [parsed.serverId, parsed.channelId, userId]
-  );
-
-  if (result.rows.length === 0) return { ok: false };
-  const row = result.rows[0];
-  const role = Number(row.owner_id) === Number(userId) ? 'owner' : row.role;
-  return { ok: true, role, channel: row };
-}
-
-async function ensureDefaultChannel(serverId) {
-  const result = await pool.query(
-    `INSERT INTO server_channels (server_id, name, kind, position)
-     VALUES ($1, 'genel', 'text', 0)
-     ON CONFLICT (server_id, name) DO NOTHING
-     RETURNING id, server_id, name, kind, position`,
-    [serverId]
-  );
-
-  if (result.rows.length > 0) return result.rows[0];
-
-  const existing = await pool.query(
-    'SELECT id, server_id, name, kind, position FROM server_channels WHERE server_id = $1 ORDER BY position ASC, id ASC LIMIT 1',
-    [serverId]
-  );
-  return existing.rows[0];
-}
-
-async function getServerSummary(serverId, userId) {
-  const result = await pool.query(
-    `SELECT cs.id, cs.name, cs.description, cs.avatar_url, cs.owner_id, cs.invite_code, sm.role,
-            COUNT(DISTINCT sm2.user_id)::int AS member_count,
-            COUNT(DISTINCT sc.id)::int AS channel_count
-     FROM chat_servers cs
-     JOIN server_members sm ON sm.server_id = cs.id AND sm.user_id = $2
-     LEFT JOIN server_members sm2 ON sm2.server_id = cs.id
-     LEFT JOIN server_channels sc ON sc.server_id = cs.id
-     WHERE cs.id = $1
-     GROUP BY cs.id, sm.role`,
-    [serverId, userId]
-  );
-
-  if (result.rows.length === 0) return null;
-  const s = result.rows[0];
-  const myRole = Number(s.owner_id) === Number(userId) ? 'owner' : s.role;
-  return { ...s, my_role: myRole, permissions: serverPermissionSet(myRole) };
-}
-
-
 async function createNotification(userId, type, payload) {
   const result = await pool.query(
     `INSERT INTO notifications (user_id, type, payload)
@@ -1292,42 +1157,6 @@ async function initDatabase() {
       action VARCHAR(80) NOT NULL,
       details JSONB NOT NULL DEFAULT '{}',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS chat_servers (
-      id SERIAL PRIMARY KEY,
-      name VARCHAR(80) NOT NULL,
-      description TEXT DEFAULT '',
-      avatar_url TEXT,
-      owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await pool.query(`ALTER TABLE chat_servers ADD COLUMN IF NOT EXISTS invite_code VARCHAR(32);`);
-  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_servers_invite_code ON chat_servers(invite_code);`);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS server_members (
-      server_id INTEGER REFERENCES chat_servers(id) ON DELETE CASCADE,
-      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-      role VARCHAR(20) NOT NULL DEFAULT 'member',
-      joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (server_id, user_id)
-    );
-  `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS server_channels (
-      id SERIAL PRIMARY KEY,
-      server_id INTEGER REFERENCES chat_servers(id) ON DELETE CASCADE,
-      name VARCHAR(60) NOT NULL,
-      kind VARCHAR(20) NOT NULL DEFAULT 'text',
-      position INTEGER DEFAULT 0,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(server_id, name)
     );
   `);
 
@@ -2095,7 +1924,10 @@ app.get('/api/messages/:room', authMiddleware, async (req, res) => {
   const result = await pool.query(
     `SELECT m.id, m.room, m.user_id, m.username, m.text, m.created_at, m.edited_at, m.deleted_at,
             m.message_type, m.file_name, m.file_mime, m.file_data, m.file_path, m.file_size, m.reply_to_id,
-            u.avatar_url, u.active_bubble_theme AS bubble_theme, u.active_name_effect AS name_effect, u.active_profile_frame AS frame_theme,
+            u.avatar_url,
+            u.active_bubble_theme AS bubble_theme,
+            u.active_name_effect AS name_effect,
+            u.active_profile_frame AS frame_theme,
             rm.username AS reply_username,
             rm.text AS reply_text
      FROM messages m
@@ -2848,256 +2680,6 @@ app.post('/api/casino/blackjack/stand', authMiddleware, async (req, res) => {
 });
 
 
-
-app.get('/api/servers', authMiddleware, async (req, res) => {
-  const result = await pool.query(
-    `SELECT cs.id, cs.name, cs.description, cs.avatar_url, cs.owner_id, cs.invite_code, sm.role,
-            COUNT(DISTINCT sm2.user_id)::int AS member_count,
-            COUNT(DISTINCT sc.id)::int AS channel_count,
-            MAX(sc.created_at) AS last_channel_at
-     FROM chat_servers cs
-     JOIN server_members sm ON sm.server_id = cs.id AND sm.user_id = $1
-     LEFT JOIN server_members sm2 ON sm2.server_id = cs.id
-     LEFT JOIN server_channels sc ON sc.server_id = cs.id
-     GROUP BY cs.id, sm.role
-     ORDER BY cs.created_at DESC`,
-    [req.user.id]
-  );
-
-  res.json({
-    servers: result.rows.map((s) => ({
-      ...s,
-      my_role: Number(s.owner_id) === Number(req.user.id) ? 'owner' : s.role
-    }))
-  });
-});
-
-app.post('/api/servers', authMiddleware, async (req, res) => {
-  const name = cleanText(req.body.name, 80);
-  const description = cleanText(req.body.description, 160);
-
-  if (name.length < 2) return res.status(400).json({ error: 'Sunucu adı en az 2 karakter olmalı.' });
-
-  await pool.query('BEGIN');
-  const inviteCode = generateInviteCode();
-  const created = await pool.query(
-    `INSERT INTO chat_servers (name, description, owner_id, invite_code)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id, name, description, avatar_url, owner_id, invite_code, created_at`,
-    [name, description, req.user.id, inviteCode]
-  );
-
-  const serverRow = created.rows[0];
-
-  await pool.query(
-    `INSERT INTO server_members (server_id, user_id, role)
-     VALUES ($1, $2, 'owner')
-     ON CONFLICT (server_id, user_id) DO UPDATE SET role = 'owner'`,
-    [serverRow.id, req.user.id]
-  );
-
-  await ensureDefaultChannel(serverRow.id);
-  await pool.query('COMMIT');
-
-  res.json({ server: await getServerSummary(serverRow.id, req.user.id) });
-});
-
-app.get('/api/servers/:serverId', authMiddleware, async (req, res) => {
-  const serverId = Number(req.params.serverId);
-  if (!Number.isInteger(serverId)) return res.status(400).json({ error: 'Geçersiz sunucu.' });
-
-  const serverSummary = await getServerSummary(serverId, req.user.id);
-  if (!serverSummary) return res.status(404).json({ error: 'Sunucu bulunamadı.' });
-
-  const channels = await pool.query(
-    `SELECT id, server_id, name, kind, position, created_at
-     FROM server_channels
-     WHERE server_id = $1
-     ORDER BY position ASC, id ASC`,
-    [serverId]
-  );
-
-  const members = await pool.query(
-    `SELECT u.id, u.username, u.display_name, u.avatar_url, sm.role, cs.owner_id, sm.joined_at
-     FROM server_members sm
-     JOIN users u ON u.id = sm.user_id
-     JOIN chat_servers cs ON cs.id = sm.server_id
-     WHERE sm.server_id = $1
-     ORDER BY CASE WHEN u.id = cs.owner_id THEN 0 WHEN sm.role = 'admin' THEN 1 ELSE 2 END, u.username ASC`,
-    [serverId]
-  );
-
-  res.json({
-    server: serverSummary,
-    channels: channels.rows,
-    members: members.rows.map((m) => ({
-      ...m,
-      role: Number(m.owner_id) === Number(m.id) ? 'owner' : m.role,
-      online: userSockets.has(String(m.id))
-    }))
-  });
-});
-
-app.post('/api/servers/:serverId/channels', authMiddleware, async (req, res) => {
-  const serverId = Number(req.params.serverId);
-  const name = cleanText(req.body.name, 60).toLowerCase().replace(/[^a-z0-9ğüşöçıİĞÜŞÖÇ_-]/gi, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'kanal';
-
-  if (!Number.isInteger(serverId)) return res.status(400).json({ error: 'Geçersiz sunucu.' });
-
-  const member = await getServerMember(serverId, req.user.id);
-  if (!member || !serverPermissionSet(member.role).can_create_channels) return res.status(403).json({ error: 'Kanal oluşturma yetkin yok.' });
-
-  const pos = await pool.query('SELECT COALESCE(MAX(position), 0) + 1 AS next_pos FROM server_channels WHERE server_id = $1', [serverId]);
-  const result = await pool.query(
-    `INSERT INTO server_channels (server_id, name, kind, position)
-     VALUES ($1, $2, 'text', $3)
-     ON CONFLICT (server_id, name) DO UPDATE SET name = EXCLUDED.name
-     RETURNING id, server_id, name, kind, position, created_at`,
-    [serverId, name, pos.rows[0]?.next_pos || 1]
-  );
-
-  res.json({ channel: result.rows[0] });
-});
-
-
-
-
-app.post('/api/servers/:serverId/invite', authMiddleware, async (req, res) => {
-  const serverId = Number(req.params.serverId);
-  if (!Number.isInteger(serverId)) return res.status(400).json({ error: 'Geçersiz sunucu.' });
-
-  const member = await getServerMember(serverId, req.user.id);
-  if (!member || !serverPermissionSet(member.role).can_create_invites) return res.status(403).json({ error: 'Davet linki alma yetkin yok.' });
-
-  const code = await ensureServerInviteCode(serverId);
-  res.json({ ok: true, code, invite_url: `/invite/${code}` });
-});
-
-app.post('/api/servers/join/:code', authMiddleware, async (req, res) => {
-  const code = cleanText(req.params.code, 40);
-  if (!code) return res.status(400).json({ error: 'Davet kodu yok.' });
-
-  const serverResult = await pool.query(
-    'SELECT id, name, owner_id FROM chat_servers WHERE invite_code = $1',
-    [code]
-  );
-
-  if (serverResult.rows.length === 0) return res.status(404).json({ error: 'Davet linki geçersiz.' });
-
-  const srv = serverResult.rows[0];
-  await pool.query(
-    `INSERT INTO server_members (server_id, user_id, role)
-     VALUES ($1, $2, 'member')
-     ON CONFLICT (server_id, user_id) DO NOTHING`,
-    [srv.id, req.user.id]
-  );
-
-  await ensureDefaultChannel(srv.id);
-  res.json({ ok: true, server: await getServerSummary(srv.id, req.user.id) });
-});
-
-
-app.post('/api/servers/:serverId/members', authMiddleware, async (req, res) => {
-  const serverId = Number(req.params.serverId);
-  const userId = Number(req.body.userId);
-
-  if (!Number.isInteger(serverId) || !Number.isInteger(userId)) return res.status(400).json({ error: 'Geçersiz istek.' });
-
-  const member = await getServerMember(serverId, req.user.id);
-  if (!member || !serverPermissionSet(member.role).can_create_invites) return res.status(403).json({ error: 'Sunucuya üye ekleme yetkin yok.' });
-
-  const ok = await areFriends(req.user.id, userId);
-  if (!ok) return res.status(403).json({ error: 'Sunucuya sadece arkadaşlarını ekleyebilirsin.' });
-
-  await pool.query(
-    `INSERT INTO server_members (server_id, user_id, role)
-     VALUES ($1, $2, 'member')
-     ON CONFLICT (server_id, user_id) DO NOTHING`,
-    [serverId, userId]
-  );
-
-  emitToUser(userId, 'notification', {
-    type: 'system',
-    payload: { text: 'Bir sunucuya eklendin.' }
-  });
-
-  res.json({ ok: true });
-});
-
-
-app.patch('/api/servers/:serverId/members/:userId', authMiddleware, async (req, res) => {
-  const serverId = Number(req.params.serverId);
-  const userId = Number(req.params.userId);
-  const role = cleanText(req.body.role, 20);
-
-  if (!Number.isInteger(serverId) || !Number.isInteger(userId)) return res.status(400).json({ error: 'Geçersiz üye.' });
-  if (!['admin', 'mod', 'member'].includes(role)) return res.status(400).json({ error: 'Geçersiz rol.' });
-
-  const actor = await getServerMember(serverId, req.user.id);
-  const target = await getServerMember(serverId, userId);
-
-  if (!actor || !target) return res.status(404).json({ error: 'Sunucu/üye bulunamadı.' });
-  if (!canSetServerRole(actor.role, target.role, role)) return res.status(403).json({ error: 'Rol değiştirme yetkin yok.' });
-
-  await pool.query(
-    'UPDATE server_members SET role = $1 WHERE server_id = $2 AND user_id = $3',
-    [role, serverId, userId]
-  );
-
-  emitToUser(userId, 'notification', {
-    type: 'system',
-    payload: { text: `Sunucu rolün ${serverRoleLabel(role)} olarak güncellendi.` }
-  });
-
-  res.json({ ok: true, role });
-});
-
-app.delete('/api/servers/:serverId/members/:userId', authMiddleware, async (req, res) => {
-  const serverId = Number(req.params.serverId);
-  const userId = Number(req.params.userId);
-
-  if (!Number.isInteger(serverId) || !Number.isInteger(userId)) return res.status(400).json({ error: 'Geçersiz üye.' });
-
-  const actor = await getServerMember(serverId, req.user.id);
-  const target = await getServerMember(serverId, userId);
-
-  if (!actor || !target) return res.status(404).json({ error: 'Sunucu/üye bulunamadı.' });
-  if (!serverPermissionSet(actor.role).can_kick_members) return res.status(403).json({ error: 'Üye çıkarma yetkin yok.' });
-  if (target.role === 'owner') return res.status(403).json({ error: 'Owner çıkarılamaz.' });
-  if (actor.role === 'admin' && target.role === 'admin') return res.status(403).json({ error: 'Admin başka admini çıkaramaz.' });
-
-  await pool.query('DELETE FROM server_members WHERE server_id = $1 AND user_id = $2', [serverId, userId]);
-
-  emitToUser(userId, 'notification', {
-    type: 'system',
-    payload: { text: 'Bir sunucudan çıkarıldın.' }
-  });
-
-  res.json({ ok: true });
-});
-
-
-app.delete('/api/servers/:serverId/channels/:channelId', authMiddleware, async (req, res) => {
-  const serverId = Number(req.params.serverId);
-  const channelId = Number(req.params.channelId);
-
-  if (!Number.isInteger(serverId) || !Number.isInteger(channelId)) return res.status(400).json({ error: 'Geçersiz kanal.' });
-
-  const member = await getServerMember(serverId, req.user.id);
-  if (!member || !serverPermissionSet(member.role).can_delete_channels) return res.status(403).json({ error: 'Kanal silme yetkin yok.' });
-
-  const count = await pool.query('SELECT COUNT(*)::int AS count FROM server_channels WHERE server_id = $1', [serverId]);
-  if (Number(count.rows[0]?.count || 0) <= 1) return res.status(400).json({ error: 'Son kanalı silemezsin.' });
-
-  const channel = await pool.query('SELECT id, name FROM server_channels WHERE id = $1 AND server_id = $2', [channelId, serverId]);
-  if (channel.rows.length === 0) return res.status(404).json({ error: 'Kanal bulunamadı.' });
-
-  await pool.query('DELETE FROM server_channels WHERE id = $1 AND server_id = $2', [channelId, serverId]);
-
-  res.json({ ok: true, deleted: channel.rows[0] });
-});
-
-
 app.get('/api/groups', authMiddleware, async (req, res) => {
   const result = await pool.query(
     `SELECT gc.id, gc.name, gc.avatar_url, gc.owner_id, gm.role,
@@ -3656,24 +3238,7 @@ io.on('connection', (socket) => {
   addSocketForUser(socket.user.id, socket.id);
 
   socket.on('join', async ({ room }) => {
-    const cleanRoom = cleanText(room, 80).toLowerCase() || 'genel';
-
-    const serverRoom = parseServerRoomName(cleanRoom);
-    if (serverRoom) {
-      const access = await canUseServerChannelRoom(cleanRoom, socket.user.id);
-      if (!access.ok) {
-        socket.emit('system_message', 'Bu sunucu kanalına erişimin yok.');
-        return;
-      }
-
-      if (socket.data.room) socket.leave(socket.data.room);
-      socket.data.room = cleanRoom;
-      socket.join(cleanRoom);
-
-      onlineUsers.set(socket.id, { id: socket.user.id, username: socket.user.username, room: cleanRoom });
-      socket.emit('room_role', { room: cleanRoom, role: access.role || 'member' });
-      return;
-    }
+    const cleanRoom = cleanText(room, 50).toLowerCase() || 'genel';
 
     if (await isRoomBanned(cleanRoom, socket.user.id)) {
       socket.emit('system_message', 'Bu odadan banlandın.');
@@ -3707,22 +3272,6 @@ io.on('connection', (socket) => {
       const filePath = cleanText(payload.filePath || '', 500) || null;
       const fileSize = Number(payload.fileSize) || null;
 
-      const requestedRoom = cleanText(payload.room || '', 80).toLowerCase();
-      if (requestedRoom && parseServerRoomName(requestedRoom)) {
-        const access = await canUseServerChannelRoom(requestedRoom, socket.user.id);
-        if (!access.ok) {
-          socket.emit('system_message', 'Bu sunucu kanalına mesaj gönderme yetkin yok.');
-          return;
-        }
-
-        if (socket.data.room !== requestedRoom) {
-          if (socket.data.room) socket.leave(socket.data.room);
-          socket.data.room = requestedRoom;
-          socket.join(requestedRoom);
-          onlineUsers.set(socket.id, { id: socket.user.id, username: socket.user.username, room: requestedRoom });
-        }
-      }
-
       if (!socket.data.room) return;
       if (messageType === 'text' && !text) return;
       if (messageType !== 'text' && !fileData) return;
@@ -3733,16 +3282,14 @@ io.on('connection', (socket) => {
 
       const room = socket.data.room;
 
-      if (!parseServerRoomName(room)) {
-        if (await isRoomBanned(room, socket.user.id)) {
-          socket.emit('system_message', 'Bu odadan banlandın.');
-          return;
-        }
+      if (await isRoomBanned(room, socket.user.id)) {
+        socket.emit('system_message', 'Bu odadan banlandın.');
+        return;
+      }
 
-        if (await isRoomMuted(room, socket.user.id)) {
-          socket.emit('system_message', 'Bu odada susturuldun.');
-          return;
-        }
+      if (await isRoomMuted(room, socket.user.id)) {
+        socket.emit('system_message', 'Bu odada susturuldun.');
+        return;
       }
 
       let replyToId = Number(payload.replyToId);
