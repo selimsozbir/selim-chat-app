@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v8.4.6</title>
-  <link rel="stylesheet" href="style.css?v=846" />
+  <title>Selim Chat v8.5.0</title>
+  <link rel="stylesheet" href="style.css?v=850" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -155,14 +155,41 @@
           </div>
 
           <div class="gamify-tabs">
-            <button id="questsTabButton" class="gamify-tab active" type="button">Görev</button>
+            <button id="dailyTabButton" class="gamify-tab active" type="button">Günlük</button>
+            <button id="questsTabButton" class="gamify-tab" type="button">Görev</button>
+            <button id="lootboxTabButton" class="gamify-tab" type="button">Kasa</button>
             <button id="marketTabButton" class="gamify-tab" type="button">Market</button>
             <button id="leaderboardTabButton" class="gamify-tab" type="button">Liderlik</button>
             <button id="casinoTabButton" class="gamify-tab" type="button">Casino</button>
           </div>
 
-          <div id="questsPanel" class="gamify-panel">
+          <div id="dailyPanel" class="gamify-panel">
+            <div id="dailyRewardCard" class="daily-card">
+              <div class="daily-icon">🎁</div>
+              <div class="daily-main">
+                <strong>Günlük ödül</strong>
+                <span id="dailyRewardText">Yükleniyor...</span>
+                <div id="dailyStreakText" class="daily-streak">Streak: -</div>
+              </div>
+              <button id="dailyClaimButton" class="small-button" type="button">Al</button>
+            </div>
+          </div>
+
+          <div id="questsPanel" class="gamify-panel hidden">
             <div id="questsList" class="gamify-list"></div>
+          </div>
+
+          <div id="lootboxPanel" class="gamify-panel hidden">
+            <div class="lootbox-card">
+              <div class="lootbox-crate">📦</div>
+              <div>
+                <strong>Serbia Rift Crate</strong>
+                <span>250 Shards · Common/Rare/Epic/Legendary item veya shard ödülü</span>
+              </div>
+              <button id="openLootboxButton" class="small-button" type="button">Kasa Aç</button>
+            </div>
+            <div id="lootboxResult" class="lootbox-result">Kasa açılmayı bekliyor.</div>
+            <div id="lootboxHistoryList" class="gamify-list"></div>
           </div>
 
           <div id="marketPanel" class="gamify-panel hidden">
@@ -220,6 +247,9 @@
             <button id="ipBanButton">Ban</button>
           </div>
           <div id="adminUsersList" class="mini-list"></div>
+          <h3>Admin Logları</h3>
+          <button id="refreshAdminLogsButton" class="small-button" type="button">Logları yenile</button>
+          <div id="adminLogsList" class="mini-list admin-logs-list"></div>
           <h3>IP Banları</h3>
           <div id="ipBansList" class="mini-list"></div>
         </div>
@@ -605,7 +635,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=846"></script>
+  <script src="script.js?v=850"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
