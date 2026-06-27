@@ -324,6 +324,169 @@ async function rewardUserActivity(userId, xpAmount = 5, shardAmount = 1) {
 }
 
 
+async function getUniverseState() {
+  const result = await pool.query('SELECT level, energy, active_event, updated_at FROM universe_state WHERE id = 1');
+  const row = result.rows[0] || { level: 1, energy: 0, active_event: null };
+  let activeEvent = row.active_event || null;
+
+  if (activeEvent && activeEvent.ends_at && Date.now() > Number(activeEvent.ends_at)) {
+    activeEvent = null;
+    await pool.query('UPDATE universe_state SET active_event = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = 1');
+  }
+
+  return {
+    level: Number(row.level || 1),
+    energy: Number(row.energy || 0),
+    active_event: activeEvent
+  };
+}
+
+async function addUniverseEnergy(amount = 1) {
+  const state = await getUniverseState();
+  let energy = Math.min(100, Math.max(0, state.energy + amount));
+  let level = state.level;
+  if (energy >= 100) {
+    level += 1;
+    energy = 0;
+    await startLiveEvent(null, 'energy_overload');
+  }
+  await pool.query('UPDATE universe_state SET level = $1, energy = $2, updated_at = CURRENT_TIMESTAMP WHERE id = 1', [level, energy]);
+  return getUniverseState();
+}
+
+const LIVE_EVENT_TYPES = [
+  { key: 'serbia_rift', name: 'Serbia Rift', icon: '🌀', theme: 'serbia', shards: 35, xp: 25, title: 'Rift Survivor', item: ['serbia_key', 'Serbia Rift Key'] },
+  { key: 'limbo_storm', name: 'Limbo Storm', icon: '⚫', theme: 'limbo', shards: 30, xp: 30, title: 'Limbo Walker', item: ['limbo_fragment', 'Limbo Fragment'] },
+  { key: 'rome_simulation', name: 'Rome Simulation', icon: '🏛️', theme: 'rome', shards: 40, xp: 20, title: 'Rome Glitch', item: ['rome_coin', 'Rome Coin'] },
+  { key: 'egypt_signal', name: 'Egypt Signal', icon: '𓂀', theme: 'egypt', shards: 45, xp: 18, title: 'Scarab Finder', item: ['golden_scarab', 'Golden Scarab'] },
+  { key: 'vertex_breach', name: 'VERTEX Breach', icon: '🔴', theme: 'vertex', shards: 55, xp: 35, title: 'Vertex Witness', item: ['vertex_token', 'Vertex Token'] }
+];
+
+function randomLiveEventType() {
+  return LIVE_EVENT_TYPES[Math.floor(Math.random() * LIVE_EVENT_TYPES.length)];
+}
+
+async function unlockTitle(userId, titleName) {
+  if (!userId || !titleName) return;
+  const key = titleName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  await pool.query(
+    `INSERT INTO user_titles (user_id, title_key, title_name)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (user_id, title_key) DO NOTHING`,
+    [userId, key, titleName]
+  );
+}
+
+async function addInventoryItem(userId, itemKey, itemName, quantity = 1) {
+  if (!userId || !itemKey) return;
+  await pool.query(
+    `INSERT INTO user_inventory (user_id, item_key, item_name, quantity)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (user_id, item_key)
+     DO UPDATE SET quantity = user_inventory.quantity + EXCLUDED.quantity, updated_at = CURRENT_TIMESTAMP`,
+    [userId, itemKey, itemName, quantity]
+  );
+}
+
+async function startLiveEvent(room = null, source = 'random') {
+  const eventType = randomLiveEventType();
+  const event = {
+    id: `event_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    ...eventType,
+    source,
+    starts_at: Date.now(),
+    ends_at: Date.now() + 10 * 60 * 1000
+  };
+
+  await pool.query('UPDATE universe_state SET active_event = $1, updated_at = CURRENT_TIMESTAMP WHERE id = 1', [event]);
+
+  const payload = {
+    event,
+    text: `${event.icon} ${event.name} başladı! 10 dakika boyunca mesaj atanlara bonus var.`
+  };
+
+  if (room) io.to(room).emit('live_event_started', payload);
+  else io.emit('live_event_started', payload);
+
+  return event;
+}
+
+async function maybeRewardLiveEventMessage(userId, room) {
+  const state = await getUniverseState();
+  const event = state.active_event;
+  if (!event) return;
+
+  const rewardShards = Number(event.shards || 25);
+  const rewardXp = Number(event.xp || 20);
+  await rewardUserActivity(userId, rewardXp, rewardShards);
+  await logShardTransaction(userId, rewardShards, 'live_event', `${event.name} bonus`, { event_id: event.id });
+  await unlockTitle(userId, event.title);
+  if (Array.isArray(event.item)) await addInventoryItem(userId, event.item[0], event.item[1], 1);
+}
+
+async function createPortalDrop(room = null, forcedType = null) {
+  const type = forcedType || randomLiveEventType();
+  const drop = {
+    id: `portal_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    key: type.key,
+    name: `${type.name} Portal`,
+    icon: type.icon,
+    theme: type.theme,
+    reward_shards: 120 + Math.floor(Math.random() * 181),
+    reward_xp: 35 + Math.floor(Math.random() * 50),
+    item: type.item,
+    title: type.title,
+    expires_at: Date.now() + 45 * 1000
+  };
+
+  if (room) io.to(room).emit('portal_drop', drop);
+  else io.emit('portal_drop', drop);
+  return drop;
+}
+
+async function recordProfileVisit(visitorId, targetId) {
+  if (!visitorId || !targetId || Number(visitorId) === Number(targetId)) return;
+  await pool.query(
+    `INSERT INTO profile_visits (visitor_id, target_id, visited_at)
+     VALUES ($1, $2, CURRENT_TIMESTAMP)
+     ON CONFLICT (visitor_id, target_id)
+     DO UPDATE SET visited_at = CURRENT_TIMESTAMP`,
+    [visitorId, targetId]
+  );
+  await unlockTitle(visitorId, 'Profile Stalker');
+}
+
+async function getProfileVisitors(userId) {
+  const result = await pool.query(
+    `SELECT pv.visited_at, u.id, u.username, COALESCE(u.display_name, u.username) AS display_name, u.avatar_url
+     FROM profile_visits pv
+     JOIN users u ON u.id = pv.visitor_id
+     WHERE pv.target_id = $1
+     ORDER BY pv.visited_at DESC
+     LIMIT 20`,
+    [userId]
+  );
+  return result.rows;
+}
+
+async function getUserUniverseData(userId) {
+  const [state, titles, inventory, visitors] = await Promise.all([
+    getUniverseState(),
+    pool.query('SELECT title_key, title_name, unlocked_at FROM user_titles WHERE user_id = $1 ORDER BY unlocked_at DESC LIMIT 30', [userId]),
+    pool.query('SELECT item_key, item_name, quantity, updated_at FROM user_inventory WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 30', [userId]),
+    getProfileVisitors(userId)
+  ]);
+
+  return {
+    universe: state,
+    titles: titles.rows,
+    inventory: inventory.rows,
+    visitors
+  };
+}
+
+
+
 
 const MARKET_ITEMS = [
   { id: 'bubble_vertex', type: 'bubble', name: 'VERTEX Bubble', icon: '🔴', rarity: 'epic', price: 280, description: 'Mesaj balonuna kırmızı glitch havası verir.' },
@@ -1277,6 +1440,65 @@ async function initDatabase() {
       PRIMARY KEY (message_id, user_id)
     );
   `);
+
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS universe_state (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      level INTEGER NOT NULL DEFAULT 1,
+      energy INTEGER NOT NULL DEFAULT 0,
+      active_event JSONB,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(`
+    INSERT INTO universe_state (id, level, energy)
+    VALUES (1, 1, 0)
+    ON CONFLICT (id) DO NOTHING;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_titles (
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      title_key VARCHAR(80) NOT NULL,
+      title_name VARCHAR(120) NOT NULL,
+      unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, title_key)
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_inventory (
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      item_key VARCHAR(80) NOT NULL,
+      item_name VARCHAR(120) NOT NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, item_key)
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS profile_visits (
+      visitor_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      target_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (visitor_id, target_id)
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS portal_claims (
+      drop_id VARCHAR(120) PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      reward_shards INTEGER NOT NULL DEFAULT 0,
+      reward_xp INTEGER NOT NULL DEFAULT 0,
+      claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_profile_visits_target_time ON profile_visits(target_id, visited_at DESC);`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS shard_transactions (
@@ -2504,6 +2726,83 @@ async function getGroupSummary(groupId, userId) {
 /* GROUP DM */
 
 
+
+app.get('/api/universe', authMiddleware, async (req, res) => {
+  try {
+    res.json(await getUserUniverseData(req.user.id));
+  } catch (error) {
+    console.error('Universe data error:', error);
+    res.status(500).json({ error: 'Evren verileri yüklenemedi.' });
+  }
+});
+
+app.post('/api/profile/:id/visit', authMiddleware, async (req, res) => {
+  try {
+    const targetId = Number(req.params.id);
+    if (!Number.isInteger(targetId)) return res.status(400).json({ error: 'Geçersiz profil.' });
+    await recordProfileVisit(req.user.id, targetId);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Profile visit error:', error);
+    res.status(500).json({ error: 'Profil ziyareti kaydedilemedi.' });
+  }
+});
+
+app.post('/api/portal/claim', authMiddleware, async (req, res) => {
+  try {
+    const drop = req.body?.drop;
+    if (!drop || !drop.id || Number(drop.expires_at || 0) < Date.now()) {
+      return res.status(400).json({ error: 'Portal kapandı.' });
+    }
+
+    const rewardShards = Math.max(0, Math.min(500, Number(drop.reward_shards || 0)));
+    const rewardXp = Math.max(0, Math.min(200, Number(drop.reward_xp || 0)));
+
+    await pool.query('BEGIN');
+    const claim = await pool.query(
+      `INSERT INTO portal_claims (drop_id, user_id, reward_shards, reward_xp)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (drop_id) DO NOTHING
+       RETURNING drop_id`,
+      [cleanText(drop.id, 120), req.user.id, rewardShards, rewardXp]
+    );
+
+    if (!claim.rows.length) {
+      await pool.query('ROLLBACK');
+      return res.status(409).json({ error: 'Portal ödülü başkası tarafından alındı.' });
+    }
+
+    await rewardUserActivity(req.user.id, rewardXp, rewardShards);
+    await logShardTransaction(req.user.id, rewardShards, 'portal_drop', `${cleanText(drop.name || 'Portal', 120)} ödülü`, { drop_id: drop.id });
+    if (drop.title) await unlockTitle(req.user.id, cleanText(drop.title, 120));
+    if (Array.isArray(drop.item)) await addInventoryItem(req.user.id, cleanText(drop.item[0], 80), cleanText(drop.item[1], 120), 1);
+    await pool.query('COMMIT');
+
+    io.emit('portal_claimed', {
+      drop_id: drop.id,
+      username: req.user.username,
+      reward_shards: rewardShards,
+      reward_xp: rewardXp
+    });
+
+    res.json({ ok: true, reward_shards: rewardShards, reward_xp: rewardXp });
+  } catch (error) {
+    await pool.query('ROLLBACK').catch(() => {});
+    console.error('Portal claim error:', error);
+    res.status(500).json({ error: 'Portal ödülü alınamadı.' });
+  }
+});
+
+app.post('/api/admin/live-event', authMiddleware, requireGlobalAdmin, async (req, res) => {
+  try {
+    const event = await startLiveEvent(null, 'admin');
+    res.json({ event });
+  } catch (error) {
+    res.status(500).json({ error: 'Event başlatılamadı.' });
+  }
+});
+
+
 app.get('/api/shards/history', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
@@ -3506,6 +3805,44 @@ io.use(async (socket, next) => {
   }
 });
 
+
+async function handleUniverseCommand({ socket, room, text }) {
+  const command = String(text || '').trim().toLowerCase();
+  if (!command.startsWith('/')) return false;
+
+  const secretMap = {
+    '/serbia': ['serbia_rift', '🇷🇸 Serbia frekansı açıldı.'],
+    '/limbo': ['limbo_storm', '⚫ Limbo 5 saniyeliğine yaklaştı.'],
+    '/vertex': ['vertex_breach', '🔴 VERTEX seni gördü.'],
+    '/rome': ['rome_simulation', '🏛️ Roma simülasyonu aktif.'],
+    '/egypt': ['egypt_signal', '𓂀 Egypt Signal yakalandı.'],
+    '/reset': ['energy_overload', '⏮️ Evren glitch reset yedi.'],
+    '/cat': ['serbia_rift', '🐈 Kedi portalı kapattı gibi yaptı ama açtı.'],
+    '/xara': ['vertex_breach', '🧬 Xara düğmeye dokundu.']
+  };
+
+  if (command === '/portal') {
+    await createPortalDrop(room);
+    return true;
+  }
+
+  if (command === '/event') {
+    await startLiveEvent(room, 'command');
+    return true;
+  }
+
+  if (secretMap[command]) {
+    const [source, msg] = secretMap[command];
+    socket.emit('system_message', msg);
+    await unlockTitle(socket.user.id, command.replace('/', '').toUpperCase() + ' Witness');
+    if (Math.random() < 0.45) await createPortalDrop(room, LIVE_EVENT_TYPES.find(e => e.key === source) || null);
+    return true;
+  }
+
+  return false;
+}
+
+
 io.on('connection', (socket) => {
   addSocketForUser(socket.user.id, socket.id);
 
@@ -3546,6 +3883,10 @@ io.on('connection', (socket) => {
 
       if (!socket.data.room) return;
       if (messageType === 'text' && !text) return;
+
+      if (messageType === 'text' && await handleUniverseCommand({ socket, room: socket.data.room, text })) {
+        return;
+      }
       if (messageType !== 'text' && !fileData) return;
       if (fileData.startsWith('data:') && fileData.length > 7200000) {
         socket.emit('system_message', 'Dosya çok büyük. Storage kullanarak gönder.');
@@ -3589,6 +3930,8 @@ io.on('connection', (socket) => {
       );
 
       await rewardUserActivity(socket.user.id, 5, 1);
+      await addUniverseEnergy(2);
+      await maybeRewardLiveEventMessage(socket.user.id, room);
 
       const avatarResult = await pool.query('SELECT avatar_url, display_name, username, active_bubble_theme, active_name_effect, active_profile_frame FROM users WHERE id = $1', [socket.user.id]);
       const msg = saved.rows[0];
@@ -4046,6 +4389,29 @@ io.on('connection', (socket) => {
   });
 });
 
+
+function startUniverseSchedulers() {
+  if (global.__universeSchedulersStarted) return;
+  global.__universeSchedulersStarted = true;
+
+  setInterval(async () => {
+    try {
+      if (Math.random() < 0.35) await createPortalDrop(null);
+    } catch (error) {
+      console.error('Portal scheduler error:', error);
+    }
+  }, 7 * 60 * 1000);
+
+  setInterval(async () => {
+    try {
+      const state = await getUniverseState();
+      if (!state.active_event && Math.random() < 0.40) await startLiveEvent(null, 'scheduler');
+    } catch (error) {
+      console.error('Live event scheduler error:', error);
+    }
+  }, 12 * 60 * 1000);
+}
+
 function updateRoomUsers(room) {
   const users = Array.from(onlineUsers.values())
     .filter((user) => user.room === room)
@@ -4056,6 +4422,7 @@ function updateRoomUsers(room) {
 
 initDatabase()
   .then(() => {
+    startUniverseSchedulers();
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`Chat app çalışıyor. Port: ${PORT}`);
     });
