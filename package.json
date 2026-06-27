@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.9.4",
-  "description": "Selim Chat v10.9.4 mobile final composer sheet list fix",
+  "version": "10.9.5",
+  "description": "Selim Chat v10.9.5 mobile composer online dm list fixes",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
