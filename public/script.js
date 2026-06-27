@@ -1173,7 +1173,7 @@ avatarInput.addEventListener('change', async () => {
       body: JSON.stringify({ avatarData })
     });
 
-    user = data.user;
+    user = { ...(user || {}), ...(data.user || {}) };
     localStorage.setItem('chat_user', JSON.stringify(user));
     renderProfile();
     addSystemMessage('Profil fotoğrafı güncellendi.');
@@ -1531,13 +1531,12 @@ function applyLocalSettings() {
 
 async function restoreSessionUser() {
   if (!token) return false;
-  if (user?.id && user?.username) return true;
 
   try {
     const data = await api('/api/me');
     user = { ...(user || {}), ...(data.user || {}) };
     localStorage.setItem('chat_user', JSON.stringify(user));
-    return true;
+    return Boolean(user?.id && user?.username);
   } catch (error) {
     const msg = String(error?.message || '');
     if (/401|403|Token geçersiz|Geçersiz token|Yetkisiz/i.test(msg)) {
@@ -1550,6 +1549,7 @@ async function restoreSessionUser() {
     return Boolean(user?.id && user?.username);
   }
 }
+
 
 
 async function startApp() {
@@ -2019,7 +2019,7 @@ async function loadOldRoomMessages(room) {
         id: message.id,
         user_id: message.user_id,
         sender_id: message.user_id,
-        username: message.username,
+        username: message.display_name || message.username,
         avatar_url: message.avatar_url,
         text: message.text,
         message_type: message.message_type,
@@ -2508,7 +2508,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1053');
+    url.searchParams.set('v', '1054');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3875,11 +3875,29 @@ function markVisibleRoomMessagesRead() {
 
 
 
+
+function resolveOwnBubbleTheme(messageBubbleTheme, isOwnMessage) {
+  const fromMessage = String(messageBubbleTheme || '').trim();
+  if (fromMessage) return fromMessage;
+  if (!isOwnMessage) return '';
+  return String(user?.active_bubble_theme || '').trim();
+}
+
 function markOwnBubble(row, bubble, activeBubble = '') {
   if (!row || !bubble) return;
+  const bubbleId = String(activeBubble || '').trim();
+
   row.classList.add('mine', 'own-message', 'self');
+  row.dataset.mine = 'true';
+  row.dataset.bubbleTheme = bubbleId;
+
   bubble.classList.add('own-bubble');
-  if (activeBubble) bubble.classList.add('cosmetic-bubble-direct', `cosmetic-${activeBubble}`);
+  bubble.dataset.bubbleTheme = bubbleId;
+
+  if (bubbleId) {
+    row.classList.add(`cosmetic-${bubbleId}`);
+    bubble.classList.add(`cosmetic-${bubbleId}`);
+  }
 }
 
 function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read, readers, bubble_theme, name_effect, frame_theme }) {
@@ -3892,7 +3910,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
     (user && String(username || '').trim().toLowerCase() === String(user.username || '').trim().toLowerCase()) ||
     (user && String(username || '').trim().toLowerCase() === String(user.display_name || '').trim().toLowerCase())
   );
-  const activeBubble = (isOwnMessage ? (bubble_theme || user?.active_bubble_theme) : bubble_theme) || '';
+  const activeBubble = resolveOwnBubbleTheme(bubble_theme, isOwnMessage);
   const activeName = name_effect || (isOwnMessage ? user?.active_name_effect : '') || '';
   const activeFrame = frame_theme || (isOwnMessage ? user?.active_profile_frame : '') || '';
 
