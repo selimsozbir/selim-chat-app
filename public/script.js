@@ -1844,7 +1844,7 @@ function addDmMessage(message) {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '880');
+    url.searchParams.set('v', '881');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3669,6 +3669,7 @@ async function openProfile(userId) {
     profileAvatar.className = `profile-avatar-shell ${profile.active_profile_frame ? 'avatar-frame ' + profile.active_profile_frame : ''}`;
     if (profileCardV2) {
       profileCardV2.classList.remove('profile-theme_limbo','profile-theme_serbia','profile-theme_egypt','profile-theme_rome','profile-theme_vertex','profile-theme_five');
+      profileCardV2.dataset.profileTheme = profile.active_profile_theme || '';
       if (profile.active_profile_theme) profileCardV2.classList.add('profile-' + profile.active_profile_theme);
     }
     profileAvatar.innerHTML = avatarHtml(profile.username, profile.avatar_url, 'profile-avatar-inner');
