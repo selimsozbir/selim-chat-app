@@ -628,6 +628,7 @@ function syncRailActive(mode = chatMode) {
   document.getElementById('railRoomButton')?.classList.toggle('active', mode === 'room');
   document.getElementById('railDmButton')?.classList.toggle('active', mode === 'dm');
   document.getElementById('railGroupButton')?.classList.toggle('active', mode === 'group');
+  syncMobileNav?.();
 }
 
 
@@ -734,12 +735,12 @@ document.getElementById('railSettingsButton')?.addEventListener('click', () => {
 if (settingsButton) settingsButton.addEventListener('click', openSettings);
 
 bindMobileTap(mobileMenuButton, openMobileSidebar);
-bindMobileTap(mobileBackdrop, closeMobileSidebar);
-bindMobileTap(mobileSettingsButton, openSettings);
+bindMobileTap(mobileBackdrop, closeMobilePanels);
+bindMobileTap(mobileSettingsButton, () => { closeMobilePanels(); openSettings(); });
 
 bindMobileTap(mobileRoomButton, () => {
   setChatMode('room');
-  closeMobileSidebar();
+  closeMobilePanels();
   messageInput?.focus();
 });
 
@@ -759,7 +760,8 @@ bindMobileTap(mobileGroupButton, () => {
   openMobileSidebar();
 });
 
-bindMobileTap(mobilePanelButton, openMobileSidebar);
+bindMobileTap(mobilePanelButton, openMobileRightPanel);
+bindMobileTap(mobileGalleryButton, () => { closeMobilePanels(); openGalleryModal?.(); });
 if (refreshAdminLogsButton) refreshAdminLogsButton.addEventListener('click', loadAdminLogs);
 if (settingsCloseButton) settingsCloseButton.addEventListener('click', closeSettings);
 if (settingsModal) settingsModal.addEventListener('click', (event) => {
@@ -1405,7 +1407,7 @@ async function api(url, options = {}, withAuth = true) {
 
 
 function isMobileLayout() {
-  return window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+  return window.matchMedia && window.matchMedia('(max-width: 960px)').matches;
 }
 
 function bindMobileTap(element, handler) {
@@ -1427,27 +1429,58 @@ function bindMobileTap(element, handler) {
 
 function openMobileSidebar() {
   if (!isMobileLayout()) return;
+  closeMobileRightPanel(false);
   syncMobileNav();
   document.body.classList.add('mobile-sidebar-open');
   mobileBackdrop?.classList.remove('hidden');
 }
 
-function closeMobileSidebar() {
+function closeMobileSidebar(hideBackdrop = true) {
   document.body.classList.remove('mobile-sidebar-open');
+  if (hideBackdrop && !document.body.classList.contains('mobile-right-panel-open')) {
+    mobileBackdrop?.classList.add('hidden');
+  }
+}
+
+function openMobileRightPanel() {
+  if (!isMobileLayout()) return;
+  closeMobileSidebar(false);
+  document.body.classList.add('mobile-right-panel-open');
+  mobileBackdrop?.classList.remove('hidden');
+  syncMobileNav();
+  setTimeout(() => {
+    const panel = document.querySelector('.right-panel');
+    const hub = document.querySelector('.gamify-box');
+    if (panel && hub) panel.scrollTo({ top: Math.max(0, hub.offsetTop - 10), behavior: 'smooth' });
+  }, 40);
+}
+
+function closeMobileRightPanel(hideBackdrop = true) {
+  document.body.classList.remove('mobile-right-panel-open');
+  if (hideBackdrop && !document.body.classList.contains('mobile-sidebar-open')) {
+    mobileBackdrop?.classList.add('hidden');
+  }
+  syncMobileNav();
+}
+
+function closeMobilePanels() {
+  document.body.classList.remove('mobile-sidebar-open', 'mobile-right-panel-open');
   mobileBackdrop?.classList.add('hidden');
+  syncMobileNav();
 }
 
 function closeMobilePanelsAfterSelect() {
   if (!isMobileLayout?.()) return;
-  closeMobileSidebar?.();
-  document.body.classList.remove('mobile-right-panel-open');
+  closeMobilePanels();
 }
 
 function syncMobileNav() {
   if (!mobileRoomButton || !mobileDmButton || !mobileGroupButton) return;
-  mobileRoomButton.classList.toggle('active', chatMode === 'room');
-  mobileDmButton.classList.toggle('active', chatMode === 'dm');
-  mobileGroupButton.classList.toggle('active', chatMode === 'group');
+  const rightOpen = document.body.classList.contains('mobile-right-panel-open');
+  mobileRoomButton.classList.toggle('active', chatMode === 'room' && !rightOpen);
+  mobileDmButton.classList.toggle('active', chatMode === 'dm' && !rightOpen);
+  mobileGroupButton.classList.toggle('active', chatMode === 'group' && !rightOpen);
+  mobilePanelButton?.classList.toggle('active', rightOpen);
 }
 
 function syncMobileHeader() {
@@ -2557,7 +2590,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1084');
+    url.searchParams.set('v', '1090');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
