@@ -7678,3 +7678,43 @@ body {
     font-size: 20px !important;
   }
 }
+
+
+/* =========================================================
+   v8.8.4 — Profile Modal Startup Fix
+   Site açılınca profil modalının boş şekilde ekrana gelmesini engeller.
+   ========================================================= */
+
+/* Hidden her zaman kazanmalı. v8.8.3'te .profile-modal display:block !important hidden'ı eziyordu. */
+.hidden,
+.profile-modal.hidden,
+#profileModal.hidden {
+  display: none !important;
+}
+
+/* Profil sadece hidden değilken görünür. */
+.profile-modal:not(.hidden),
+#profileModal:not(.hidden) {
+  display: block !important;
+}
+
+/* Profil açıkken arka plan blur kalsın ama modal yanlışlıkla sayfaya yapışmasın. */
+#profileModal.profile-modal:not(.hidden) {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 10020 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 18px 12px 80px !important;
+  background: rgba(0,0,0,.75) !important;
+}
+
+/* Kart merkezde ve düzgün açılsın. */
+#profileModal:not(.hidden) .profile-card-v2 {
+  margin: 0 auto !important;
+}
+
+/* Kapak fix'i korunur. */
+#profileModal:not(.hidden) .profile-cover-v2 {
+  background-position: center top !important;
+}
