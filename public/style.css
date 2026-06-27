@@ -15968,3 +15968,64 @@ button:hover {
   border-right: inherit !important;
   border-top: inherit !important;
 }
+
+
+/* =========================================================
+   v10.5.4 — Final market bubble application
+   Uses data-bubble-theme and direct .msg-bubble classes.
+   ========================================================= */
+
+.message[data-mine="true"] > .msg-bubble[data-bubble-theme="bubble_vertex"],
+.msg-bubble.cosmetic-bubble_vertex {
+  background: linear-gradient(135deg, rgba(239, 68, 68, .94), rgba(127, 29, 29, .92)) !important;
+  border-color: rgba(248,113,113,.36) !important;
+  box-shadow: 0 14px 34px rgba(239,68,68,.22), inset 0 1px 0 rgba(255,255,255,.13) !important;
+  color: #fff !important;
+}
+
+.message[data-mine="true"] > .msg-bubble[data-bubble-theme="bubble_limbo"],
+.msg-bubble.cosmetic-bubble_limbo {
+  background: linear-gradient(135deg, rgba(17,24,39,.99), rgba(3,7,18,.97)) !important;
+  border-color: rgba(148,163,184,.24) !important;
+  box-shadow: 0 14px 34px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.08) !important;
+  color: #f8fafc !important;
+}
+
+.message[data-mine="true"] > .msg-bubble[data-bubble-theme="bubble_ice"],
+.msg-bubble.cosmetic-bubble_ice {
+  background: linear-gradient(135deg, rgba(14,165,233,.88), rgba(59,130,246,.80), rgba(224,242,254,.34)) !important;
+  border-color: rgba(186,230,253,.40) !important;
+  box-shadow: 0 14px 34px rgba(14,165,233,.22), inset 0 1px 0 rgba(255,255,255,.15) !important;
+  color: #f8fafc !important;
+}
+
+.message[data-mine="true"] > .msg-bubble[data-bubble-theme="bubble_gold"],
+.msg-bubble.cosmetic-bubble_gold {
+  background: linear-gradient(135deg, rgba(245,158,11,.96), rgba(120,53,15,.92)) !important;
+  border-color: rgba(253,230,138,.40) !important;
+  box-shadow: 0 14px 34px rgba(245,158,11,.24), inset 0 1px 0 rgba(255,255,255,.17) !important;
+  color: #fff7ed !important;
+}
+
+.message[data-mine="true"] > .msg-bubble[data-bubble-theme="bubble_serbia"],
+.msg-bubble.cosmetic-bubble_serbia {
+  background: linear-gradient(135deg, rgba(91,33,182,.98), rgba(190,24,93,.90), rgba(30,64,175,.84)) !important;
+  border-color: rgba(216,180,254,.36) !important;
+  box-shadow: 0 14px 34px rgba(168,85,247,.24), inset 0 1px 0 rgba(255,255,255,.15) !important;
+  color: #fff !important;
+}
+
+.message[data-mine="true"] > .msg-bubble[data-bubble-theme^="bubble_"] .text,
+.message[data-mine="true"] > .msg-bubble[data-bubble-theme^="bubble_"] .meta,
+.msg-bubble[class*="cosmetic-bubble_"] .text,
+.msg-bubble[class*="cosmetic-bubble_"] .meta {
+  color: #ffffff !important;
+}
+
+/* Tail inherits actual equipped bubble */
+.message[data-mine="true"] > .msg-bubble[data-bubble-theme^="bubble_"]::before,
+.msg-bubble[class*="cosmetic-bubble_"]::before {
+  background: inherit !important;
+  border-right: inherit !important;
+  border-top: inherit !important;
+}
