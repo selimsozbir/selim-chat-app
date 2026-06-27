@@ -6803,3 +6803,135 @@ body {
 .admin-user-item .mini-actions {
   gap: 5px !important;
 }
+
+
+/* =========================================================
+   v8.5.0 — Daily Rewards / Lootbox / Admin Logs
+   ========================================================= */
+
+.gamify-tabs {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+
+.daily-card,
+.lootbox-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at top left, rgba(139,92,246,.18), transparent 36%),
+    rgba(24,24,31,.78);
+  border: 1px solid rgba(255,255,255,.07);
+}
+
+.daily-icon,
+.lootbox-crate,
+.lootbox-win-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  font-size: 22px;
+  background: rgba(139,92,246,.18);
+}
+
+.daily-main strong,
+.lootbox-card strong,
+.lootbox-win strong {
+  display: block;
+  color: white;
+  font-size: 13px;
+}
+
+.daily-main span,
+.daily-streak,
+.lootbox-card span,
+.lootbox-win span,
+.lootbox-history span {
+  display: block;
+  color: #a1a1aa;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.lootbox-result {
+  margin: 10px 0;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(0,0,0,.22);
+  color: #e5e7eb;
+  font-size: 13px;
+}
+
+.lootbox-opening {
+  text-align: center;
+  font-weight: 900;
+  animation: lootboxPulse .8s ease-in-out infinite alternate;
+}
+
+@keyframes lootboxPulse {
+  from { transform: scale(.98); opacity: .75; }
+  to { transform: scale(1.02); opacity: 1; }
+}
+
+.lootbox-win {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.lootbox-win.rarity-legendary {
+  color: #fde68a;
+  text-shadow: 0 0 18px rgba(251,191,36,.45);
+}
+
+.lootbox-win.rarity-epic {
+  color: #f5d0fe;
+  text-shadow: 0 0 18px rgba(168,85,247,.45);
+}
+
+.lootbox-history {
+  padding: 9px;
+  border-radius: 13px;
+  background: rgba(24,24,31,.78);
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+.lootbox-history strong {
+  display: block;
+  color: white;
+  font-size: 12px;
+}
+
+.admin-logs-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.admin-log-item {
+  align-items: flex-start;
+}
+
+.admin-log-item span {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .daily-card,
+  .lootbox-card {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .daily-card button,
+  .lootbox-card button {
+    grid-column: 1 / -1;
+  }
+}
