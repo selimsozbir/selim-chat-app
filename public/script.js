@@ -2165,7 +2165,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '935');
+    url.searchParams.set('v', '936');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2811,6 +2811,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
     avatar.title = 'Profili aç';
     avatar.addEventListener('click', (event) => {
       event.stopPropagation();
+      if (isMobileLayout && isMobileLayout()) return;
       openProfile(profileTargetId);
     });
   }
@@ -2830,6 +2831,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
     meta.title = 'Profili aç';
     meta.addEventListener('click', (event) => {
       event.stopPropagation();
+      if (isMobileLayout && isMobileLayout()) return;
       openProfile(profileTargetId);
     });
   }
@@ -5259,4 +5261,46 @@ function mobileComposerHardSnap() {
 
 messageInput?.addEventListener('focus', mobileComposerHardSnap);
 messageInput?.addEventListener('input', mobileComposerHardSnap);
+
+
+
+/* v9.3.6 stable mobile mode: no fixed composer hacks, grid handles keyboard */
+function stableMobileViewportUpdate() {
+  const h = Math.round(window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 700);
+  document.documentElement.style.setProperty('--mobile-vvh', `${h}px`);
+}
+
+function stableMobileKeyboardState() {
+  if (!isMobileLayout || !isMobileLayout()) return;
+  stableMobileViewportUpdate();
+  const focused = document.activeElement === messageInput;
+  document.body.classList.toggle('keyboard-open', focused);
+  document.body.classList.toggle('composer-focused', focused);
+  if (focused) {
+    setTimeout(() => {
+      try {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      } catch {}
+    }, 60);
+    setTimeout(() => {
+      try {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      } catch {}
+    }, 220);
+  }
+}
+
+window.visualViewport?.addEventListener('resize', stableMobileKeyboardState);
+window.visualViewport?.addEventListener('scroll', stableMobileKeyboardState);
+window.addEventListener('resize', stableMobileKeyboardState);
+window.addEventListener('orientationchange', () => setTimeout(stableMobileKeyboardState, 250));
+messageInput?.addEventListener('focus', stableMobileKeyboardState);
+messageInput?.addEventListener('blur', () => setTimeout(stableMobileKeyboardState, 120));
+messageInput?.addEventListener('input', stableMobileKeyboardState);
+window.addEventListener('load', stableMobileKeyboardState);
+
+/* Mobile profile: backdrop tap closes, close button always works */
+profileModal?.addEventListener('click', (event) => {
+  if (isMobileLayout && isMobileLayout() && event.target === profileModal) closeProfile();
+});
 
