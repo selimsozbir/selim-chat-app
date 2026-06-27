@@ -7390,3 +7390,291 @@ body {
     padding-right: 16px !important;
   }
 }
+
+
+/* =========================================================
+   v8.8.3 — Profile Cover Alignment + Premium Themes
+   Kapak fotoğrafı artık üstten başlar, aşağı kaymış gibi durmaz.
+   Temalar komple yeniden polish edildi.
+   ========================================================= */
+
+.profile-modal {
+  display: block !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 18px 12px 80px !important;
+  text-align: center;
+}
+
+.profile-card-v2 {
+  position: relative !important;
+  display: block !important;
+  margin: 0 auto !important;
+  width: min(560px, 94vw) !important;
+  max-height: none !important;
+  min-height: auto !important;
+  overflow: visible !important;
+  border-radius: 24px !important;
+  background: #080b14 !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  box-shadow: 0 22px 80px rgba(0,0,0,.62) !important;
+  text-align: left;
+}
+
+/* Close butonu artık kapağın üstünde boşluk oluşturmuyor */
+.profile-close {
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  z-index: 50 !important;
+  width: 34px !important;
+  height: 34px !important;
+  display: grid !important;
+  place-items: center !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  background: rgba(3,7,18,.72) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 28px rgba(0,0,0,.35);
+}
+
+/* Kapak düzeltmesi: üstten başlar, taşmaz, çirkin aşağı kayma yok */
+.profile-cover-v2 {
+  margin: 0 !important;
+  height: 132px !important;
+  min-height: 132px !important;
+  width: 100% !important;
+  border-radius: 23px 23px 0 0 !important;
+  overflow: hidden !important;
+  background-size: cover !important;
+  background-position: center top !important;
+  background-repeat: no-repeat !important;
+  box-shadow: inset 0 -52px 52px rgba(3,7,18,.72) !important;
+}
+
+.profile-cover-v2::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(3,7,18,.04) 0%, rgba(3,7,18,.12) 42%, rgba(3,7,18,.82) 100%);
+  z-index: 2;
+}
+
+.profile-cover-shine {
+  opacity: .28 !important;
+  z-index: 3 !important;
+}
+
+.profile-main-v2 {
+  position: relative !important;
+  margin-top: -34px !important;
+  padding: 0 18px 14px !important;
+  align-items: flex-end !important;
+  z-index: 6 !important;
+}
+
+.profile-avatar-v2 {
+  width: 88px !important;
+  height: 88px !important;
+  border: 4px solid #080b14 !important;
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.56),
+    0 0 0 1px rgba(255,255,255,.09) !important;
+}
+
+.profile-identity-v2 {
+  padding: 10px 12px 10px !important;
+  border-radius: 18px !important;
+  background: rgba(7,10,19,.72) !important;
+  border: 1px solid rgba(255,255,255,.07) !important;
+  backdrop-filter: blur(12px);
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-identity-v2 h2 {
+  font-size: 24px !important;
+  line-height: 1.08 !important;
+}
+
+.profile-identity-v2 #profileBio {
+  margin-top: 8px !important;
+  padding-top: 8px !important;
+  border-top: 1px solid rgba(255,255,255,.08);
+  font-size: 13px;
+}
+
+/* Premium tema sistemi: kart değil atmosfer değişir */
+.profile-card-v2.profile-theme_limbo,
+.profile-card-v2.profile-theme_serbia,
+.profile-card-v2.profile-theme_egypt,
+.profile-card-v2.profile-theme_rome,
+.profile-card-v2.profile-theme_vertex,
+.profile-card-v2.profile-theme_five,
+.active-theme-theme_limbo .profile-card-v2,
+.active-theme-theme_serbia .profile-card-v2,
+.active-theme-theme_egypt .profile-card-v2,
+.active-theme-theme_rome .profile-card-v2,
+.active-theme-theme_vertex .profile-card-v2,
+.active-theme-theme_five .profile-card-v2 {
+  background: linear-gradient(180deg, #090d18 0%, #050711 100%) !important;
+}
+
+/* Varsayılan tema atmosferi */
+.profile-card-v2::before {
+  z-index: 0 !important;
+  opacity: 1 !important;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(139,92,246,.16), transparent 32%),
+    radial-gradient(circle at 90% 4%, rgba(34,211,238,.08), transparent 30%) !important;
+}
+
+/* Her tema için kapağa özel üst atmosfer */
+.profile-card-v2.profile-theme_limbo .profile-cover-v2,
+.active-theme-theme_limbo .profile-card-v2 .profile-cover-v2 {
+  box-shadow: inset 0 -54px 54px rgba(0,0,0,.86), inset 0 0 0 1px rgba(148,163,184,.10) !important;
+  filter: saturate(.72) contrast(1.1) brightness(.82);
+}
+
+.profile-card-v2.profile-theme_limbo::before,
+.active-theme-theme_limbo .profile-card-v2::before {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(148,163,184,.13), transparent 34%),
+    linear-gradient(135deg, rgba(0,0,0,.22), rgba(39,39,42,.10)) !important;
+}
+
+.profile-card-v2.profile-theme_serbia .profile-cover-v2,
+.active-theme-theme_serbia .profile-card-v2 .profile-cover-v2 {
+  box-shadow: inset 0 -54px 54px rgba(34,6,49,.82), inset 0 0 0 1px rgba(168,85,247,.20) !important;
+  filter: saturate(1.15) contrast(1.04) brightness(.90);
+}
+
+.profile-card-v2.profile-theme_serbia::before,
+.active-theme-theme_serbia .profile-card-v2::before {
+  background:
+    radial-gradient(circle at 14% 0%, rgba(168,85,247,.26), transparent 36%),
+    radial-gradient(circle at 92% 2%, rgba(239,68,68,.13), transparent 34%),
+    linear-gradient(135deg, rgba(76,29,149,.10), rgba(127,29,29,.06)) !important;
+}
+
+.profile-card-v2.profile-theme_egypt .profile-cover-v2,
+.active-theme-theme_egypt .profile-card-v2 .profile-cover-v2 {
+  box-shadow: inset 0 -54px 54px rgba(65,37,10,.84), inset 0 0 0 1px rgba(245,158,11,.20) !important;
+  filter: sepia(.10) saturate(1.05) contrast(1.02) brightness(.92);
+}
+
+.profile-card-v2.profile-theme_egypt::before,
+.active-theme-theme_egypt .profile-card-v2::before {
+  background:
+    radial-gradient(circle at 14% 0%, rgba(245,158,11,.25), transparent 36%),
+    radial-gradient(circle at 92% 4%, rgba(180,83,9,.10), transparent 32%) !important;
+}
+
+.profile-card-v2.profile-theme_rome .profile-cover-v2,
+.active-theme-theme_rome .profile-card-v2 .profile-cover-v2 {
+  box-shadow: inset 0 -54px 54px rgba(46,31,8,.84), inset 0 0 0 1px rgba(234,179,8,.22) !important;
+  filter: sepia(.08) saturate(1.08) contrast(1.02) brightness(.92);
+}
+
+.profile-card-v2.profile-theme_rome::before,
+.active-theme-theme_rome .profile-card-v2::before {
+  background:
+    radial-gradient(circle at 14% 0%, rgba(234,179,8,.22), transparent 36%),
+    radial-gradient(circle at 92% 4%, rgba(168,85,247,.08), transparent 32%) !important;
+}
+
+.profile-card-v2.profile-theme_vertex .profile-cover-v2,
+.active-theme-theme_vertex .profile-card-v2 .profile-cover-v2 {
+  box-shadow: inset 0 -54px 54px rgba(58,8,12,.88), inset 0 0 0 1px rgba(239,68,68,.24) !important;
+  filter: saturate(1.18) contrast(1.08) brightness(.86);
+}
+
+.profile-card-v2.profile-theme_vertex::before,
+.active-theme-theme_vertex .profile-card-v2::before {
+  background:
+    radial-gradient(circle at 14% 0%, rgba(239,68,68,.28), transparent 36%),
+    repeating-linear-gradient(90deg, rgba(239,68,68,.035) 0 1px, transparent 1px 18px) !important;
+}
+
+.profile-card-v2.profile-theme_five .profile-cover-v2,
+.active-theme-theme_five .profile-card-v2 .profile-cover-v2 {
+  box-shadow: inset 0 -54px 54px rgba(7,22,45,.84), inset 0 0 0 1px rgba(34,211,238,.22) !important;
+  filter: saturate(1.14) contrast(1.04) brightness(.90);
+}
+
+.profile-card-v2.profile-theme_five::before,
+.active-theme-theme_five .profile-card-v2::before {
+  background:
+    radial-gradient(circle at 14% 0%, rgba(34,211,238,.24), transparent 34%),
+    radial-gradient(circle at 88% 3%, rgba(236,72,153,.18), transparent 34%),
+    radial-gradient(circle at 50% 0%, rgba(139,92,246,.12), transparent 38%) !important;
+}
+
+/* Tema aksanları: stat ve meta kartları daha premium */
+.profile-card-v2.profile-theme_serbia .profile-stats-v2 div,
+.profile-card-v2.profile-theme_serbia .profile-meta-v2 div,
+.active-theme-theme_serbia .profile-card-v2 .profile-stats-v2 div,
+.active-theme-theme_serbia .profile-card-v2 .profile-meta-v2 div {
+  border-color: rgba(168,85,247,.18) !important;
+  background: rgba(88,28,135,.10) !important;
+}
+
+.profile-card-v2.profile-theme_egypt .profile-stats-v2 div,
+.profile-card-v2.profile-theme_egypt .profile-meta-v2 div,
+.active-theme-theme_egypt .profile-card-v2 .profile-stats-v2 div,
+.active-theme-theme_egypt .profile-card-v2 .profile-meta-v2 div,
+.profile-card-v2.profile-theme_rome .profile-stats-v2 div,
+.profile-card-v2.profile-theme_rome .profile-meta-v2 div,
+.active-theme-theme_rome .profile-card-v2 .profile-stats-v2 div,
+.active-theme-theme_rome .profile-card-v2 .profile-meta-v2 div {
+  border-color: rgba(245,158,11,.18) !important;
+  background: rgba(120,53,15,.10) !important;
+}
+
+.profile-card-v2.profile-theme_vertex .profile-stats-v2 div,
+.profile-card-v2.profile-theme_vertex .profile-meta-v2 div,
+.active-theme-theme_vertex .profile-card-v2 .profile-stats-v2 div,
+.active-theme-theme_vertex .profile-card-v2 .profile-meta-v2 div {
+  border-color: rgba(239,68,68,.18) !important;
+  background: rgba(127,29,29,.11) !important;
+}
+
+.profile-card-v2.profile-theme_five .profile-stats-v2 div,
+.profile-card-v2.profile-theme_five .profile-meta-v2 div,
+.active-theme-theme_five .profile-card-v2 .profile-stats-v2 div,
+.active-theme-theme_five .profile-card-v2 .profile-meta-v2 div {
+  border-color: rgba(34,211,238,.18) !important;
+  background: rgba(14,165,233,.08) !important;
+}
+
+@media (max-width: 760px) {
+  .profile-modal {
+    padding: 8px 6px 96px !important;
+  }
+
+  .profile-card-v2 {
+    width: min(100%, 97vw) !important;
+    border-radius: 20px !important;
+  }
+
+  .profile-cover-v2 {
+    height: 118px !important;
+    min-height: 118px !important;
+    border-radius: 19px 19px 0 0 !important;
+  }
+
+  .profile-main-v2 {
+    margin-top: -30px !important;
+    padding: 0 12px 12px !important;
+  }
+
+  .profile-avatar-v2 {
+    width: 78px !important;
+    height: 78px !important;
+  }
+
+  .profile-identity-v2 h2 {
+    font-size: 20px !important;
+  }
+}
