@@ -787,8 +787,59 @@ async function ensureServerInviteCode(serverId) {
   throw new Error('Davet kodu üretilemedi.');
 }
 
+function serverPermissionSet(role) {
+  const r = String(role || 'member');
+  return {
+    can_manage_roles: r === 'owner',
+    can_create_channels: ['owner', 'admin'].includes(r),
+    can_delete_channels: ['owner', 'admin'].includes(r),
+    can_create_invites: ['owner', 'admin', 'mod'].includes(r),
+    can_kick_members: ['owner', 'admin'].includes(r),
+    can_write: ['owner', 'admin', 'mod', 'member'].includes(r)
+  };
+}
+
+function canSetServerRole(actorRole, targetRole, newRole) {
+  if (actorRole !== 'owner') return false;
+  if (targetRole === 'owner') return false;
+  return ['admin', 'mod', 'member'].includes(newRole);
+}
+
+function serverRoleLabel(role) {
+  if (role === 'owner') return 'Owner';
+  if (role === 'admin') return 'Admin';
+  if (role === 'mod') return 'Mod';
+  return 'Üye';
+}
+
 function serverRoomName(serverId, channelId) {
   return `srv_${Number(serverId)}_${Number(channelId)}`;
+}
+
+function parseServerRoomName(room) {
+  const match = String(room || '').match(/^srv_(\d+)_(\d+)$/);
+  if (!match) return null;
+  return { serverId: Number(match[1]), channelId: Number(match[2]) };
+}
+
+async function canUseServerChannelRoom(room, userId) {
+  const parsed = parseServerRoomName(room);
+  if (!parsed) return { ok: false };
+
+  const result = await pool.query(
+    `SELECT sc.id, sc.name, sc.server_id, sm.role, cs.owner_id
+     FROM server_channels sc
+     JOIN chat_servers cs ON cs.id = sc.server_id
+     JOIN server_members sm ON sm.server_id = sc.server_id AND sm.user_id = $3
+     WHERE sc.server_id = $1 AND sc.id = $2
+     LIMIT 1`,
+    [parsed.serverId, parsed.channelId, userId]
+  );
+
+  if (result.rows.length === 0) return { ok: false };
+  const row = result.rows[0];
+  const role = Number(row.owner_id) === Number(userId) ? 'owner' : row.role;
+  return { ok: true, role, channel: row };
 }
 
 async function ensureDefaultChannel(serverId) {
@@ -825,7 +876,8 @@ async function getServerSummary(serverId, userId) {
 
   if (result.rows.length === 0) return null;
   const s = result.rows[0];
-  return { ...s, my_role: Number(s.owner_id) === Number(userId) ? 'owner' : s.role };
+  const myRole = Number(s.owner_id) === Number(userId) ? 'owner' : s.role;
+  return { ...s, my_role: myRole, permissions: serverPermissionSet(myRole) };
 }
 
 
@@ -2893,7 +2945,7 @@ app.post('/api/servers/:serverId/channels', authMiddleware, async (req, res) => 
   if (!Number.isInteger(serverId)) return res.status(400).json({ error: 'Geçersiz sunucu.' });
 
   const member = await getServerMember(serverId, req.user.id);
-  if (!member || !['owner', 'admin'].includes(member.role)) return res.status(403).json({ error: 'Kanal oluşturma yetkin yok.' });
+  if (!member || !serverPermissionSet(member.role).can_create_channels) return res.status(403).json({ error: 'Kanal oluşturma yetkin yok.' });
 
   const pos = await pool.query('SELECT COALESCE(MAX(position), 0) + 1 AS next_pos FROM server_channels WHERE server_id = $1', [serverId]);
   const result = await pool.query(
@@ -2915,7 +2967,7 @@ app.post('/api/servers/:serverId/invite', authMiddleware, async (req, res) => {
   if (!Number.isInteger(serverId)) return res.status(400).json({ error: 'Geçersiz sunucu.' });
 
   const member = await getServerMember(serverId, req.user.id);
-  if (!member || !['owner', 'admin'].includes(member.role)) return res.status(403).json({ error: 'Davet linki alma yetkin yok.' });
+  if (!member || !serverPermissionSet(member.role).can_create_invites) return res.status(403).json({ error: 'Davet linki alma yetkin yok.' });
 
   const code = await ensureServerInviteCode(serverId);
   res.json({ ok: true, code, invite_url: `/invite/${code}` });
@@ -2952,7 +3004,7 @@ app.post('/api/servers/:serverId/members', authMiddleware, async (req, res) => {
   if (!Number.isInteger(serverId) || !Number.isInteger(userId)) return res.status(400).json({ error: 'Geçersiz istek.' });
 
   const member = await getServerMember(serverId, req.user.id);
-  if (!member || !['owner', 'admin'].includes(member.role)) return res.status(403).json({ error: 'Sunucuya üye ekleme yetkin yok.' });
+  if (!member || !serverPermissionSet(member.role).can_create_invites) return res.status(403).json({ error: 'Sunucuya üye ekleme yetkin yok.' });
 
   const ok = await areFriends(req.user.id, userId);
   if (!ok) return res.status(403).json({ error: 'Sunucuya sadece arkadaşlarını ekleyebilirsin.' });
@@ -2972,6 +3024,59 @@ app.post('/api/servers/:serverId/members', authMiddleware, async (req, res) => {
   res.json({ ok: true });
 });
 
+
+app.patch('/api/servers/:serverId/members/:userId', authMiddleware, async (req, res) => {
+  const serverId = Number(req.params.serverId);
+  const userId = Number(req.params.userId);
+  const role = cleanText(req.body.role, 20);
+
+  if (!Number.isInteger(serverId) || !Number.isInteger(userId)) return res.status(400).json({ error: 'Geçersiz üye.' });
+  if (!['admin', 'mod', 'member'].includes(role)) return res.status(400).json({ error: 'Geçersiz rol.' });
+
+  const actor = await getServerMember(serverId, req.user.id);
+  const target = await getServerMember(serverId, userId);
+
+  if (!actor || !target) return res.status(404).json({ error: 'Sunucu/üye bulunamadı.' });
+  if (!canSetServerRole(actor.role, target.role, role)) return res.status(403).json({ error: 'Rol değiştirme yetkin yok.' });
+
+  await pool.query(
+    'UPDATE server_members SET role = $1 WHERE server_id = $2 AND user_id = $3',
+    [role, serverId, userId]
+  );
+
+  emitToUser(userId, 'notification', {
+    type: 'system',
+    payload: { text: `Sunucu rolün ${serverRoleLabel(role)} olarak güncellendi.` }
+  });
+
+  res.json({ ok: true, role });
+});
+
+app.delete('/api/servers/:serverId/members/:userId', authMiddleware, async (req, res) => {
+  const serverId = Number(req.params.serverId);
+  const userId = Number(req.params.userId);
+
+  if (!Number.isInteger(serverId) || !Number.isInteger(userId)) return res.status(400).json({ error: 'Geçersiz üye.' });
+
+  const actor = await getServerMember(serverId, req.user.id);
+  const target = await getServerMember(serverId, userId);
+
+  if (!actor || !target) return res.status(404).json({ error: 'Sunucu/üye bulunamadı.' });
+  if (!serverPermissionSet(actor.role).can_kick_members) return res.status(403).json({ error: 'Üye çıkarma yetkin yok.' });
+  if (target.role === 'owner') return res.status(403).json({ error: 'Owner çıkarılamaz.' });
+  if (actor.role === 'admin' && target.role === 'admin') return res.status(403).json({ error: 'Admin başka admini çıkaramaz.' });
+
+  await pool.query('DELETE FROM server_members WHERE server_id = $1 AND user_id = $2', [serverId, userId]);
+
+  emitToUser(userId, 'notification', {
+    type: 'system',
+    payload: { text: 'Bir sunucudan çıkarıldın.' }
+  });
+
+  res.json({ ok: true });
+});
+
+
 app.delete('/api/servers/:serverId/channels/:channelId', authMiddleware, async (req, res) => {
   const serverId = Number(req.params.serverId);
   const channelId = Number(req.params.channelId);
@@ -2979,7 +3084,7 @@ app.delete('/api/servers/:serverId/channels/:channelId', authMiddleware, async (
   if (!Number.isInteger(serverId) || !Number.isInteger(channelId)) return res.status(400).json({ error: 'Geçersiz kanal.' });
 
   const member = await getServerMember(serverId, req.user.id);
-  if (!member || !['owner', 'admin'].includes(member.role)) return res.status(403).json({ error: 'Kanal silme yetkin yok.' });
+  if (!member || !serverPermissionSet(member.role).can_delete_channels) return res.status(403).json({ error: 'Kanal silme yetkin yok.' });
 
   const count = await pool.query('SELECT COUNT(*)::int AS count FROM server_channels WHERE server_id = $1', [serverId]);
   if (Number(count.rows[0]?.count || 0) <= 1) return res.status(400).json({ error: 'Son kanalı silemezsin.' });
@@ -3551,7 +3656,24 @@ io.on('connection', (socket) => {
   addSocketForUser(socket.user.id, socket.id);
 
   socket.on('join', async ({ room }) => {
-    const cleanRoom = cleanText(room, 50).toLowerCase() || 'genel';
+    const cleanRoom = cleanText(room, 80).toLowerCase() || 'genel';
+
+    const serverRoom = parseServerRoomName(cleanRoom);
+    if (serverRoom) {
+      const access = await canUseServerChannelRoom(cleanRoom, socket.user.id);
+      if (!access.ok) {
+        socket.emit('system_message', 'Bu sunucu kanalına erişimin yok.');
+        return;
+      }
+
+      if (socket.data.room) socket.leave(socket.data.room);
+      socket.data.room = cleanRoom;
+      socket.join(cleanRoom);
+
+      onlineUsers.set(socket.id, { id: socket.user.id, username: socket.user.username, room: cleanRoom });
+      socket.emit('room_role', { room: cleanRoom, role: access.role || 'member' });
+      return;
+    }
 
     if (await isRoomBanned(cleanRoom, socket.user.id)) {
       socket.emit('system_message', 'Bu odadan banlandın.');
@@ -3585,6 +3707,22 @@ io.on('connection', (socket) => {
       const filePath = cleanText(payload.filePath || '', 500) || null;
       const fileSize = Number(payload.fileSize) || null;
 
+      const requestedRoom = cleanText(payload.room || '', 80).toLowerCase();
+      if (requestedRoom && parseServerRoomName(requestedRoom)) {
+        const access = await canUseServerChannelRoom(requestedRoom, socket.user.id);
+        if (!access.ok) {
+          socket.emit('system_message', 'Bu sunucu kanalına mesaj gönderme yetkin yok.');
+          return;
+        }
+
+        if (socket.data.room !== requestedRoom) {
+          if (socket.data.room) socket.leave(socket.data.room);
+          socket.data.room = requestedRoom;
+          socket.join(requestedRoom);
+          onlineUsers.set(socket.id, { id: socket.user.id, username: socket.user.username, room: requestedRoom });
+        }
+      }
+
       if (!socket.data.room) return;
       if (messageType === 'text' && !text) return;
       if (messageType !== 'text' && !fileData) return;
@@ -3595,14 +3733,16 @@ io.on('connection', (socket) => {
 
       const room = socket.data.room;
 
-      if (await isRoomBanned(room, socket.user.id)) {
-        socket.emit('system_message', 'Bu odadan banlandın.');
-        return;
-      }
+      if (!parseServerRoomName(room)) {
+        if (await isRoomBanned(room, socket.user.id)) {
+          socket.emit('system_message', 'Bu odadan banlandın.');
+          return;
+        }
 
-      if (await isRoomMuted(room, socket.user.id)) {
-        socket.emit('system_message', 'Bu odada susturuldun.');
-        return;
+        if (await isRoomMuted(room, socket.user.id)) {
+          socket.emit('system_message', 'Bu odada susturuldun.');
+          return;
+        }
       }
 
       let replyToId = Number(payload.replyToId);
