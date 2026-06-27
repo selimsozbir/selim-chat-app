@@ -1,0 +1,279 @@
+/* =========================================================
+   Selim Chat v10.5.0 — MOBILE CSS
+   Mobile-only layout.
+   Chat first + bottom nav + sheet/modal panels.
+   ========================================================= */
+
+@media (max-width: 960px) {
+  html,
+  body {
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  .app {
+    height: 100dvh !important;
+    width: 100vw !important;
+    overflow: hidden !important;
+  }
+
+  .chat-screen {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    grid-template-areas:
+      "topbar"
+      "chat"
+      "bottomnav" !important;
+    height: 100dvh !important;
+    width: 100vw !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    background: #0b0d12 !important;
+    overflow: hidden !important;
+  }
+
+  .mobile-topbar {
+    grid-area: topbar !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    height: calc(56px + env(safe-area-inset-top)) !important;
+    padding: env(safe-area-inset-top) 12px 0 !important;
+    border-bottom: 1px solid rgba(255,255,255,.08) !important;
+    background: rgba(14,16,22,.94) !important;
+    backdrop-filter: blur(18px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(150%) !important;
+    z-index: 80 !important;
+  }
+
+  .chat-main {
+    grid-area: chat !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #0b0d12 !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+  }
+
+  .chat-header {
+    display: none !important;
+  }
+
+  .messages {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    padding: 14px 12px 10px !important;
+    padding-bottom: 10px !important;
+  }
+
+  .typing,
+  #typingText {
+    min-height: 18px !important;
+    padding: 0 12px !important;
+  }
+
+  .reply-bar {
+    margin: 0 10px 8px !important;
+  }
+
+  .message-form {
+    flex: 0 0 auto !important;
+    margin: 0 8px 8px !important;
+    padding: 8px !important;
+    border-radius: 20px !important;
+    display: grid !important;
+    grid-template-columns: auto auto auto minmax(0, 1fr) auto !important;
+    gap: 6px !important;
+    align-items: center !important;
+  }
+
+  .composer-field {
+    min-width: 0 !important;
+  }
+
+  #messageInput {
+    width: 100% !important;
+    min-width: 0 !important;
+    font-size: 16px !important;
+  }
+
+  #sendButton {
+    min-width: 72px !important;
+    padding-inline: 12px !important;
+  }
+
+  .mobile-bottom-nav {
+    grid-area: bottomnav !important;
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 0 !important;
+    height: calc(64px + env(safe-area-inset-bottom)) !important;
+    padding: 6px 6px env(safe-area-inset-bottom) !important;
+    border-top: 1px solid rgba(255,255,255,.08) !important;
+    background: rgba(14,16,22,.96) !important;
+    backdrop-filter: blur(18px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(150%) !important;
+    z-index: 90 !important;
+  }
+
+  .mobile-nav-item {
+    display: grid !important;
+    place-items: center !important;
+    gap: 2px !important;
+    min-width: 0 !important;
+    border-radius: 16px !important;
+    color: #9ca3af !important;
+    background: transparent !important;
+    border: 0 !important;
+    font-size: 18px !important;
+  }
+
+  .mobile-nav-item span {
+    font-size: 10.5px !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+  }
+
+  .mobile-nav-item.active {
+    color: #0b0d12 !important;
+    background: #f5f5f7 !important;
+  }
+
+  /* Desktop-only rail removed on mobile */
+  .app-rail {
+    display: none !important;
+  }
+
+  /* Sidebar becomes left sheet */
+  .sidebar {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: min(88vw, 360px) !important;
+    height: 100dvh !important;
+    padding: calc(14px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom)) !important;
+    border-radius: 0 26px 26px 0 !important;
+    border: 1px solid rgba(255,255,255,.10) !important;
+    border-left: 0 !important;
+    background: rgba(14,16,22,.97) !important;
+    backdrop-filter: blur(22px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(150%) !important;
+    box-shadow: 24px 0 80px rgba(0,0,0,.42) !important;
+    overflow-y: auto !important;
+    transform: translateX(-104%) !important;
+    transition: transform 260ms cubic-bezier(.22,1,.36,1) !important;
+    z-index: 120 !important;
+  }
+
+  body.mobile-sidebar-open .sidebar {
+    transform: translateX(0) !important;
+  }
+
+  /* Hub becomes bottom sheet */
+  .right-panel {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    width: 100vw !important;
+    height: min(82dvh, 760px) !important;
+    padding: 14px 12px calc(14px + env(safe-area-inset-bottom)) !important;
+    border-radius: 28px 28px 0 0 !important;
+    border: 1px solid rgba(255,255,255,.10) !important;
+    border-bottom: 0 !important;
+    background: rgba(14,16,22,.98) !important;
+    backdrop-filter: blur(22px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(150%) !important;
+    box-shadow: 0 -24px 80px rgba(0,0,0,.44) !important;
+    overflow-y: auto !important;
+    transform: translateY(104%) !important;
+    transition: transform 260ms cubic-bezier(.22,1,.36,1) !important;
+    z-index: 125 !important;
+  }
+
+  body.mobile-right-panel-open .right-panel {
+    transform: translateY(0) !important;
+  }
+
+  .mobile-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    display: block !important;
+    background: rgba(0,0,0,.44) !important;
+    backdrop-filter: blur(6px) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
+    z-index: 110 !important;
+  }
+
+  .mobile-backdrop.hidden {
+    display: none !important;
+  }
+
+  body:not(.mobile-sidebar-open):not(.mobile-right-panel-open) .mobile-backdrop {
+    display: none !important;
+  }
+
+  /* Modal panels become mobile bottom sheets */
+  #friendsCenterModal,
+  .gallery-modal,
+  .profile-modal,
+  .settings-modal {
+    align-items: end !important;
+    place-items: end center !important;
+    padding: 0 !important;
+  }
+
+  .friends-center-card,
+  .gallery-card,
+  .profile-card,
+  .settings-card,
+  .settings-card-v2 {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    max-height: 88dvh !important;
+    border-radius: 28px 28px 0 0 !important;
+    margin: 0 !important;
+  }
+
+  body::after {
+    display: none !important;
+  }
+
+  .sidebar-brand span {
+    display: none !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .message-form {
+    grid-template-columns: auto auto minmax(0, 1fr) auto !important;
+  }
+
+  #emojiButton {
+    display: none !important;
+  }
+
+  #voiceButton,
+  #attachButton {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  #sendButton {
+    min-width: 62px !important;
+  }
+
+  .mobile-nav-item span {
+    font-size: 10px !important;
+  }
+}

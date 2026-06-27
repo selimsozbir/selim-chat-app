@@ -1,0 +1,107 @@
+/* =========================================================
+   Selim Chat v10.5.0 — DESKTOP CSS
+   Desktop-only layout and spacing.
+   Layout: Rail | Left Panel | Chat | Hub
+   ========================================================= */
+
+@media (min-width: 961px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden !important;
+  }
+
+  .app {
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  .chat-screen {
+    display: grid !important;
+    grid-template-columns: 68px 300px minmax(520px, 1fr) 352px !important;
+    grid-template-areas: "rail sidebar chat hub" !important;
+    gap: 12px !important;
+    padding: 12px !important;
+    height: 100dvh !important;
+    width: 100vw !important;
+    overflow: hidden !important;
+    background: transparent !important;
+  }
+
+  .app-rail {
+    grid-area: rail !important;
+    display: flex !important;
+    height: calc(100dvh - 24px) !important;
+    border-radius: 26px !important;
+  }
+
+  .sidebar {
+    grid-area: sidebar !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: calc(100dvh - 24px) !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    border-radius: 26px !important;
+  }
+
+  .chat-main {
+    grid-area: chat !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: calc(100dvh - 24px) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    border-radius: 26px !important;
+  }
+
+  .right-panel {
+    grid-area: hub !important;
+    display: block !important;
+    height: calc(100dvh - 24px) !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    border-radius: 26px !important;
+  }
+
+  .mobile-topbar,
+  .mobile-bottom-nav,
+  .mobile-backdrop {
+    display: none !important;
+  }
+
+  .chat-header {
+    display: flex !important;
+    flex: 0 0 auto !important;
+  }
+
+  .messages {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+  }
+
+  .message-form {
+    flex: 0 0 auto !important;
+  }
+
+  #roomPanel {
+    min-height: 0 !important;
+  }
+
+  #usersList,
+  #friendsList,
+  #groupsList,
+  .mini-list,
+  .gamify-list {
+    min-height: 0;
+  }
+
+  /* Desktop rail stays useful but calmer because header is cleaner now. */
+  .rail-button[title="Galeri"],
+  .rail-button[title="Arkadaşlar"],
+  .rail-button[title="Ayarlar"] {
+    opacity: .78 !important;
+  }
+}
