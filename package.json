@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "9.1.0",
-  "description": "Selim Chat v9.1.0 professional UI refresh",
+  "version": "9.2.0",
+  "description": "Selim Chat v9.2.0 cleaner multi-column layout redesign",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
