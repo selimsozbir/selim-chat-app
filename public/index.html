@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v9.8.0</title>
-  <link rel="stylesheet" href="style.css?v=980" />
+  <title>Selim Chat v9.8.1</title>
+  <link rel="stylesheet" href="style.css?v=981" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -44,6 +44,7 @@
         <button id="railDmButton" class="rail-button" type="button" title="DM">💬</button>
         <button id="railGroupButton" class="rail-button" type="button" title="Gruplar">👥</button>
         <button id="railHubButton" class="rail-button" type="button" title="Hub">5</button>
+        <button id="railGalleryButton" class="rail-button" type="button" title="Galeri">🗂️</button>
         <button id="railSettingsButton" class="rail-button rail-bottom" type="button" title="Ayarlar">⚙</button>
       </nav>
 
@@ -56,6 +57,7 @@
           </div>
         </div>
         <div class="profile-box">
+          <div id="currentStatusBubble" class="current-status-bubble hidden"></div>
           <label class="avatar-wrap" title="Profil fotoğrafı değiştir">
             <img id="avatarImg" class="avatar-img hidden" alt="Avatar" />
             <div id="avatarLetter" class="avatar">?</div>
@@ -242,6 +244,7 @@
           <button id="mobileDmButton" class="mobile-nav-item" type="button">💬<span>DM</span></button>
           <button id="mobileGroupButton" class="mobile-nav-item" type="button">👥<span>Grup</span></button>
           <button id="mobilePanelButton" class="mobile-nav-item" type="button">📋<span>Panel</span></button>
+          <button id="mobileGalleryButton" class="mobile-nav-item" type="button">🗂️<span>Galeri</span></button>
         </nav>
       </main>
 
@@ -276,7 +279,6 @@
             <button id="shardsHistoryTabButton" class="gamify-tab" type="button">Geçmiş</button>
             <button id="universeTabButton" class="gamify-tab" type="button">Evren</button>
             <button id="socialTabButton" class="gamify-tab" type="button">Sosyal</button>
-            <button id="galleryTabButton" class="gamify-tab" type="button">Galeri</button>
           </div>
 
           <div id="dailyPanel" class="gamify-panel">
@@ -365,23 +367,6 @@
               <strong>Aktif Story'ler</strong>
               <div id="storiesList" class="stories-list"></div>
             </div>
-          </div>
-
-          <div id="galleryPanel" class="gamify-panel hidden">
-            <div class="gallery-head">
-              <div>
-                <strong>Dosya Galerisi</strong>
-                <span>Bu odadaki fotoğraf, ses ve dosyalar</span>
-              </div>
-              <button id="refreshGalleryButton" class="small-button" type="button">Yenile</button>
-            </div>
-            <div class="gallery-filters">
-              <button class="gallery-filter active" data-gallery-filter="all" type="button">Hepsi</button>
-              <button class="gallery-filter" data-gallery-filter="image" type="button">Foto</button>
-              <button class="gallery-filter" data-gallery-filter="audio" type="button">Ses</button>
-              <button class="gallery-filter" data-gallery-filter="file" type="button">Dosya</button>
-            </div>
-            <div id="galleryList" class="gallery-list"></div>
           </div>
 
           <div id="universePanel" class="gamify-panel hidden">
@@ -497,6 +482,26 @@
         </div>
 
       </aside>
+      <div id="galleryModal" class="gallery-modal hidden">
+        <div id="galleryPanel" class="gallery-card">
+            <div class="gallery-head">
+              <div>
+                <strong>Dosya Galerisi</strong>
+                <span>Bu odadaki fotoğraf, ses ve dosyalar</span>
+              </div>
+              <button id="refreshGalleryButton" class="small-button" type="button">Yenile</button>
+            </div>
+            <div class="gallery-filters">
+              <button class="gallery-filter active" data-gallery-filter="all" type="button">Hepsi</button>
+              <button class="gallery-filter" data-gallery-filter="image" type="button">Foto</button>
+              <button class="gallery-filter" data-gallery-filter="audio" type="button">Ses</button>
+              <button class="gallery-filter" data-gallery-filter="file" type="button">Dosya</button>
+            </div>
+            <div id="galleryList" class="gallery-list"></div>
+        </div>
+      </div>
+
+
     </section>
   </div>
 
@@ -849,7 +854,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=980"></script>
+  <script src="script.js?v=981"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
