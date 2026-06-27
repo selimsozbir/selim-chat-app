@@ -2381,7 +2381,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '983');
+    url.searchParams.set('v', '984');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2687,6 +2687,7 @@ async function savePresence() {
     });
     if (chatMode === 'room' && socket?.connected) {
       setTimeout(() => socket.emit('join', { room: currentRoom }), 80);
+      setTimeout(() => loadRoomMembers(), 140);
     }
     showPolishToast?.('Durum güncellendi', formatPresence({ ...user, online: user.presence_status !== 'invisible' }), 'success');
   } catch (error) {
@@ -2707,7 +2708,10 @@ async function saveStory() {
       presenceStatus: user.presence_status || 'online',
       customStatus: user.custom_status || ''
     });
-    if (chatMode === 'room' && socket?.connected) setTimeout(() => socket.emit('join', { room: currentRoom }), 80);
+    if (chatMode === 'room' && socket?.connected) {
+      setTimeout(() => socket.emit('join', { room: currentRoom }), 80);
+      setTimeout(() => loadRoomMembers(), 140);
+    }
     await loadStories();
     showPolishToast?.('Story paylaşıldı', '24 saat görünür kalacak.', 'success');
   } catch (error) {
@@ -2725,7 +2729,10 @@ async function clearStory() {
       presenceStatus: user.presence_status || 'online',
       customStatus: user.custom_status || ''
     });
-    if (chatMode === 'room' && socket?.connected) setTimeout(() => socket.emit('join', { room: currentRoom }), 80);
+    if (chatMode === 'room' && socket?.connected) {
+      setTimeout(() => socket.emit('join', { room: currentRoom }), 80);
+      setTimeout(() => loadRoomMembers(), 140);
+    }
     await loadStories();
     showPolishToast?.('Story silindi', '', 'success');
   } catch (error) {
@@ -4354,7 +4361,13 @@ function renderOnlineUsersDetailed() {
   roomMembers.forEach((member) => {
     const li = document.createElement('li');
     li.className = 'user-row';
-    li.innerHTML = `${avatarHtml(member.username, member.avatar_url)}<div><strong>${escapeHtml(member.username)}</strong><span>${member.role ? member.role + ' • ' : ''}${formatPresence(member)}</span></div>`;
+    const name = member.display_name || member.username;
+    const status = String(member.presence_status || 'online').toLowerCase();
+    const custom = String(member.custom_status || '').trim();
+    const storyText = storyActive(member) ? String(member.story_text || '').trim() : '';
+    const bubbleText = custom || storyText;
+    const bubbleHtml = bubbleText ? `<div class="online-status-bubble" title="${escapeHtml(bubbleText)}">${escapeHtml(bubbleText)}</div>` : '';
+    li.innerHTML = `${avatarHtml(name, member.avatar_url)}<div class="user-meta"><strong>${escapeHtml(name)}</strong><span>${member.role ? member.role + ' • ' : ''}${presenceIcon(status)} ${presenceLabel(status)}</span>${bubbleHtml}</div>`;
     li.onclick = () => openProfile(member.id);
     usersList.appendChild(li);
   });
