@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.8.7",
-  "description": "Selim Chat v8.8.7 slightly bigger profile and clickable chat profiles",
+  "version": "8.8.8",
+  "description": "Selim Chat v8.8.8 profile card balanced bigger size",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
