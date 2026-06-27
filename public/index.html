@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v9.7.0</title>
-  <link rel="stylesheet" href="style.css?v=970" />
+  <title>Selim Chat v9.8.0</title>
+  <link rel="stylesheet" href="style.css?v=980" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -275,6 +275,8 @@
             <button id="casinoTabButton" class="gamify-tab" type="button">Casino</button>
             <button id="shardsHistoryTabButton" class="gamify-tab" type="button">Geçmiş</button>
             <button id="universeTabButton" class="gamify-tab" type="button">Evren</button>
+            <button id="socialTabButton" class="gamify-tab" type="button">Sosyal</button>
+            <button id="galleryTabButton" class="gamify-tab" type="button">Galeri</button>
           </div>
 
           <div id="dailyPanel" class="gamify-panel">
@@ -327,6 +329,59 @@
               <button id="refreshShardsHistoryButton" class="small-button" type="button">Yenile</button>
             </div>
             <div id="shardsHistoryList" class="gamify-list"></div>
+          </div>
+
+          <div id="socialPanel" class="gamify-panel hidden">
+            <div class="social-card">
+              <div class="social-head">
+                <div>
+                  <strong>Online Durumu</strong>
+                  <span>Arkadaşların seni böyle görür</span>
+                </div>
+                <button id="savePresenceButton" class="small-button" type="button">Kaydet</button>
+              </div>
+              <select id="presenceSelect" class="social-input">
+                <option value="online">🟢 Aktif</option>
+                <option value="idle">🌙 Boşta</option>
+                <option value="dnd">⛔ Rahatsız Etmeyin</option>
+                <option value="invisible">👻 Görünmez</option>
+              </select>
+              <input id="customStatusInput" class="social-input" maxlength="80" placeholder="Özel durum: 5ECROPOLIS üzerinde çalışıyor" />
+            </div>
+
+            <div class="social-card">
+              <div class="social-head">
+                <div>
+                  <strong>Story / Status</strong>
+                  <span>24 saatlik kısa paylaşım</span>
+                </div>
+                <button id="saveStoryButton" class="small-button" type="button">Paylaş</button>
+              </div>
+              <textarea id="storyTextInput" class="social-input social-textarea" maxlength="220" placeholder="Bugün ne yapıyorsun?"></textarea>
+              <button id="clearStoryButton" class="small-button gray" type="button">Story Sil</button>
+            </div>
+
+            <div class="social-card">
+              <strong>Aktif Story'ler</strong>
+              <div id="storiesList" class="stories-list"></div>
+            </div>
+          </div>
+
+          <div id="galleryPanel" class="gamify-panel hidden">
+            <div class="gallery-head">
+              <div>
+                <strong>Dosya Galerisi</strong>
+                <span>Bu odadaki fotoğraf, ses ve dosyalar</span>
+              </div>
+              <button id="refreshGalleryButton" class="small-button" type="button">Yenile</button>
+            </div>
+            <div class="gallery-filters">
+              <button class="gallery-filter active" data-gallery-filter="all" type="button">Hepsi</button>
+              <button class="gallery-filter" data-gallery-filter="image" type="button">Foto</button>
+              <button class="gallery-filter" data-gallery-filter="audio" type="button">Ses</button>
+              <button class="gallery-filter" data-gallery-filter="file" type="button">Dosya</button>
+            </div>
+            <div id="galleryList" class="gallery-list"></div>
           </div>
 
           <div id="universePanel" class="gamify-panel hidden">
@@ -794,7 +849,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=970"></script>
+  <script src="script.js?v=980"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
