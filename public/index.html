@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v9.1.0</title>
-  <link rel="stylesheet" href="style.css?v=910" />
+  <title>Selim Chat v9.2.0</title>
+  <link rel="stylesheet" href="style.css?v=920" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -39,12 +39,20 @@
         </div>
         <button id="mobileSettingsButton" class="mobile-icon-button" type="button">⚙</button>
       </div>
+      <nav class="app-rail" aria-label="Hızlı menü">
+        <button id="railRoomButton" class="rail-button active" type="button" title="Odalar">#</button>
+        <button id="railDmButton" class="rail-button" type="button" title="DM">💬</button>
+        <button id="railGroupButton" class="rail-button" type="button" title="Gruplar">👥</button>
+        <button id="railHubButton" class="rail-button" type="button" title="Hub">5</button>
+        <button id="railSettingsButton" class="rail-button rail-bottom" type="button" title="Ayarlar">⚙</button>
+      </nav>
+
       <aside class="sidebar">
         <div class="sidebar-brand">
           <div class="brand-mark">5</div>
           <div>
             <strong>Selim Chat</strong>
-            <span>5ECROPOLIS Network</span>
+            <span>Network</span>
           </div>
         </div>
         <div class="profile-box">
@@ -163,6 +171,67 @@
         </div>
 
 
+      </aside>
+
+      <main class="chat-main">
+        <header class="chat-header">
+          <div class="chat-title-block">
+            <div class="chat-title-row">
+              <div id="chatHeaderAvatar" class="chat-header-avatar">#</div>
+              <div class="chat-title-copy">
+                <h2 id="chatTitle"># genel</h2>
+                <div class="chat-subline">
+                  <span class="encryption-label">Uçtan uca hissiyat 🔒</span>
+                  <span id="statusText">Bağlanıyor...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-header-actions">
+            <button id="focusComposerButton" class="small-button" type="button">Yaz</button>
+            <button id="jumpBottomHeaderButton" class="small-button" type="button">Aşağı</button>
+            <button id="enableNotificationsButton" class="small-button">Bildirim aç</button>
+          </div>
+        </header>
+
+        <div id="messages" class="messages"></div>
+        <button id="scrollBottomButton" class="scroll-bottom-button hidden" type="button">↓ Yeni mesajlar</button>
+        <div id="typingText" class="typing"></div>
+
+        <div id="replyBar" class="reply-bar hidden">
+          <div>
+            <strong id="replyUsername"></strong>
+            <span id="replyText"></span>
+          </div>
+          <button id="cancelReplyButton" type="button">×</button>
+        </div>
+
+        <form id="messageForm" class="message-form">
+          <button id="emojiButton" type="button" title="Emoji">😊</button>
+          <button id="attachButton" type="button" title="Dosya gönder">📎</button>
+          <button id="voiceButton" type="button" title="Sesli mesaj">🎙️</button>
+          <input id="fileInput" type="file" accept="image/*,audio/*,.pdf,.txt,.zip,.rar,.doc,.docx" hidden />
+          <div class="composer-field">
+            <input id="messageInput" type="text" placeholder="Mesaj yaz..." maxlength="1000" autocomplete="off" />
+            <span id="composerHint" class="composer-hint">Enter gönderir</span>
+          </div>
+          <button id="sendButton" type="submit">Gönder</button>
+          <div id="emojiPanel" class="emoji-panel hidden" aria-label="Emoji paneli"></div>
+        </form>
+
+        <nav id="mobileBottomNav" class="mobile-bottom-nav">
+          <button id="mobileRoomButton" class="mobile-nav-item active" type="button">🏠<span>Oda</span></button>
+          <button id="mobileDmButton" class="mobile-nav-item" type="button">💬<span>DM</span></button>
+          <button id="mobileGroupButton" class="mobile-nav-item" type="button">👥<span>Grup</span></button>
+          <button id="mobilePanelButton" class="mobile-nav-item" type="button">📋<span>Panel</span></button>
+        </nav>
+      </main>
+
+      <aside class="right-panel">
+        <div class="right-panel-header">
+          <strong>Hub & Kontrol</strong>
+          <span>Ödüller, bildirimler, admin</span>
+        </div>
         <div class="gamify-box">
           <div class="gamify-header">
             <div>
@@ -284,61 +353,8 @@
           <h3>IP Banları</h3>
           <div id="ipBansList" class="mini-list"></div>
         </div>
+
       </aside>
-
-      <main class="chat-main">
-        <header class="chat-header">
-          <div class="chat-title-block">
-            <div class="chat-title-row">
-              <div id="chatHeaderAvatar" class="chat-header-avatar">#</div>
-              <div class="chat-title-copy">
-                <h2 id="chatTitle"># genel</h2>
-                <div class="chat-subline">
-                  <span class="encryption-label">Uçtan uca hissiyat 🔒</span>
-                  <span id="statusText">Bağlanıyor...</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="chat-header-actions">
-            <button id="focusComposerButton" class="small-button" type="button">Yaz</button>
-            <button id="jumpBottomHeaderButton" class="small-button" type="button">Aşağı</button>
-            <button id="enableNotificationsButton" class="small-button">Bildirim aç</button>
-          </div>
-        </header>
-
-        <div id="messages" class="messages"></div>
-        <button id="scrollBottomButton" class="scroll-bottom-button hidden" type="button">↓ Yeni mesajlar</button>
-        <div id="typingText" class="typing"></div>
-
-        <div id="replyBar" class="reply-bar hidden">
-          <div>
-            <strong id="replyUsername"></strong>
-            <span id="replyText"></span>
-          </div>
-          <button id="cancelReplyButton" type="button">×</button>
-        </div>
-
-        <form id="messageForm" class="message-form">
-          <button id="emojiButton" type="button" title="Emoji">😊</button>
-          <button id="attachButton" type="button" title="Dosya gönder">📎</button>
-          <button id="voiceButton" type="button" title="Sesli mesaj">🎙️</button>
-          <input id="fileInput" type="file" accept="image/*,audio/*,.pdf,.txt,.zip,.rar,.doc,.docx" hidden />
-          <div class="composer-field">
-            <input id="messageInput" type="text" placeholder="Mesaj yaz..." maxlength="1000" autocomplete="off" />
-            <span id="composerHint" class="composer-hint">Enter gönderir</span>
-          </div>
-          <button id="sendButton" type="submit">Gönder</button>
-          <div id="emojiPanel" class="emoji-panel hidden" aria-label="Emoji paneli"></div>
-        </form>
-
-        <nav id="mobileBottomNav" class="mobile-bottom-nav">
-          <button id="mobileRoomButton" class="mobile-nav-item active" type="button">🏠<span>Oda</span></button>
-          <button id="mobileDmButton" class="mobile-nav-item" type="button">💬<span>DM</span></button>
-          <button id="mobileGroupButton" class="mobile-nav-item" type="button">👥<span>Grup</span></button>
-          <button id="mobilePanelButton" class="mobile-nav-item" type="button">📋<span>Panel</span></button>
-        </nav>
-      </main>
     </section>
   </div>
 
@@ -675,7 +691,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=910"></script>
+  <script src="script.js?v=920"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
