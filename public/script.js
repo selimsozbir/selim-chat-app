@@ -122,6 +122,13 @@ const friendsCenterList = document.getElementById('friendsCenterList');
 const friendsCenterRequestsList = document.getElementById('friendsCenterRequestsList');
 const friendsCenterBlockedList = document.getElementById('friendsCenterBlockedList');
 const friendsCenterTabs = document.querySelectorAll('.friends-center-tab');
+const presenceChoices = document.querySelectorAll('.presence-choice');
+const socialPreviewAvatar = document.getElementById('socialPreviewAvatar');
+const socialPreviewName = document.getElementById('socialPreviewName');
+const socialPreviewPresence = document.getElementById('socialPreviewPresence');
+const socialPreviewCustom = document.getElementById('socialPreviewCustom');
+const clearCustomStatusButton = document.getElementById('clearCustomStatusButton');
+const socialSaveHint = document.getElementById('socialSaveHint');
 const dailyRewardText = document.getElementById('dailyRewardText');
 const dailyStreakText = document.getElementById('dailyStreakText');
 const dailyClaimButton = document.getElementById('dailyClaimButton');
@@ -2413,7 +2420,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1021');
+    url.searchParams.set('v', '1022');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2694,7 +2701,37 @@ async function claimQuest(questId) {
 function syncSocialInputs() {
   if (presenceSelect) presenceSelect.value = user?.presence_status || 'online';
   if (customStatusInput) customStatusInput.value = user?.custom_status || '';
+  updateSocialPreview?.();
 }
+
+function updatePresenceChoiceButtons() {
+  const value = presenceSelect?.value || user?.presence_status || 'online';
+  presenceChoices?.forEach((button) => {
+    button.classList.toggle('active', button.dataset.presenceChoice === value);
+  });
+}
+
+function updateSocialPreview() {
+  const status = presenceSelect?.value || user?.presence_status || 'online';
+  const custom = String(customStatusInput?.value || user?.custom_status || '').trim();
+  const name = user?.display_name || user?.username || 'Kullanıcı';
+
+  if (socialPreviewAvatar) socialPreviewAvatar.textContent = name.charAt(0).toUpperCase();
+  if (socialPreviewName) socialPreviewName.textContent = name;
+  if (socialPreviewPresence) socialPreviewPresence.textContent = `${presenceIcon(status)} ${presenceLabel(status)}`;
+  if (socialPreviewCustom) {
+    socialPreviewCustom.textContent = custom || 'Özel durum yok';
+    socialPreviewCustom.classList.toggle('hidden', !custom);
+  }
+
+  updatePresenceChoiceButtons();
+}
+
+function setPresenceChoice(value) {
+  if (presenceSelect) presenceSelect.value = value;
+  updateSocialPreview();
+}
+
 
 async function savePresence() {
   try {
@@ -2717,6 +2754,8 @@ async function savePresence() {
       setTimeout(() => socket.emit('join', { room: currentRoom }), 80);
       setTimeout(() => loadRoomMembers(), 140);
     }
+    updateSocialPreview?.();
+    if (socialSaveHint) socialSaveHint.textContent = 'Kaydedildi · Online listesi yenilendi.';
     showPolishToast?.('Durum güncellendi', formatPresence({ ...user, online: user.presence_status !== 'invisible' }), 'success');
   } catch (error) {
     showPolishToast?.('Durum hata', error.message, 'error');
@@ -6641,4 +6680,21 @@ friendsCenterTabs?.forEach((button) => {
 friendsCenterSearchButton?.addEventListener('click', searchFriendsCenterUsers);
 friendsCenterSearchInput?.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') searchFriendsCenterUsers();
+});
+
+
+presenceChoices?.forEach((button) => {
+  button.addEventListener('click', () => setPresenceChoice(button.dataset.presenceChoice || 'online'));
+});
+
+presenceSelect?.addEventListener('change', updateSocialPreview);
+customStatusInput?.addEventListener('input', () => {
+  if (socialSaveHint) socialSaveHint.textContent = 'Kaydetmeyi unutma.';
+  updateSocialPreview();
+});
+
+clearCustomStatusButton?.addEventListener('click', () => {
+  if (customStatusInput) customStatusInput.value = '';
+  if (socialSaveHint) socialSaveHint.textContent = 'Kaydetmeyi unutma.';
+  updateSocialPreview();
 });
