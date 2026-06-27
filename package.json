@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.9.0",
-  "description": "Selim Chat v10.9.0 mobile UI polish and fixes",
+  "version": "10.9.1",
+  "description": "Selim Chat v10.9.1 mobile Safari sheet keyboard and profile fixes",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
