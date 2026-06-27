@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v10.5.4</title>
-  <link rel="stylesheet" href="style.css?v=1054" />
+  <title>Selim Chat v10.6.0</title>
+  <link rel="stylesheet" href="style.css?v=1060" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -911,5 +911,39 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js?v=985"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
+
+  <!-- v10.6.0 Command Palette + Media Viewer -->
+  <div id="commandPaletteModal" class="command-palette-modal hidden" aria-hidden="true">
+    <div class="command-palette-card" role="dialog" aria-modal="true" aria-label="Komut paleti">
+      <div class="command-palette-search">
+        <span>⌘K</span>
+        <input id="commandPaletteInput" type="text" placeholder="Komut ara, oda aç, DM bul..." autocomplete="off" />
+        <button id="commandPaletteCloseButton" type="button" aria-label="Kapat">×</button>
+      </div>
+      <div id="commandPaletteList" class="command-palette-list"></div>
+      <div class="command-palette-hint">
+        <span>↑↓ seç</span>
+        <span>Enter çalıştır</span>
+        <span>Esc kapat</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="mediaViewerModal" class="media-viewer-modal hidden" aria-hidden="true">
+    <div class="media-viewer-topbar">
+      <div>
+        <strong id="mediaViewerTitle">Medya</strong>
+        <span id="mediaViewerMeta">Önizleme</span>
+      </div>
+      <div class="media-viewer-actions">
+        <a id="mediaViewerOpenLink" class="small-button gray" href="#" target="_blank" rel="noopener">Aç</a>
+        <button id="mediaViewerCloseButton" class="small-button" type="button">Kapat</button>
+      </div>
+    </div>
+    <button id="mediaViewerPrevButton" class="media-viewer-nav media-viewer-prev" type="button">‹</button>
+    <div id="mediaViewerStage" class="media-viewer-stage"></div>
+    <button id="mediaViewerNextButton" class="media-viewer-nav media-viewer-next" type="button">›</button>
+  </div>
+
 </body>
 </html>
