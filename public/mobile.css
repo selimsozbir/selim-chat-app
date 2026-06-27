@@ -377,3 +377,16 @@
     min-height: 38px;
   }
 }
+
+
+/* v10.8.0 mobile story/pet/replay */
+@media (max-width: 960px) {
+  .story-pet-grid {
+    margin: 12px 0;
+  }
+
+  .pet-choices,
+  .replay-stats {
+    grid-template-columns: 1fr;
+  }
+}
