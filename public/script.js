@@ -10,6 +10,7 @@ const usernameInput = document.getElementById('usernameInput');
 const passwordInput = document.getElementById('passwordInput');
 
 const currentUsername = document.getElementById('currentUsername');
+const currentStatusBubble = document.getElementById('currentStatusBubble');
 const logoutButton = document.getElementById('logoutButton');
 const avatarInput = document.getElementById('avatarInput');
 const avatarImg = document.getElementById('avatarImg');
@@ -27,6 +28,7 @@ const mobileRoomButton = document.getElementById('mobileRoomButton');
 const mobileDmButton = document.getElementById('mobileDmButton');
 const mobileGroupButton = document.getElementById('mobileGroupButton');
 const mobilePanelButton = document.getElementById('mobilePanelButton');
+const mobileGalleryButton = document.getElementById('mobileGalleryButton');
 
 const roomModeButton = document.getElementById('roomModeButton');
 const dmModeButton = document.getElementById('dmModeButton');
@@ -111,6 +113,7 @@ const shardsHistoryPanel = document.getElementById('shardsHistoryPanel');
 const universePanel = document.getElementById('universePanel');
 const socialPanel = document.getElementById('socialPanel');
 const galleryPanel = document.getElementById('galleryPanel');
+const galleryModal = document.getElementById('galleryModal');
 const dailyRewardText = document.getElementById('dailyRewardText');
 const dailyStreakText = document.getElementById('dailyStreakText');
 const dailyClaimButton = document.getElementById('dailyClaimButton');
@@ -1478,6 +1481,13 @@ function renderProfile() {
   if (user?.active_profile_theme) document.body.classList.add('active-theme-' + user.active_profile_theme);
 
   currentUsername.textContent = user.display_name || user.username;
+  if (currentStatusBubble) {
+    const custom = String(user?.custom_status || '').trim();
+    const status = String(user?.presence_status || 'online').toLowerCase();
+    currentStatusBubble.textContent = custom || `${presenceIcon?.(status) || '🟢'} ${presenceLabel?.(status) || 'Aktif'}`;
+    currentStatusBubble.classList.toggle('hidden', !(custom || status));
+    currentStatusBubble.dataset.presence = status;
+  }
   avatarLetter.textContent = (user.display_name || user.username).charAt(0).toUpperCase();
 
   if (user.avatar_url) {
@@ -2364,7 +2374,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '980');
+    url.searchParams.set('v', '981');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2402,7 +2412,6 @@ function switchGamifyTab(tab) {
   shardsHistoryTabButton?.classList.toggle('active', tab === 'shards');
   universeTabButton?.classList.toggle('active', tab === 'universe');
   socialTabButton?.classList.toggle('active', tab === 'social');
-  galleryTabButton?.classList.toggle('active', tab === 'gallery');
   dailyPanel?.classList.toggle('hidden', tab !== 'daily');
   questsPanel?.classList.toggle('hidden', tab !== 'quests');
   lootboxPanel?.classList.toggle('hidden', tab !== 'lootbox');
@@ -2419,7 +2428,6 @@ function switchGamifyTab(tab) {
   if (tab === 'shards') loadShardsHistory();
   if (tab === 'universe') loadUniversePanel();
   if (tab === 'social') { syncSocialInputs(); loadStories(); }
-  if (tab === 'gallery') loadGallery();
 
   const box = document.querySelector('.gamify-box');
   if (box) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -2666,7 +2674,14 @@ async function savePresence() {
     localStorage.setItem('chat_user', JSON.stringify(user));
     renderProfile();
     syncSocialInputs();
-    showPolishToast?.('Durum güncellendi', formatPresence(user), 'success');
+    socket?.emit('presence_update', {
+      presenceStatus: user.presence_status || presenceSelect?.value || 'online',
+      customStatus: user.custom_status || customStatusInput?.value || ''
+    });
+    if (chatMode === 'room' && socket?.connected) {
+      setTimeout(() => socket.emit('join', { room: currentRoom }), 80);
+    }
+    showPolishToast?.('Durum güncellendi', formatPresence({ ...user, online: user.presence_status !== 'invisible' }), 'success');
   } catch (error) {
     showPolishToast?.('Durum hata', error.message, 'error');
   }
@@ -2730,6 +2745,17 @@ async function loadStories() {
     storiesList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
   }
 }
+
+
+function openGalleryModal() {
+  galleryModal?.classList.remove('hidden');
+  loadGallery?.();
+}
+
+function closeGalleryModal() {
+  galleryModal?.classList.add('hidden');
+}
+
 
 function galleryIcon(type) {
   if (type === 'image') return '🖼️';
@@ -3389,7 +3415,10 @@ function updateBadge() {
 function renderUsers(users) {
   usersList.innerHTML = '';
   users.forEach((entry) => {
-    const profile = typeof entry === 'string' ? { username: entry, display_name: entry, presence_status: 'online', online: true } : entry;
+    let profile = typeof entry === 'string' ? { username: entry, display_name: entry, presence_status: 'online', online: true } : entry;
+    if (Number(profile.id) === Number(user?.id)) {
+      profile = { ...profile, presence_status: user.presence_status || profile.presence_status || 'online', custom_status: user.custom_status || profile.custom_status || '', online: user.presence_status !== 'invisible' };
+    }
     const li = document.createElement('li');
     li.className = `room-user-item presence-${String(profile.presence_status || 'online').toLowerCase()}`;
     li.innerHTML = `<div class="mini-left">${avatarHtml(profile.display_name || profile.username, profile.avatar_url)}<div><strong>${escapeHtml(profile.display_name || profile.username)}</strong><span>${escapeHtml(formatPresence(profile))}</span>${storyActive(profile) ? `<em>${escapeHtml(profile.story_text)}</em>` : ''}</div></div>`;
@@ -6259,3 +6288,20 @@ sendButton?.addEventListener('click', (event) => {
   }
 }, true);
 
+
+railGalleryButton?.addEventListener('click', () => {
+  syncRailActive?.('gallery');
+  openGalleryModal();
+});
+
+mobileGalleryButton?.addEventListener('click', () => {
+  openGalleryModal();
+});
+
+galleryModal?.addEventListener('click', (event) => {
+  if (event.target === galleryModal) closeGalleryModal();
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeGalleryModal();
+});
