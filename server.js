@@ -2636,7 +2636,8 @@ app.get('/api/room/:room/members', authMiddleware, async (req, res) => {
   if (ids.length === 0) return res.json({ members: [] });
 
   const result = await pool.query(
-    `SELECT u.id, u.username, u.avatar_url, u.bio, u.last_seen, rr.role
+    `SELECT u.id, u.username, u.display_name, u.avatar_url, u.bio, u.last_seen,
+            u.presence_status, u.custom_status, u.story_text, u.story_expires_at, rr.role
      FROM users u
      LEFT JOIN room_roles rr ON rr.room = $1 AND rr.user_id = u.id
      WHERE u.id = ANY($2::int[])
