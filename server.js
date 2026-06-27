@@ -316,20 +316,20 @@ async function rewardUserActivity(userId, xpAmount = 5, shardAmount = 1) {
 
 
 const MARKET_ITEMS = [
-  { id: 'bubble_vertex', type: 'bubble', name: 'VERTEX Bubble', icon: '🔴', rarity: 'epic', price: 60, description: 'Mesaj balonuna kırmızı glitch havası verir.' },
-  { id: 'bubble_limbo', type: 'bubble', name: 'Limbo Bubble', icon: '⚫', rarity: 'rare', price: 35, description: 'Karanlık, minimal Limbo mesaj stili.' },
-  { id: 'bubble_ice', type: 'bubble', name: 'Nico Ice Bubble', icon: '🧊', rarity: 'rare', price: 45, description: 'Soğuk mavi buz mesaj efekti.' },
-  { id: 'bubble_gold', type: 'bubble', name: 'Rome Gold Bubble', icon: '🏛️', rarity: 'epic', price: 70, description: 'Altın Roma mesaj balonu.' },
-  { id: 'bubble_serbia', type: 'bubble', name: 'Serbia Portal Bubble', icon: '🇷🇸', rarity: 'epic', price: 75, description: 'Mor portal mesaj balonu.' },
+  { id: 'bubble_vertex', type: 'bubble', name: 'VERTEX Bubble', icon: '🔴', rarity: 'epic', price: 280, description: 'Mesaj balonuna kırmızı glitch havası verir.' },
+  { id: 'bubble_limbo', type: 'bubble', name: 'Limbo Bubble', icon: '⚫', rarity: 'rare', price: 160, description: 'Karanlık, minimal Limbo mesaj stili.' },
+  { id: 'bubble_ice', type: 'bubble', name: 'Nico Ice Bubble', icon: '🧊', rarity: 'rare', price: 190, description: 'Soğuk mavi buz mesaj efekti.' },
+  { id: 'bubble_gold', type: 'bubble', name: 'Rome Gold Bubble', icon: '🏛️', rarity: 'epic', price: 320, description: 'Altın Roma mesaj balonu.' },
+  { id: 'bubble_serbia', type: 'bubble', name: 'Serbia Portal Bubble', icon: '🇷🇸', rarity: 'epic', price: 350, description: 'Mor portal mesaj balonu.' },
 
-  { id: 'frame_vertex', type: 'frame', name: 'VERTEX Frame', icon: '🟥', rarity: 'epic', price: 95, description: 'Profil fotoğrafına kırmızı VERTEX çerçevesi.' },
-  { id: 'frame_limbo', type: 'frame', name: 'Limbo Frame', icon: '⬛', rarity: 'rare', price: 65, description: 'Karanlık Limbo profil çerçevesi.' },
-  { id: 'frame_five', type: 'frame', name: '5ECROPOLIS Frame', icon: '5️⃣', rarity: 'legendary', price: 150, description: 'Özel 5ECROPOLIS profil çerçevesi.' },
-  { id: 'frame_ataturk', type: 'frame', name: 'Respect Frame', icon: '🇹🇷', rarity: 'legendary', price: 160, description: 'Saygı protokolü profil çerçevesi.' },
+  { id: 'frame_vertex', type: 'frame', name: 'VERTEX Frame', icon: '🟥', rarity: 'epic', price: 450, description: 'Profil fotoğrafına kırmızı VERTEX çerçevesi.' },
+  { id: 'frame_limbo', type: 'frame', name: 'Limbo Frame', icon: '⬛', rarity: 'rare', price: 300, description: 'Karanlık Limbo profil çerçevesi.' },
+  { id: 'frame_five', type: 'frame', name: '5ECROPOLIS Frame', icon: '5️⃣', rarity: 'legendary', price: 1000, description: 'Özel 5ECROPOLIS profil çerçevesi.' },
+  { id: 'frame_ataturk', type: 'frame', name: 'Respect Frame', icon: '🇹🇷', rarity: 'legendary', price: 1000, description: 'Saygı protokolü profil çerçevesi.' },
 
-  { id: 'name_glitch', type: 'name', name: 'Glitch Name', icon: '⚡', rarity: 'rare', price: 65, description: 'İsme hafif glitch efekti.' },
-  { id: 'name_neon', type: 'name', name: 'Neon Name', icon: '💜', rarity: 'epic', price: 95, description: 'İsme neon mor parlama verir.' },
-  { id: 'name_legend', type: 'name', name: 'Legend Name', icon: '👑', rarity: 'legendary', price: 180, description: 'İsme legendary altın efekt verir.' }
+  { id: 'name_glitch', type: 'name', name: 'Glitch Name', icon: '⚡', rarity: 'rare', price: 280, description: 'İsme hafif glitch efekti.' },
+  { id: 'name_neon', type: 'name', name: 'Neon Name', icon: '💜', rarity: 'epic', price: 420, description: 'İsme neon mor parlama verir.' },
+  { id: 'name_legend', type: 'name', name: 'Legend Name', icon: '👑', rarity: 'legendary', price: 1000, description: 'İsme legendary altın efekt verir.' }
 ];
 
 
@@ -1571,7 +1571,7 @@ app.get('/api/admin/me', authMiddleware, async (req, res) => {
 app.get('/api/admin/users', authMiddleware, requireGlobalAdmin, async (req, res) => {
   const result = await pool.query(
     `SELECT id, username, display_name, avatar_url, global_role, is_banned, ban_reason,
-            last_ip, last_user_agent, last_active, last_seen, created_at
+            xp, shards, last_ip, last_user_agent, last_active, last_seen, created_at
      FROM users
      ORDER BY last_active DESC NULLS LAST, created_at DESC
      LIMIT 100`
@@ -1589,7 +1589,7 @@ app.patch('/api/admin/users/:id', authMiddleware, requireGlobalAdmin, async (req
   const targetId = Number(req.params.id);
   if (!Number.isInteger(targetId)) return res.status(400).json({ error: 'Geçersiz kullanıcı.' });
 
-  const targetResult = await pool.query('SELECT id, username, global_role FROM users WHERE id = $1', [targetId]);
+  const targetResult = await pool.query('SELECT id, username, global_role, shards FROM users WHERE id = $1', [targetId]);
   if (targetResult.rows.length === 0) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
 
   const target = targetResult.rows[0];
@@ -1601,6 +1601,8 @@ app.patch('/api/admin/users/:id', authMiddleware, requireGlobalAdmin, async (req
   const globalRole = req.body.globalRole !== undefined ? String(req.body.globalRole || '') : undefined;
   const isBanned = req.body.isBanned !== undefined ? Boolean(req.body.isBanned) : undefined;
   const banReason = req.body.banReason !== undefined ? cleanText(req.body.banReason, 200) : undefined;
+  const shards = req.body.shards !== undefined ? Math.max(0, Math.min(9999999, Math.floor(Number(req.body.shards) || 0))) : undefined;
+  const shardDelta = req.body.shardDelta !== undefined ? Math.max(-999999, Math.min(999999, Math.floor(Number(req.body.shardDelta) || 0))) : undefined;
 
   if (globalRole !== undefined) {
     if (req.adminUser.global_role !== 'owner') return res.status(403).json({ error: 'Rol değiştirmeyi sadece owner yapabilir.' });
@@ -1620,6 +1622,19 @@ app.patch('/api/admin/users/:id', authMiddleware, requireGlobalAdmin, async (req
     }
   } else if (banReason !== undefined) {
     await pool.query('UPDATE users SET ban_reason = $1 WHERE id = $2', [banReason, targetId]);
+  }
+
+  if (shards !== undefined) {
+    await pool.query('UPDATE users SET shards = $1 WHERE id = $2', [shards, targetId]);
+    emitToUser(targetId, 'notification', { type: 'system', payload: { text: `Shards bakiyen ${shards} olarak güncellendi.` } });
+  }
+
+  if (shardDelta !== undefined && shardDelta !== 0) {
+    const result = await pool.query(
+      'UPDATE users SET shards = GREATEST(0, COALESCE(shards, 0) + $1) WHERE id = $2 RETURNING shards',
+      [shardDelta, targetId]
+    );
+    emitToUser(targetId, 'notification', { type: 'system', payload: { text: `Shards bakiyen ${result.rows[0]?.shards || 0} oldu.` } });
   }
 
   res.json({ ok: true, message: 'Kullanıcı güncellendi.' });
@@ -2274,7 +2289,7 @@ app.post('/api/casino/slot', authMiddleware, async (req, res) => {
     const balance = await getShardBalance(req.user.id);
     if (balance < bet) return res.status(400).json({ error: 'Yetersiz Shards.' });
 
-    const symbols = ['🍒', '🍋', '🔔', '💎', '7️⃣', '5️⃣', '🔴'];
+    const symbols = ['🍒', '🍋', '🍋', '🔔', '🔔', '💎', '7️⃣', '5️⃣', '🔴', '⚫'];
     const reels = [
       symbols[Math.floor(Math.random() * symbols.length)],
       symbols[Math.floor(Math.random() * symbols.length)],
@@ -2285,9 +2300,9 @@ app.post('/api/casino/slot', authMiddleware, async (req, res) => {
     let result = 'Kaybettin';
 
     if (reels[0] === reels[1] && reels[1] === reels[2]) {
-      multiplier = reels[0] === '5️⃣' ? 12 : reels[0] === '7️⃣' ? 8 : reels[0] === '💎' ? 6 : 4;
+      multiplier = reels[0] === '5️⃣' ? 7 : reels[0] === '7️⃣' ? 5 : reels[0] === '💎' ? 4 : 3;
       result = 'Büyük kazanç!';
-    } else if (reels[0] === reels[1] || reels[1] === reels[2] || reels[0] === reels[2]) {
+    } else if (reels[0] === reels[1] && reels[1] === '5️⃣') {
       multiplier = 2;
       result = 'Küçük kazanç!';
     }
@@ -2324,7 +2339,7 @@ app.post('/api/casino/blackjack/start', authMiddleware, async (req, res) => {
     if (handValue(session.player) === 21) {
       session.status = 'finished';
       session.result = 'Blackjack!';
-      session.payout = bet * 3;
+      session.payout = Math.floor(bet * 2.2);
       await addShards(req.user.id, session.payout);
     } else {
       casinoSessions.set(req.user.id, session);
@@ -2365,7 +2380,7 @@ app.post('/api/casino/blackjack/stand', authMiddleware, async (req, res) => {
     const session = casinoSessions.get(req.user.id);
     if (!session || session.status !== 'playing') return res.status(400).json({ error: 'Aktif blackjack oyunu yok.' });
 
-    while (handValue(session.dealer) < 17) session.dealer.push(drawCard());
+    while (handValue(session.dealer) < 18) session.dealer.push(drawCard());
 
     const playerValue = handValue(session.player);
     const dealerValue = handValue(session.dealer);
@@ -2374,7 +2389,7 @@ app.post('/api/casino/blackjack/stand', authMiddleware, async (req, res) => {
 
     if (dealerValue > 21 || playerValue > dealerValue) {
       session.result = 'Kazandın!';
-      session.payout = session.bet * 2;
+      session.payout = Math.floor(session.bet * 1.8);
     } else if (playerValue === dealerValue) {
       session.result = 'Berabere.';
       session.payout = session.bet;
@@ -2771,6 +2786,14 @@ async function emitReactionState(scope, messageId, state) {
     return;
   }
 
+  if (scope === 'group') {
+    const msg = await pool.query('SELECT group_id FROM group_messages WHERE id = $1', [messageId]);
+    if (msg.rows.length > 0) {
+      await emitGroupToMembers(msg.rows[0].group_id, 'reaction_state', { scope, messageId, reactions: state });
+    }
+    return;
+  }
+
   const msg = await pool.query('SELECT sender_id, receiver_id FROM dm_messages WHERE id = $1', [messageId]);
   if (msg.rows.length > 0) {
     emitToUser(msg.rows[0].sender_id, 'reaction_state', { scope, messageId, reactions: state });
@@ -2784,12 +2807,38 @@ app.post('/api/reactions', authMiddleware, async (req, res) => {
     const messageId = Number(req.body.messageId);
     const emoji = cleanText(req.body.emoji, 20);
 
-    if (!['room', 'dm'].includes(scope)) return res.status(400).json({ error: 'Geçersiz mesaj tipi.' });
+    if (!['room', 'dm', 'group'].includes(scope)) return res.status(400).json({ error: 'Geçersiz mesaj tipi.' });
     if (!Number.isInteger(messageId)) return res.status(400).json({ error: 'Geçersiz mesaj.' });
     if (!['👍', '😂', '❤️', '🔥', '😘'].includes(emoji)) return res.status(400).json({ error: 'Geçersiz emoji.' });
 
     if (scope === 'room') {
       const msg = await pool.query('SELECT id, room FROM messages WHERE id = $1 AND deleted_at IS NULL', [messageId]);
+      if (msg.rows.length === 0) return res.status(404).json({ error: 'Mesaj bulunamadı.' });
+
+      await pool.query('DELETE FROM message_reactions WHERE message_scope = $1 AND message_id = $2 AND user_id = $3', [scope, messageId, req.user.id]);
+
+      await pool.query(
+        `INSERT INTO message_reactions (message_scope, message_id, user_id, emoji)
+         VALUES ($1, $2, $3, $4)`,
+        [scope, messageId, req.user.id, emoji]
+      );
+
+      const state = await getReactionState(scope, messageId);
+      await emitReactionState(scope, messageId, state);
+
+      return res.json({ ok: true, reactions: state });
+    }
+
+
+    if (scope === 'group') {
+      const msg = await pool.query(
+        `SELECT gm.id, gm.group_id
+         FROM group_messages gm
+         JOIN group_members gmem ON gmem.group_id = gm.group_id AND gmem.user_id = $2
+         WHERE gm.id = $1 AND gm.deleted_at IS NULL`,
+        [messageId, req.user.id]
+      );
+
       if (msg.rows.length === 0) return res.status(404).json({ error: 'Mesaj bulunamadı.' });
 
       await pool.query('DELETE FROM message_reactions WHERE message_scope = $1 AND message_id = $2 AND user_id = $3', [scope, messageId, req.user.id]);
@@ -2838,7 +2887,7 @@ app.get('/api/reactions/:scope/:messageId', authMiddleware, async (req, res) => 
   const scope = String(req.params.scope || '');
   const messageId = Number(req.params.messageId);
 
-  if (!['room', 'dm'].includes(scope) || !Number.isInteger(messageId)) {
+  if (!['room', 'dm', 'group'].includes(scope) || !Number.isInteger(messageId)) {
     return res.status(400).json({ error: 'Geçersiz istek.' });
   }
 
