@@ -130,6 +130,7 @@ const leaderboardTabButton = document.getElementById('leaderboardTabButton');
 const casinoTabButton = document.getElementById('casinoTabButton');
 const shardsHistoryTabButton = document.getElementById('shardsHistoryTabButton');
 const universeTabButton = document.getElementById('universeTabButton');
+const inventoryTabButton = document.getElementById('inventoryTabButton');
 const galleryTabButton = document.getElementById('galleryTabButton');
 const dailyPanel = document.getElementById('dailyPanel');
 const questsPanel = document.getElementById('questsPanel');
@@ -139,6 +140,11 @@ const leaderboardPanel = document.getElementById('leaderboardPanel');
 const casinoPanel = document.getElementById('casinoPanel');
 const shardsHistoryPanel = document.getElementById('shardsHistoryPanel');
 const universePanel = document.getElementById('universePanel');
+const inventoryPanel = document.getElementById('inventoryPanel');
+const refreshInventoryButton = document.getElementById('refreshInventoryButton');
+const inventoryItemsList = document.getElementById('inventoryItemsList');
+const inventoryCompanionBox = document.getElementById('inventoryCompanionBox');
+
 const socialPanel = document.getElementById('socialPanel');
 const galleryPanel = document.getElementById('galleryPanel');
 const galleryModal = document.getElementById('galleryModal');
@@ -1623,9 +1629,7 @@ async function startApp() {
   ]).then(() => {
     checkForUnlockedBadges(true);
     updateMessengerUi();
-    loadChatReplay?.();
-    loadStoryDecision?.();
-    loadCompanion?.();
+    loadInventory?.();
   }).catch(() => {});
 }
 
@@ -1749,7 +1753,7 @@ function connectSocket() {
     }
   });
   socket.on('users', renderUsers);
-  socket.on('story_decision_update', renderStoryDecision);
+  socket.on('story_decision_update', updateStoryDecisionCards);
 
   socket.on('room_message_updated', (msg) => updateMessageElement('room', msg.id, msg.text, true, false));
   socket.on('room_message_deleted', (msg) => updateMessageElement('room', msg.id, msg.text, false, true));
@@ -2111,7 +2115,8 @@ function addRoomMessage(message) {
     readers: message.readers || [],
     bubble_theme: message.bubble_theme || message.active_bubble_theme || (Number(message.sender_id || message.user_id) === Number(user.id) ? user?.active_bubble_theme : ''),
     name_effect: message.name_effect,
-    frame_theme: message.frame_theme || message.active_profile_frame
+    frame_theme: message.frame_theme || message.active_profile_frame,
+    story_decision: message.story_decision
   });
 }
 
@@ -2545,7 +2550,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1080');
+    url.searchParams.set('v', '1081');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2590,12 +2595,14 @@ function switchGamifyTab(tab) {
   casinoPanel?.classList.toggle('hidden', tab !== 'casino');
   shardsHistoryPanel?.classList.toggle('hidden', tab !== 'shards');
   universePanel?.classList.toggle('hidden', tab !== 'universe');
+  inventoryPanel?.classList.toggle('hidden', tab !== 'inventory');
   galleryPanel?.classList.toggle('hidden', tab !== 'gallery');
 
   if (tab === 'market' || tab === 'daily' || tab === 'lootbox') loadGamify();
   if (tab === 'leaderboard') loadLeaderboard();
   if (tab === 'shards') loadShardsHistory();
   if (tab === 'universe') loadUniversePanel();
+  if (tab === 'inventory') loadInventory();
 
   const box = document.querySelector('.gamify-box');
   if (box) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -4216,7 +4223,45 @@ function runCommandPaletteItem(index = commandPaletteIndex) {
 }
 
 
-function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read, readers, bubble_theme, name_effect, frame_theme }) {
+
+function renderStoryDecisionMessage(decision) {
+  const box = document.createElement('div');
+  box.className = 'story-message-card';
+  if (!decision) {
+    box.innerHTML = '<p>Hikaye kararı yüklenemedi.</p>';
+    return box;
+  }
+
+  const total = Number(decision.total_votes || 0);
+  box.innerHTML = `
+    <div class="story-message-head">
+      <span>🗳️ feiz anketi</span>
+      <strong>Mini Hikaye Kararı</strong>
+    </div>
+    <p>${escapeHtml(decision.prompt || 'Oda ne yapacak?')}</p>
+    <div class="story-message-options">
+      ${(decision.options || []).map((option) => {
+        const votes = Number(option.votes || 0);
+        const pct = total ? Math.round((votes / total) * 100) : 0;
+        return `<button class="story-option" data-story-option="${escapeHtml(option.key)}" type="button">
+          <span>${escapeHtml(option.label)}</span>
+          <b>${votes} oy · ${pct}%</b>
+          <i style="width:${pct}%"></i>
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="story-result">Şu anki sonuç: ${escapeHtml(decision.result_text || 'Henüz karar verilmedi.')}</div>
+  `;
+
+  box.querySelectorAll('[data-story-option]').forEach((button) => {
+    button.addEventListener('click', () => voteStoryDecision(button.dataset.storyOption));
+  });
+
+  return box;
+}
+
+
+function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read, readers, bubble_theme, name_effect, frame_theme, story_decision }) {
   const localSettings = getLocalSettings();
   const normalizedUsername = String(username || '').toLowerCase();
   const isBotMessage = ['feiz', 'selimbot', 'bot'].includes(normalizedUsername);
@@ -4306,6 +4351,10 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
   const previewUrl = !deleted ? extractFirstUrl(text) : '';
   const linkPreview = previewUrl ? buildLinkPreview(previewUrl) : null;
   if (linkPreview) bubble.appendChild(linkPreview);
+
+  if (message_type === 'story_decision' && !deleted) {
+    bubble.appendChild(renderStoryDecisionMessage(story_decision));
+  }
 
   if (file_data && !deleted) {
     bubble.appendChild(renderMedia({ message_type, file_name, file_mime, file_data, file_path, file_size }));
@@ -7043,6 +7092,62 @@ function resizeImage(file, maxSize) {
 
 
 
+
+function updateStoryDecisionCards(data) {
+  const decision = data?.decision || data;
+  if (!decision) return;
+  document.querySelectorAll('.story-message-card').forEach((card) => {
+    const fresh = renderStoryDecisionMessage(decision);
+    card.replaceWith(fresh);
+  });
+}
+
+
+
+function renderInventory(data = {}) {
+  const items = Array.isArray(data.items) ? data.items : [];
+  const pet = data.companion || {};
+  const pets = data.pets || {};
+
+  if (inventoryItemsList) {
+    inventoryItemsList.innerHTML = items.length
+      ? items.map((item) => `<div class="inventory-item-card"><span>🎒</span><div><strong>${escapeHtml(item.item_name || item.item_id)}</strong><small>${escapeHtml(item.item_id || '')} · ×${Number(item.quantity || 0)}</small></div></div>`).join('')
+      : '<div class="mini-item">Henüz item yok. Eventlere katıl, lootbox aç veya hikaye oyu ver.</div>';
+  }
+
+  if (inventoryCompanionBox) {
+    const petOptions = Object.entries(pets).map(([key, def]) => `<button class="pet-choice ${pet.pet_type === key ? 'active' : ''}" data-pet-type="${escapeHtml(key)}" type="button">${escapeHtml(def.icon)} <span>${escapeHtml(def.name)}</span></button>`).join('');
+    inventoryCompanionBox.innerHTML = `
+      <div class="pet-main">
+        <div class="pet-orb">${escapeHtml(pet.icon || '🐈‍⬛')}</div>
+        <div>
+          <strong>${escapeHtml(pet.pet_name || 'Companion')}</strong>
+          <span>Level ${Number(pet.level || 1)} · mood: ${escapeHtml(pet.mood || 'curious')}</span>
+        </div>
+      </div>
+      <div class="pet-xp"><div style="width:${Math.max(0, Math.min(100, Number(pet.progress || 0)))}%"></div></div>
+      <div class="pet-meta"><span>${Number(pet.xp || 0)} XP</span><span>Next ${Number(pet.next_xp || 0)} XP</span></div>
+      <div class="pet-choices">${petOptions}</div>
+    `;
+    inventoryCompanionBox.querySelectorAll('[data-pet-type]').forEach((button) => {
+      button.addEventListener('click', () => selectCompanion(button.dataset.petType));
+    });
+  }
+}
+
+async function loadInventory() {
+  if (!inventoryItemsList && !inventoryCompanionBox) return;
+  if (inventoryItemsList) inventoryItemsList.innerHTML = '<div class="mini-item">Envanter yükleniyor...</div>';
+  if (inventoryCompanionBox) inventoryCompanionBox.innerHTML = '<p>Companion yükleniyor...</p>';
+  try {
+    const data = await api('/api/inventory/me');
+    renderInventory(data);
+  } catch (error) {
+    if (inventoryItemsList) inventoryItemsList.innerHTML = `<div class="mini-item">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+
 function renderReplay(data) {
   if (!chatReplayBox) return;
   const stats = data?.stats || {};
@@ -7181,7 +7286,8 @@ async function selectCompanion(petType) {
       method: 'POST',
       body: JSON.stringify({ petType })
     });
-    renderCompanion(data);
+    renderInventory({ companion: data.companion, pets: data.pets, items: [] });
+    loadInventory?.();
     showPolishToast?.('Companion değişti', data?.companion?.pet_name || '', 'success');
   } catch (error) {
     addSystemMessage(error.message);
@@ -7255,6 +7361,7 @@ refreshReplayButton?.addEventListener('click', loadChatReplay);
 refreshStoryDecisionButton?.addEventListener('click', loadStoryDecision);
 refreshCompanionButton?.addEventListener('click', loadCompanion);
 
+refreshInventoryButton?.addEventListener('click', loadInventory);
 startApp();
 
 window.addEventListener('load', () => setTimeout(clearFiveEggClasses, 120));
