@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v8.6.1</title>
-  <link rel="stylesheet" href="style.css?v=861" />
+  <title>Selim Chat v8.6.2</title>
+  <link rel="stylesheet" href="style.css?v=862" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -96,20 +96,32 @@
 
         <div id="serversPanel" class="friends-panel hidden">
           <h3>Sunucu Sistemi</h3>
-          <div class="server-create-box">
-            <div class="room-row">
-              <input id="newServerNameInput" type="text" placeholder="Sunucu adı" maxlength="80" />
-              <button id="createServerButton" type="button">Kur</button>
-            </div>
-            <input id="newServerDescriptionInput" type="text" placeholder="Açıklama / konu" maxlength="160" />
+
+          <div class="server-tabs">
+            <button id="serverListTabButton" class="server-tab active" type="button">Sunucular</button>
+            <button id="serverCreateTabButton" class="server-tab" type="button">Sunucu Kur</button>
           </div>
 
-          <h3>Sunucularım</h3>
-          <div id="serversList" class="mini-list"></div>
+          <div id="serverListPanel">
+            <h3>Sunucularım</h3>
+            <div id="serversList" class="mini-list"></div>
+          </div>
+
+          <div id="serverCreatePanel" class="server-create-box hidden">
+            <h3>Yeni Sunucu</h3>
+            <input id="newServerNameInput" type="text" placeholder="Sunucu adı" maxlength="80" />
+            <input id="newServerDescriptionInput" type="text" placeholder="Açıklama / konu" maxlength="160" />
+            <button id="createServerButton" class="small-button" type="button">Sunucuyu Kur</button>
+          </div>
 
           <div id="serverDetailsBox" class="server-details hidden">
             <h3>Aktif Sunucu</h3>
             <div id="activeServerInfo" class="mini-list"></div>
+
+            <div class="server-invite-box">
+              <button id="copyServerInviteButton" class="small-button" type="button">Davet Linki Kopyala</button>
+              <input id="serverInviteLinkInput" type="text" readonly placeholder="Davet linki" />
+            </div>
 
             <div class="room-row">
               <input id="newChannelNameInput" type="text" placeholder="kanal-adı" maxlength="60" />
@@ -121,8 +133,6 @@
 
             <h3>Üyeler</h3>
             <div id="serverMembersList" class="mini-list"></div>
-            <h3>Arkadaş ekle</h3>
-            <div id="addServerFriendList" class="mini-list"></div>
           </div>
         </div>
 
@@ -670,7 +680,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=861"></script>
+  <script src="script.js?v=862"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
