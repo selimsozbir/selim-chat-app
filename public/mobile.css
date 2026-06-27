@@ -355,3 +355,25 @@
     height: 50px;
   }
 }
+
+
+/* v10.7.0 mobile activity calendar */
+@media (max-width: 960px) {
+  .profile-activity-box {
+    margin: 12px 12px 0;
+    padding: 12px;
+  }
+
+  .profile-activity-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .activity-calendar-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .activity-day {
+    min-height: 38px;
+  }
+}
