@@ -2165,7 +2165,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '934');
+    url.searchParams.set('v', '935');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -5243,3 +5243,20 @@ window.addEventListener('load', () => setTimeout(clearFiveEggClasses, 120));
 window.addEventListener('load', () => requestAnimationFrame(() => document.body.classList.add('ui-ready')));
 
 window.addEventListener('load', () => setTimeout(() => setAdminPanelVisible(false), 80));
+
+
+function mobileComposerHardSnap() {
+  if (!isMobileLayout() || document.activeElement !== messageInput) return;
+  document.body.classList.add('keyboard-open', 'composer-focused');
+  updateMobileViewportHeight?.();
+  requestAnimationFrame(() => {
+    scrollToBottom?.();
+    messagesEl?.scrollTo?.({ top: messagesEl.scrollHeight, behavior: 'auto' });
+  });
+  setTimeout(() => messagesEl?.scrollTo?.({ top: messagesEl.scrollHeight, behavior: 'auto' }), 80);
+  setTimeout(() => messagesEl?.scrollTo?.({ top: messagesEl.scrollHeight, behavior: 'auto' }), 220);
+}
+
+messageInput?.addEventListener('focus', mobileComposerHardSnap);
+messageInput?.addEventListener('input', mobileComposerHardSnap);
+
