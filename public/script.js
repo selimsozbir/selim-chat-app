@@ -263,6 +263,7 @@ let mediaRecorder = null;
 let recordedChunks = [];
 let isRecording = false;
 let voiceRecordingStartedAt = 0;
+let voiceRecordingLastDuration = 0;
 let voiceRecordingTimer = null;
 let voiceRecordingStream = null;
 let cancelVoiceRecording = false;
@@ -1012,8 +1013,8 @@ async function startVoiceRecording() {
         return;
       }
 
-      const duration = voiceRecordingStartedAt ? (Date.now() - voiceRecordingStartedAt) / 1000 : 0;
-      if (duration < 0.7 || !recordedChunks.length) {
+      const duration = voiceRecordingLastDuration || (voiceRecordingStartedAt ? (Date.now() - voiceRecordingStartedAt) / 1000 : 0);
+      if (duration < 0.35 || !recordedChunks.length) {
         recordedChunks = [];
         addSystemMessage('Ses kaydı çok kısa.');
         return;
@@ -1029,6 +1030,7 @@ async function startVoiceRecording() {
         addSystemMessage(error.message);
       } finally {
         recordedChunks = [];
+        voiceRecordingLastDuration = 0;
       }
     };
 
@@ -1043,6 +1045,7 @@ async function startVoiceRecording() {
 function stopVoiceRecording(cancel = false) {
   if (!mediaRecorder || !isRecording) return;
 
+  voiceRecordingLastDuration = voiceRecordingStartedAt ? (Date.now() - voiceRecordingStartedAt) / 1000 : 0;
   cancelVoiceRecording = Boolean(cancel);
   try {
     mediaRecorder.stop();
@@ -2227,7 +2230,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '950');
+    url.searchParams.set('v', '951');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3251,6 +3254,11 @@ function setVoiceRecordingUi(recording) {
   if (voiceButton) {
     voiceButton.textContent = isRecording ? '⏹️' : '🎙️';
     voiceButton.title = isRecording ? 'Kaydı durdur' : 'Sesli mesaj kaydet';
+  }
+  if (sendButton) {
+    sendButton.classList.toggle('voice-send-ready', isRecording);
+    sendButton.textContent = isRecording ? 'Gönder' : 'Gönder';
+    sendButton.title = isRecording ? 'Kaydı durdur ve gönder' : 'Gönder';
   }
 
   voiceRecordHud?.classList.toggle('hidden', !isRecording);
