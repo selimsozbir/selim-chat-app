@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.3.0",
-  "description": "Selim Chat v10.3.0 Minimal Linear Apple style with subtle 5ECROPOLIS details",
+  "version": "10.3.1",
+  "description": "Selim Chat v10.3.1 clean left panel layout",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
