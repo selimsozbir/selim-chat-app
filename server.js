@@ -465,6 +465,19 @@ async function addShards(userId, amount) {
   return Number(result.rows[0]?.shards || 0);
 }
 
+async function logShardTransaction(userId, amount, reason, label, meta = {}) {
+  try {
+    const balance = await getShardBalance(userId);
+    await pool.query(
+      `INSERT INTO shard_transactions (user_id, amount, balance_after, reason, label, meta)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [userId, Math.trunc(Number(amount) || 0), balance, cleanText(reason || 'system', 80), cleanText(label || 'Shards işlem', 180), meta]
+    );
+  } catch (error) {
+    console.error('Shard history log error:', error);
+  }
+}
+
 function publicBlackjackSession(session, revealDealer = false) {
   return {
     bet: session.bet,
@@ -1266,6 +1279,21 @@ async function initDatabase() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS shard_transactions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      amount INTEGER NOT NULL,
+      balance_after INTEGER,
+      reason VARCHAR(80) NOT NULL,
+      label TEXT NOT NULL,
+      meta JSONB NOT NULL DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_shard_transactions_user_created ON shard_transactions(user_id, created_at DESC);`);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS lootbox_history (
       id SERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -1888,6 +1916,7 @@ app.patch('/api/admin/users/:id', authMiddleware, requireGlobalAdmin, async (req
 
   if (shards !== undefined) {
     await pool.query('UPDATE users SET shards = $1 WHERE id = $2', [shards, targetId]);
+    await logShardTransaction(targetId, shards - Number(target.shards || 0), 'admin_set', `Admin shards set · ${shards}`, { previous: target.shards, final: shards, actor_id: req.adminUser.id });
     emitToUser(targetId, 'notification', { type: 'system', payload: { text: `Shards bakiyen ${shards} olarak güncellendi.` } });
     await logAdminAction(req.adminUser.id, 'shards_set', { shards, previous: target.shards }, targetId);
   }
@@ -1897,6 +1926,7 @@ app.patch('/api/admin/users/:id', authMiddleware, requireGlobalAdmin, async (req
       'UPDATE users SET shards = GREATEST(0, COALESCE(shards, 0) + $1) WHERE id = $2 RETURNING shards',
       [shardDelta, targetId]
     );
+    await logShardTransaction(targetId, shardDelta, 'admin_delta', `Admin shards ${shardDelta > 0 ? 'ekledi' : 'aldı'}`, { delta: shardDelta, final: result.rows[0]?.shards || 0, actor_id: req.adminUser.id });
     emitToUser(targetId, 'notification', { type: 'system', payload: { text: `Shards bakiyen ${result.rows[0]?.shards || 0} oldu.` } });
     await logAdminAction(req.adminUser.id, 'shards_delta', { delta: shardDelta, final: result.rows[0]?.shards || 0 }, targetId);
   }
@@ -2474,6 +2504,24 @@ async function getGroupSummary(groupId, userId) {
 /* GROUP DM */
 
 
+app.get('/api/shards/history', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, amount, balance_after, reason, label, meta, created_at
+       FROM shard_transactions
+       WHERE user_id = $1
+       ORDER BY created_at DESC, id DESC
+       LIMIT 50`,
+      [req.user.id]
+    );
+
+    res.json({ history: result.rows });
+  } catch (error) {
+    console.error('Shard history error:', error);
+    res.status(500).json({ error: 'Shards geçmişi yüklenemedi.' });
+  }
+});
+
 app.get('/api/gamify/summary', authMiddleware, async (req, res) => {
   try {
     const userResult = await pool.query(
@@ -2547,6 +2595,7 @@ app.post('/api/daily/claim', authMiddleware, async (req, res) => {
       [req.user.id, streak, reward.shards, reward.xp]
     );
     await rewardUserActivity(req.user.id, reward.xp, reward.shards);
+    await logShardTransaction(req.user.id, reward.shards, 'daily_reward', `Günlük ödül · Streak ${streak}`, { streak, xp: reward.xp });
     await pool.query('COMMIT');
 
     const me = await pool.query('SELECT xp, shards FROM users WHERE id = $1', [req.user.id]);
@@ -2588,6 +2637,7 @@ app.post('/api/lootbox/open', authMiddleware, async (req, res) => {
 
     await pool.query('BEGIN');
     await addShards(req.user.id, -cost);
+    await logShardTransaction(req.user.id, -cost, 'lootbox_open', `${crate.name || crate.id} açıldı`, { crate_id: crate.id });
 
     let reward;
     if (candidates.length) {
@@ -2609,6 +2659,7 @@ app.post('/api/lootbox/open', authMiddleware, async (req, res) => {
     } else {
       const shardReward = Math.max(80, Math.floor(cost * (0.45 + Math.random() * 0.55)));
       await addShards(req.user.id, shardReward);
+      await logShardTransaction(req.user.id, shardReward, 'lootbox_refund', 'Kasa shard refund', { crate_id: crate.id });
 
       await pool.query(
         `INSERT INTO lootbox_history (user_id, crate_id, reward_type, reward_name, reward_rarity, reward_shards, cost_shards)
@@ -2686,6 +2737,7 @@ app.post('/api/quests/claim', authMiddleware, async (req, res) => {
     );
 
     await rewardUserActivity(req.user.id, quest.xp, quest.shards);
+    await logShardTransaction(req.user.id, quest.shards, 'quest_reward', `Görev ödülü · ${quest.title}`, { quest_id: quest.id, xp: quest.xp });
     const me = await pool.query('SELECT xp, shards FROM users WHERE id = $1', [req.user.id]);
 
     res.json({ ok: true, reward: { xp: quest.xp, shards: quest.shards }, user: me.rows[0] });
@@ -2711,6 +2763,7 @@ app.post('/api/market/buy', authMiddleware, async (req, res) => {
 
     await pool.query('BEGIN');
     await pool.query('UPDATE users SET shards = COALESCE(shards,0) - $1 WHERE id = $2', [item.price, req.user.id]);
+    await logShardTransaction(req.user.id, -item.price, 'market_buy', `Market satın alım · ${item.name}`, { item_id: item.id, item_type: item.type, rarity: item.rarity });
     await pool.query(
       `INSERT INTO user_items (user_id, item_id, item_type)
        VALUES ($1, $2, $3)`,
@@ -2793,6 +2846,7 @@ app.post('/api/casino/slot', authMiddleware, async (req, res) => {
     const payout = bet * multiplier;
     const net = payout - bet;
     const shards = await addShards(req.user.id, net);
+    await logShardTransaction(req.user.id, net, 'casino_slot', `Slot ${net >= 0 ? 'kazanç' : 'kayıp'} · ${result}`, { bet, payout, reels });
 
     res.json({ game: 'slot', bet, reels, multiplier, payout, net, result, shards });
   } catch (error) {
@@ -2808,6 +2862,7 @@ app.post('/api/casino/blackjack/start', authMiddleware, async (req, res) => {
     if (balance < bet) return res.status(400).json({ error: 'Yetersiz Shards.' });
 
     await addShards(req.user.id, -bet);
+    await logShardTransaction(req.user.id, -bet, 'blackjack_bet', 'Blackjack bet', { bet });
 
     const session = {
       bet,
@@ -2824,6 +2879,7 @@ app.post('/api/casino/blackjack/start', authMiddleware, async (req, res) => {
       session.result = 'Blackjack!';
       session.payout = Math.floor(bet * 2.2);
       await addShards(req.user.id, session.payout);
+      await logShardTransaction(req.user.id, session.payout, 'blackjack_payout', 'Blackjack payout', { bet, result: session.result });
     } else {
       casinoSessions.set(req.user.id, session);
     }
@@ -2881,7 +2937,10 @@ app.post('/api/casino/blackjack/stand', authMiddleware, async (req, res) => {
       session.payout = 0;
     }
 
-    if (session.payout > 0) await addShards(req.user.id, session.payout);
+    if (session.payout > 0) {
+      await addShards(req.user.id, session.payout);
+      await logShardTransaction(req.user.id, session.payout, 'blackjack_payout', `Blackjack · ${session.result}`, { bet: session.bet, payout: session.payout });
+    }
     casinoSessions.delete(req.user.id);
 
     const shards = await getShardBalance(req.user.id);
