@@ -8118,3 +8118,138 @@ body {
     font-size: 22px !important;
   }
 }
+
+
+/* =========================================================
+   v8.8.8 — Profile Card Balanced Bigger Size
+   Dozu ayarlı büyütme: genişlik, kapak, avatar, spacing.
+   ========================================================= */
+
+#profileModal.profile-modal:not(.hidden) {
+  padding: 12px 10px !important;
+}
+
+#profileModal:not(.hidden) .profile-card-v2 {
+  width: min(760px, 97vw) !important;
+  max-height: calc(100vh - 24px) !important;
+}
+
+#profileModal:not(.hidden) .profile-cover-v2 {
+  height: 176px !important;
+  min-height: 176px !important;
+}
+
+#profileModal:not(.hidden) .profile-main-v2 {
+  margin-top: -54px !important;
+  padding: 0 28px 20px !important;
+  gap: 18px !important;
+}
+
+#profileModal:not(.hidden) .profile-avatar-v2 {
+  width: 116px !important;
+  height: 116px !important;
+  flex: 0 0 116px !important;
+  border-width: 5px !important;
+}
+
+#profileModal:not(.hidden) .profile-identity-v2 {
+  padding: 16px 18px !important;
+  border-radius: 20px !important;
+}
+
+#profileModal:not(.hidden) .profile-identity-v2 h2,
+#profileModal:not(.hidden) #profileUsername {
+  font-size: 30px !important;
+}
+
+#profileModal:not(.hidden) .profile-identity-v2 #profileBio {
+  font-size: 14px !important;
+}
+
+#profileModal:not(.hidden) .profile-stats-v2,
+#profileModal:not(.hidden) .profile-level-box,
+#profileModal:not(.hidden) .profile-meta-v2,
+#profileModal:not(.hidden) .profile-badges-v2 {
+  padding-left: 28px !important;
+  padding-right: 28px !important;
+}
+
+#profileModal:not(.hidden) .profile-stats-v2 {
+  gap: 12px !important;
+}
+
+#profileModal:not(.hidden) .profile-stats-v2 div,
+#profileModal:not(.hidden) .profile-meta-v2 div {
+  padding: 14px !important;
+}
+
+#profileModal:not(.hidden) .profile-stats-v2 strong {
+  font-size: 28px !important;
+}
+
+#profileModal:not(.hidden) .profile-about-box,
+#profileModal:not(.hidden) .profile-edit-panel {
+  margin-left: 28px !important;
+  margin-right: 28px !important;
+}
+
+#profileModal:not(.hidden) .profile-badges-list {
+  gap: 12px !important;
+}
+
+#profileModal:not(.hidden) .profile-badge {
+  padding: 12px !important;
+}
+
+@media (max-width: 760px) {
+  #profileModal.profile-modal:not(.hidden) {
+    padding: 8px 6px 92px !important;
+    place-items: start center !important;
+  }
+
+  #profileModal:not(.hidden) .profile-card-v2 {
+    width: min(100%, 98.5vw) !important;
+    max-height: calc(100vh - 104px) !important;
+  }
+
+  #profileModal:not(.hidden) .profile-cover-v2 {
+    height: 138px !important;
+    min-height: 138px !important;
+  }
+
+  #profileModal:not(.hidden) .profile-main-v2 {
+    margin-top: -40px !important;
+    padding: 0 14px 15px !important;
+    gap: 12px !important;
+  }
+
+  #profileModal:not(.hidden) .profile-avatar-v2 {
+    width: 92px !important;
+    height: 92px !important;
+    flex-basis: 92px !important;
+    border-width: 4px !important;
+  }
+
+  #profileModal:not(.hidden) .profile-identity-v2 {
+    padding: 12px 13px !important;
+  }
+
+  #profileModal:not(.hidden) .profile-identity-v2 h2,
+  #profileModal:not(.hidden) #profileUsername {
+    font-size: 23px !important;
+  }
+
+  #profileModal:not(.hidden) .profile-stats-v2,
+  #profileModal:not(.hidden) .profile-level-box,
+  #profileModal:not(.hidden) .profile-meta-v2,
+  #profileModal:not(.hidden) .profile-badges-v2 {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  #profileModal:not(.hidden) .profile-about-box,
+  #profileModal:not(.hidden) .profile-edit-panel {
+    margin-left: 14px !important;
+    margin-right: 14px !important;
+  }
+}
