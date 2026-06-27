@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.2.0",
-  "description": "Selim Chat v10.2.0 separated social panel and story removal",
+  "version": "10.2.1",
+  "description": "Selim Chat v10.2.1 login, messaging and friends center fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
