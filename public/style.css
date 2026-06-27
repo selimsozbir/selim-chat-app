@@ -9627,3 +9627,377 @@ select:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+
+/* =========================================================
+   v9.2.0 — Layout Redesign
+   Sol taraf sadeleşti, Hub/Admin/Bildirimler sağ panele taşındı.
+   Discord'dan ilhamlı ama birebir olmayan temiz 3 kolon düzeni.
+   ========================================================= */
+
+.chat-layout {
+  grid-template-columns: 72px 300px minmax(0, 1fr) 340px !important;
+  align-items: stretch !important;
+  gap: 12px !important;
+  padding: 12px !important;
+}
+
+.app-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 8px;
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(9,13,24,.96), rgba(5,7,16,.96));
+  border: 1px solid rgba(255,255,255,.085);
+  box-shadow: 0 22px 80px rgba(0,0,0,.38);
+  backdrop-filter: blur(18px);
+  min-width: 0;
+}
+
+.rail-button {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 17px !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  background: rgba(255,255,255,.055) !important;
+  color: #dbeafe !important;
+  font-size: 18px !important;
+  font-weight: 1000 !important;
+  cursor: pointer;
+}
+
+.rail-button:hover {
+  border-radius: 16px !important;
+  background: rgba(168,85,247,.20) !important;
+  transform: translateY(-1px);
+}
+
+.rail-button.active {
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, #7c3aed, #ec4899) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 32px rgba(168,85,247,.28);
+}
+
+.rail-bottom {
+  margin-top: auto;
+}
+
+.sidebar {
+  width: 300px !important;
+  min-width: 300px !important;
+  max-width: 300px !important;
+  border-radius: 26px !important;
+  padding: 12px !important;
+}
+
+.sidebar-brand {
+  padding: 10px !important;
+  margin-bottom: 10px !important;
+}
+
+.brand-mark {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 14px !important;
+}
+
+.profile-box {
+  grid-template-columns: 44px minmax(0, 1fr) !important;
+  padding: 10px !important;
+  border-radius: 20px !important;
+}
+
+.profile-box .avatar,
+.profile-box .avatar-img {
+  width: 44px !important;
+  height: 44px !important;
+}
+
+.profile-box > div {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.profile-box > div > strong {
+  grid-column: 1 / -1 !important;
+}
+
+.profile-box #logoutButton {
+  grid-column: 1 / -1 !important;
+}
+
+.sidebar .gamify-box,
+.sidebar .notifications-box,
+.sidebar .global-admin-panel {
+  display: none !important;
+}
+
+.right-panel {
+  width: 340px;
+  min-width: 340px;
+  max-width: 340px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px;
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(9,13,24,.94), rgba(5,7,16,.94));
+  border: 1px solid rgba(255,255,255,.085);
+  box-shadow: 0 22px 80px rgba(0,0,0,.38);
+  backdrop-filter: blur(18px);
+}
+
+.right-panel-header {
+  display: grid;
+  gap: 2px;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(168,85,247,.18), transparent 36%),
+    rgba(255,255,255,.045);
+  border: 1px solid rgba(255,255,255,.075);
+}
+
+.right-panel-header strong {
+  color: #fff;
+  font-size: 14px;
+}
+
+.right-panel-header span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.right-panel .gamify-box,
+.right-panel .notifications-box,
+.right-panel .global-admin-panel {
+  margin-top: 10px !important;
+  padding: 12px !important;
+  border-radius: 22px !important;
+}
+
+.right-panel .global-admin-panel.hidden {
+  display: none !important;
+}
+
+.right-panel::-webkit-scrollbar,
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.right-panel::-webkit-scrollbar-thumb,
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(168,85,247,.34);
+  border-radius: 999px;
+}
+
+/* Sol panel artık sadece navigasyon/kişiler için daha temiz */
+#roomPanel,
+#friendsPanel,
+#groupsPanel {
+  display: grid;
+  gap: 10px;
+}
+
+#roomPanel.hidden,
+#friendsPanel.hidden,
+#groupsPanel.hidden,
+.hidden {
+  display: none !important;
+}
+
+.room-box,
+.users-box,
+.search-box,
+.requests-box,
+.friends-box,
+.blocked-box,
+.friend-activity-box,
+.admin-panel,
+.group-details {
+  margin-top: 0 !important;
+}
+
+.admin-panel {
+  opacity: .95;
+}
+
+.admin-panel .mini-actions,
+.admin-user-item .mini-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+/* Chat alanı daha geniş ve sakin */
+.chat-main {
+  min-width: 0 !important;
+  border-radius: 26px !important;
+}
+
+.messages {
+  padding: 20px 22px !important;
+}
+
+.msg-bubble {
+  max-width: min(680px, 70vw) !important;
+}
+
+/* Hub sağ panel içinde kompakt */
+.right-panel .gamify-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+.right-panel .polish-quick-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.right-panel .gamify-panel {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.right-panel .daily-card,
+.right-panel .lootbox-card {
+  grid-template-columns: 38px minmax(0, 1fr) !important;
+}
+
+.right-panel .daily-card button,
+.right-panel .lootbox-card button {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+}
+
+.right-panel .market-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.right-panel .casino-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+/* Bildirimler sağda kutu gibi */
+.right-panel .notifications-box h3 {
+  justify-content: space-between;
+}
+
+.right-panel #clearNotificationsButton {
+  width: 100% !important;
+  margin-bottom: 8px;
+}
+
+/* Küçük laptoplarda sağ panel daralsın */
+@media (max-width: 1280px) {
+  .chat-layout {
+    grid-template-columns: 64px 286px minmax(0, 1fr) 310px !important;
+    gap: 10px !important;
+  }
+
+  .app-rail {
+    padding-inline: 7px;
+  }
+
+  .rail-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .sidebar {
+    width: 286px !important;
+    min-width: 286px !important;
+    max-width: 286px !important;
+  }
+
+  .right-panel {
+    width: 310px;
+    min-width: 310px;
+    max-width: 310px;
+  }
+}
+
+/* Orta ekranlarda sağ panel alta alınır, sol kalabalık olmaz */
+@media (max-width: 1080px) {
+  .chat-layout {
+    grid-template-columns: 64px 286px minmax(0, 1fr) !important;
+  }
+
+  .right-panel {
+    display: none;
+  }
+
+  .sidebar .gamify-box,
+  .sidebar .notifications-box,
+  .sidebar .global-admin-panel {
+    display: block !important;
+  }
+}
+
+/* Mobilde rail altta, sidebar drawer mantığı korunur */
+@media (max-width: 760px) {
+  .chat-layout {
+    grid-template-columns: 1fr !important;
+    padding: 0 !important;
+  }
+
+  .app-rail {
+    position: fixed;
+    left: 50%;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    z-index: 10040;
+    flex-direction: row;
+    width: min(420px, calc(100vw - 18px));
+    height: 62px;
+    border-radius: 22px;
+    justify-content: space-around;
+    padding: 8px;
+  }
+
+  .rail-button {
+    width: 46px;
+    height: 46px;
+  }
+
+  .rail-bottom {
+    margin-top: 0;
+  }
+
+  .sidebar {
+    width: min(88vw, 360px) !important;
+    max-width: min(88vw, 360px) !important;
+    min-width: 0 !important;
+  }
+
+  .right-panel {
+    display: none !important;
+  }
+
+  .sidebar .gamify-box,
+  .sidebar .notifications-box,
+  .sidebar .global-admin-panel {
+    display: block !important;
+  }
+
+  .chat-main {
+    border-radius: 0 !important;
+  }
+
+  .messages {
+    padding-bottom: 86px !important;
+  }
+
+  .message-form {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .msg-bubble {
+    max-width: min(82vw, 560px) !important;
+  }
+}
