@@ -798,6 +798,41 @@ async function isRoomMuted(room, userId) {
   return result.rows.length > 0;
 }
 
+
+async function getRoomReadSummaries(room, messageIds) {
+  const ids = Array.from(new Set((messageIds || []).map(Number).filter(Number.isInteger))).slice(0, 80);
+  if (!ids.length) return [];
+
+  const result = await pool.query(
+    `SELECT m.id AS message_id,
+            COALESCE(
+              json_agg(
+                json_build_object('id', u.id, 'username', COALESCE(u.display_name, u.username))
+                ORDER BY r.seen_at ASC
+              ) FILTER (WHERE r.user_id IS NOT NULL),
+              '[]'::json
+            ) AS readers
+     FROM messages m
+     LEFT JOIN room_message_reads r ON r.message_id = m.id AND r.user_id <> m.user_id
+     LEFT JOIN users u ON u.id = r.user_id
+     WHERE m.room = $1 AND m.id = ANY($2::int[])
+     GROUP BY m.id`,
+    [room, ids]
+  );
+
+  return result.rows;
+}
+
+async function emitRoomReadSummaries(room, messageIds) {
+  const summaries = await getRoomReadSummaries(room, messageIds);
+  summaries.forEach((summary) => {
+    io.to(room).emit('room_read_summary', {
+      messageId: summary.message_id,
+      readers: summary.readers || []
+    });
+  });
+}
+
 async function areFriends(userA, userB) {
   if (await isBlockedBetween(userA, userB)) return false;
 
@@ -1202,6 +1237,15 @@ async function initDatabase() {
       reward_xp INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(user_id, claim_date)
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_message_reads (
+      message_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (message_id, user_id)
     );
   `);
 
@@ -2000,7 +2044,17 @@ app.get('/api/messages/:room', authMiddleware, async (req, res) => {
             u.active_name_effect AS name_effect,
             u.active_profile_frame AS frame_theme,
             rm.username AS reply_username,
-            rm.text AS reply_text
+            rm.text AS reply_text,
+            COALESCE((
+              SELECT json_agg(
+                       json_build_object('id', ru.id, 'username', COALESCE(ru.display_name, ru.username))
+                       ORDER BY rmr.seen_at ASC
+                     )
+              FROM room_message_reads rmr
+              JOIN users ru ON ru.id = rmr.user_id
+              WHERE rmr.message_id = m.id
+              AND rmr.user_id <> m.user_id
+            ), '[]'::json) AS readers
      FROM messages m
      LEFT JOIN users u ON u.id = m.user_id
      LEFT JOIN messages rm ON rm.id = m.reply_to_id
@@ -3442,6 +3496,33 @@ io.on('connection', (socket) => {
     } catch (error) {
       console.error('Mesaj kayıt hatası:', error);
       socket.emit('system_message', 'Mesaj gönderilemedi.');
+    }
+  });
+
+
+  socket.on('room_messages_read', async ({ room, messageIds } = {}) => {
+    try {
+      const cleanRoom = cleanText(room || socket.data.room || '', 50).toLowerCase();
+      const ids = Array.from(new Set((Array.isArray(messageIds) ? messageIds : []).map(Number).filter(Number.isInteger))).slice(0, 80);
+
+      if (!cleanRoom || !ids.length) return;
+
+      await pool.query(
+        `INSERT INTO room_message_reads (message_id, user_id, seen_at)
+         SELECT id, $3, CURRENT_TIMESTAMP
+         FROM messages
+         WHERE room = $1
+         AND id = ANY($2::int[])
+         AND user_id <> $3
+         AND deleted_at IS NULL
+         ON CONFLICT (message_id, user_id)
+         DO UPDATE SET seen_at = EXCLUDED.seen_at`,
+        [cleanRoom, ids, socket.user.id]
+      );
+
+      await emitRoomReadSummaries(cleanRoom, ids);
+    } catch (error) {
+      console.error('Oda görüldü bilgisi hatası:', error);
     }
   });
 
