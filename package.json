@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "9.6.0",
-  "description": "Selim Chat v9.6.0 live events, portal drops and universe systems",
+  "version": "9.7.0",
+  "description": "Selim Chat v9.7.0 Feiz memory and personality upgrade",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
