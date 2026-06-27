@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.5.3",
-  "description": "Selim Chat v10.5.3 real equipped market bubble fix for own messages",
+  "version": "10.5.4",
+  "description": "Selim Chat v10.5.4 market bubble source fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
