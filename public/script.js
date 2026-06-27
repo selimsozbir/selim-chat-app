@@ -1496,6 +1496,8 @@ async function loadOldRoomMessages(room) {
     data.messages.forEach((message) => {
       addRoomMessage({
         id: message.id,
+        user_id: message.user_id,
+        sender_id: message.user_id,
         username: message.username,
         avatar_url: message.avatar_url,
         text: message.text,
@@ -1526,6 +1528,8 @@ function addRoomMessage(message) {
   addMessage({
     type: 'room',
     id: message.id,
+    user_id: message.user_id,
+    sender_id: message.sender_id,
     username: message.username,
     avatar_url: message.avatar_url,
     text: message.text,
@@ -1828,6 +1832,8 @@ function addDmMessage(message) {
   addMessage({
     type: 'dm',
     id: message.id,
+    user_id: message.sender_id,
+    sender_id: message.sender_id,
     username: message.sender_username || (message.sender_id === user.id ? user.username : 'Arkadaş'),
     avatar_url: message.sender_avatar_url || (message.sender_id === user.id ? user.avatar_url : null),
     text: message.text,
@@ -1856,7 +1862,7 @@ function addDmMessage(message) {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '886');
+    url.searchParams.set('v', '887');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2438,7 +2444,7 @@ function markVisibleRoomMessagesRead() {
 }
 
 
-function addMessage({ type, id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read, readers, bubble_theme, name_effect, frame_theme }) {
+function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read, readers, bubble_theme, name_effect, frame_theme }) {
   const localSettings = getLocalSettings();
   const normalizedUsername = String(username || '').toLowerCase();
   const isBotMessage = ['feiz', 'selimbot', 'bot'].includes(normalizedUsername);
@@ -2456,6 +2462,8 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
   div.className = `message ${mine ? 'mine' : ''} ${isBotMessage ? 'bot-message' : ''} ${sameSender ? 'same-sender' : ''} ${activeBubble ? 'cosmetic-' + activeBubble : ''} ${activeName ? 'namefx-' + activeName : ''} ${activeFrame ? 'framefx-' + activeFrame : ''}`;
   div.dataset.type = type;
   div.dataset.id = id;
+  const profileTargetId = Number(sender_id || user_id || 0);
+  if (Number.isInteger(profileTargetId) && profileTargetId > 0) div.dataset.profileUserId = String(profileTargetId);
 
   lastRenderedSenderKey = senderKey;
   lastRenderedMessageType = type;
@@ -2469,6 +2477,15 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
     avatar.textContent = String(username || '?').charAt(0).toUpperCase();
   }
 
+  if (Number.isInteger(profileTargetId) && profileTargetId > 0) {
+    avatar.classList.add('clickable-profile');
+    avatar.title = 'Profili aç';
+    avatar.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openProfile(profileTargetId);
+    });
+  }
+
   const bubble = document.createElement('div');
   bubble.className = 'msg-bubble';
 
@@ -2479,6 +2496,14 @@ function addMessage({ type, id, username, avatar_url, text, message_type, file_n
   if (edited) metaParts.push('düzenlendi');
   if (deleted) metaParts.push('silindi');
   meta.textContent = metaParts.join(' • ');
+  if (Number.isInteger(profileTargetId) && profileTargetId > 0) {
+    meta.classList.add('clickable-profile-name');
+    meta.title = 'Profili aç';
+    meta.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openProfile(profileTargetId);
+    });
+  }
 
   const body = document.createElement('div');
   body.className = 'text';
@@ -4278,6 +4303,8 @@ function addGroupMessage(message) {
   addMessage({
     type: 'group',
     id: message.id,
+    user_id: message.sender_id,
+    sender_id: message.sender_id,
     username: message.display_name || message.username,
     avatar_url: message.avatar_url,
     text: message.text,
