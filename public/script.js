@@ -980,13 +980,7 @@ async function startVoiceRecording() {
   }
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    });
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
     voiceRecordingStream = stream;
     recordedChunks = [];
@@ -2249,7 +2243,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '952');
+    url.searchParams.set('v', '953');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -5766,4 +5760,15 @@ document.addEventListener('keydown', (event) => {
     closeSettingsMobileSafe();
   }
 });
+
+
+
+/* v9.5.3: mobile/desktop direct send button support for active voice recording */
+sendButton?.addEventListener('click', (event) => {
+  if (isRecording || mediaRecorder?.state === 'recording') {
+    event.preventDefault();
+    event.stopPropagation();
+    stopVoiceRecording(false);
+  }
+}, true);
 
