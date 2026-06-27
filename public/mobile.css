@@ -984,3 +984,352 @@
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   }
 }
+
+
+/* =========================================================
+   Selim Chat v10.9.2 — Mobile rollback/fix from screenshots
+   Previous iOS toolbar transform made composer disappear and left large
+   dead zones. This layer overrides that and makes composer/bottom nav
+   deterministic.
+   ========================================================= */
+
+@media (max-width: 960px) {
+  :root {
+    --mobile-topbar-h: calc(56px + env(safe-area-inset-top));
+    --mobile-bottomnav-h: calc(74px + env(safe-area-inset-bottom));
+    --mobile-composer-fixed-h: 68px;
+  }
+
+  html,
+  body {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .app,
+  .chat-screen {
+    width: 100vw !important;
+    height: var(--mobile-vvh, 100dvh) !important;
+    max-height: var(--mobile-vvh, 100dvh) !important;
+    overflow: hidden !important;
+  }
+
+  .chat-screen {
+    display: grid !important;
+    grid-template-rows: var(--mobile-topbar-h) minmax(0, 1fr) var(--mobile-bottomnav-h) !important;
+    grid-template-areas:
+      "topbar"
+      "chat"
+      "bottomnav" !important;
+  }
+
+  .mobile-topbar {
+    grid-area: topbar !important;
+    transform: none !important;
+  }
+
+  .mobile-bottom-nav {
+    grid-area: bottomnav !important;
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+    height: var(--mobile-bottomnav-h) !important;
+    min-height: var(--mobile-bottomnav-h) !important;
+    max-height: var(--mobile-bottomnav-h) !important;
+    z-index: 180 !important;
+  }
+
+  .chat-main {
+    grid-area: chat !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding-bottom: calc(var(--mobile-composer-fixed-h) + 10px) !important;
+    position: relative !important;
+  }
+
+  .messages {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 12px 10px calc(var(--mobile-composer-fixed-h) + 18px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .typing,
+  #typingText,
+  .reply-bar {
+    flex: 0 0 auto !important;
+  }
+
+  .message-form {
+    position: fixed !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: calc(var(--mobile-bottomnav-h) + 8px) !important;
+    z-index: 190 !important;
+    display: grid !important;
+    grid-template-columns: 38px 38px minmax(0, 1fr) 56px !important;
+    gap: 6px !important;
+    align-items: center !important;
+    min-height: 56px !important;
+    margin: 0 !important;
+    padding: 8px !important;
+    border-radius: 20px !important;
+    background: rgba(18,20,28,.96) !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    box-shadow: 0 16px 42px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.06) !important;
+    transform: none !important;
+  }
+
+  #emojiButton {
+    display: none !important;
+  }
+
+  #voiceButton,
+  #attachButton {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+  }
+
+  #sendButton {
+    min-width: 56px !important;
+    height: 38px !important;
+    padding-inline: 10px !important;
+  }
+
+  .composer-field,
+  #messageInput {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  #messageInput {
+    font-size: 16px !important;
+    line-height: 1.35 !important;
+    max-height: 84px !important;
+  }
+
+  body.keyboard-open .chat-screen,
+  body.composer-focused .chat-screen {
+    grid-template-rows: 0 minmax(0, 1fr) 0 !important;
+  }
+
+  body.keyboard-open .mobile-topbar,
+  body.composer-focused .mobile-topbar,
+  body.keyboard-open .mobile-bottom-nav,
+  body.composer-focused .mobile-bottom-nav {
+    display: none !important;
+  }
+
+  body.keyboard-open .chat-main,
+  body.composer-focused .chat-main {
+    padding-bottom: calc(var(--mobile-composer-fixed-h) + 12px) !important;
+    max-height: var(--mobile-vvh, 100dvh) !important;
+  }
+
+  body.keyboard-open .messages,
+  body.composer-focused .messages {
+    padding-bottom: calc(var(--mobile-composer-fixed-h) + 20px) !important;
+  }
+
+  body.keyboard-open .message-form,
+  body.composer-focused .message-form {
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    transform: none !important;
+  }
+
+  body.mobile-sidebar-open .message-form,
+  body.mobile-right-panel-open .message-form,
+  .profile-modal:not(.hidden) ~ .message-form,
+  .settings-modal:not(.hidden) ~ .message-form {
+    display: none !important;
+  }
+
+  /* Undo the v10.9.1 iOS toolbar lift that created big blank areas. */
+  body:not(.keyboard-open):not(.composer-focused) .mobile-bottom-nav,
+  body:not(.keyboard-open):not(.composer-focused) .sidebar,
+  body:not(.keyboard-open):not(.composer-focused) .right-panel,
+  body:not(.keyboard-open):not(.composer-focused) .profile-card,
+  body:not(.keyboard-open):not(.composer-focused) .settings-card-v2,
+  body:not(.keyboard-open):not(.composer-focused) .settings-card,
+  body:not(.keyboard-open):not(.composer-focused) .gallery-card,
+  body:not(.keyboard-open):not(.composer-focused) .friends-center-card,
+  body:not(.keyboard-open):not(.composer-focused) .command-palette-card {
+    transform: none;
+  }
+
+  body:not(.keyboard-open):not(.composer-focused) .mobile-bottom-nav {
+    transform: none !important;
+  }
+
+  /* Mobile sheets */
+  .sidebar {
+    top: 0 !important;
+    bottom: 0 !important;
+    height: var(--mobile-vvh, 100dvh) !important;
+    max-height: var(--mobile-vvh, 100dvh) !important;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom)) !important;
+    transform: translateX(-104%) !important;
+  }
+
+  body.mobile-sidebar-open .sidebar {
+    transform: translateX(0) !important;
+  }
+
+  .right-panel {
+    bottom: 0 !important;
+    height: min(82dvh, calc(var(--mobile-vvh, 100dvh) - 18px)) !important;
+    max-height: calc(var(--mobile-vvh, 100dvh) - 18px) !important;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom)) !important;
+    transform: translateY(104%) !important;
+  }
+
+  body.mobile-right-panel-open .right-panel {
+    transform: translateY(0) !important;
+  }
+
+  /* Status bubble in sidebar was overlaying username. */
+  .profile-box {
+    overflow: visible !important;
+    padding-top: 18px !important;
+  }
+
+  .current-status-bubble {
+    position: static !important;
+    display: inline-flex !important;
+    width: fit-content !important;
+    max-width: 100% !important;
+    margin: 0 0 8px 0 !important;
+    border-radius: 999px !important;
+    white-space: normal !important;
+    order: -1 !important;
+  }
+
+  .current-status-bubble.hidden {
+    display: none !important;
+  }
+
+  .profile-box > div:last-child {
+    min-width: 0 !important;
+  }
+
+  #currentUsername {
+    display: block !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  /* Friend/DM action rows were overlapping text. Put actions below. */
+  .mini-item.conversation-item,
+  #friendsList .mini-item,
+  #searchResults .mini-item,
+  #requestsList .mini-item,
+  #blockedList .mini-item {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 9px !important;
+    align-items: stretch !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .mini-left {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .mini-left > div,
+  .mini-left strong,
+  .mini-left span {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .mini-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .mini-actions .action-button,
+  .mini-actions button {
+    min-width: 0 !important;
+    width: 100% !important;
+    padding-inline: 8px !important;
+    font-size: 12px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* Group creation / member rows */
+  .new-group-friend,
+  .group-row,
+  .room-user-item {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 8px !important;
+    max-width: 100% !important;
+  }
+
+  .new-group-friend .mini-left,
+  .group-row .mini-left,
+  .room-user-item .mini-left {
+    min-width: 0 !important;
+  }
+
+  .new-group-friend input[type="checkbox"] {
+    justify-self: end !important;
+  }
+
+  .users-box,
+  .friends-panel,
+  .groups-panel,
+  .room-box,
+  .search-panel,
+  .group-box {
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .message-form {
+    left: 6px !important;
+    right: 6px !important;
+    grid-template-columns: 36px 36px minmax(0, 1fr) 50px !important;
+    gap: 4px !important;
+  }
+
+  #voiceButton,
+  #attachButton {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+  }
+
+  #sendButton {
+    min-width: 50px !important;
+    font-size: 12px !important;
+  }
+
+  .mini-actions {
+    grid-template-columns: 1fr !important;
+  }
+}
