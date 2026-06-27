@@ -1550,6 +1550,13 @@ function connectSocket() {
     loadFeizPersonality?.();
   });
 
+  socket.on('level_reward', ({ levels, total_shards, new_level }) => {
+    const lastLevel = new_level || levels?.[levels.length - 1]?.level;
+    showPolishToast?.('Level atladın!', `Level ${lastLevel} · +${total_shards || 0} shards`, 'success');
+    addSystemMessage(`🎉 Level ${lastLevel} ödülü: +${total_shards || 0} shards`);
+    loadGamify?.();
+  });
+
   socket.on('room_role', ({ role }) => {
     myRoomRole = role;
     renderRole();
@@ -2374,7 +2381,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '981');
+    url.searchParams.set('v', '983');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2696,6 +2703,11 @@ async function saveStory() {
     user = data.user;
     localStorage.setItem('chat_user', JSON.stringify(user));
     syncSocialInputs();
+    socket?.emit('presence_update', {
+      presenceStatus: user.presence_status || 'online',
+      customStatus: user.custom_status || ''
+    });
+    if (chatMode === 'room' && socket?.connected) setTimeout(() => socket.emit('join', { room: currentRoom }), 80);
     await loadStories();
     showPolishToast?.('Story paylaşıldı', '24 saat görünür kalacak.', 'success');
   } catch (error) {
@@ -2709,6 +2721,11 @@ async function clearStory() {
     user = data.user;
     localStorage.setItem('chat_user', JSON.stringify(user));
     syncSocialInputs();
+    socket?.emit('presence_update', {
+      presenceStatus: user.presence_status || 'online',
+      customStatus: user.custom_status || ''
+    });
+    if (chatMode === 'room' && socket?.connected) setTimeout(() => socket.emit('join', { room: currentRoom }), 80);
     await loadStories();
     showPolishToast?.('Story silindi', '', 'success');
   } catch (error) {
@@ -3205,7 +3222,7 @@ async function equipMarketItem(itemId, slot) {
     addSystemMessage(itemId ? 'Kozmetik kuşanıldı. Site yenileniyor...' : 'Kozmetik çıkarıldı. Site yenileniyor...');
     await loadGamify();
     if (!shardsHistoryPanel?.classList.contains('hidden')) loadShardsHistory();
-    forceAppRefresh();
+    forceAppRefresh(250);
   } catch (error) {
     addSystemMessage(error.message);
   }
@@ -3421,7 +3438,7 @@ function renderUsers(users) {
     }
     const li = document.createElement('li');
     li.className = `room-user-item presence-${String(profile.presence_status || 'online').toLowerCase()}`;
-    li.innerHTML = `<div class="mini-left">${avatarHtml(profile.display_name || profile.username, profile.avatar_url)}<div><strong>${escapeHtml(profile.display_name || profile.username)}</strong><span>${escapeHtml(formatPresence(profile))}</span>${storyActive(profile) ? `<em>${escapeHtml(profile.story_text)}</em>` : ''}</div></div>`;
+    li.innerHTML = `<div class="mini-left">${avatarHtml(profile.display_name || profile.username, profile.avatar_url)}<div><strong>${escapeHtml(profile.display_name || profile.username)}</strong><span>${escapeHtml(roomPresenceLine(profile))}</span>${storyActive(profile) ? `<em>Story: ${escapeHtml(profile.story_text)}</em>` : ''}</div></div>`;
     if (profile.id) li.onclick = () => openProfile(profile.id);
     usersList.appendChild(li);
   });
@@ -5294,6 +5311,12 @@ function formatPresence(profile) {
     hour: '2-digit',
     minute: '2-digit'
   })}`;
+}
+
+function roomPresenceLine(profile) {
+  const status = String(profile?.presence_status || 'online').toLowerCase();
+  const custom = String(profile?.custom_status || '').trim();
+  return `${presenceIcon(status)} ${presenceLabel(status)}${custom ? ' · ' + custom : ''}`;
 }
 
 
