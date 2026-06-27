@@ -992,11 +992,16 @@ async function startVoiceRecording() {
     recordedChunks = [];
     cancelVoiceRecording = false;
 
-    const preferredType = MediaRecorder.isTypeSupported?.('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus'
-      : 'audio/webm';
-
-    mediaRecorder = new MediaRecorder(stream, { mimeType: preferredType });
+    const supportedMimeTypes = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/mp4',
+      'audio/aac'
+    ];
+    const preferredType = supportedMimeTypes.find(type => MediaRecorder.isTypeSupported?.(type)) || '';
+    mediaRecorder = preferredType
+      ? new MediaRecorder(stream, { mimeType: preferredType })
+      : new MediaRecorder(stream);
 
     mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) recordedChunks.push(event.data);
@@ -1020,8 +1025,10 @@ async function startVoiceRecording() {
         return;
       }
 
-      const blob = new Blob(recordedChunks, { type: preferredType });
-      const file = new File([blob], `voice-${Date.now()}.webm`, { type: preferredType });
+      const finalType = mediaRecorder?.mimeType || preferredType || 'audio/webm';
+      const extension = finalType.includes('mp4') || finalType.includes('aac') ? 'm4a' : 'webm';
+      const blob = new Blob(recordedChunks, { type: finalType });
+      const file = new File([blob], `voice-${Date.now()}.${extension}`, { type: finalType });
 
       try {
         showPolishToast?.('Ses yükleniyor', `${formatVoiceTime(duration)} kayıt gönderiliyor.`, 'info');
@@ -1037,8 +1044,20 @@ async function startVoiceRecording() {
     mediaRecorder.start(500);
     setVoiceRecordingUi(true);
     showPolishToast?.('Ses kaydı başladı', 'Durdurmak için kırmızı butona bas.', 'info');
-  } catch {
-    addSystemMessage('Mikrofon izni verilmedi.');
+  } catch (error) {
+    console.error('Voice recording error:', error);
+    const message = error?.name === 'NotAllowedError'
+      ? 'Mikrofon izni engellenmiş görünüyor. Tarayıcı site ayarlarından mikrofonu izinli yap.'
+      : error?.name === 'NotFoundError'
+        ? 'Mikrofon bulunamadı.'
+        : error?.name === 'NotReadableError'
+          ? 'Mikrofon başka bir uygulama tarafından kullanılıyor olabilir.'
+          : `Ses kaydı başlatılamadı: ${error?.message || error?.name || 'Bilinmeyen hata'}`;
+    addSystemMessage(message);
+    showPolishToast?.('Ses kaydı başlatılamadı', message, 'error');
+    setVoiceRecordingUi(false);
+    voiceRecordingStream?.getTracks?.().forEach(track => track.stop());
+    voiceRecordingStream = null;
   }
 }
 
@@ -2180,7 +2199,7 @@ function addDmMessage(message) {
 
 
 function showPolishToast(title, text = '', type = 'info') {
-  const box = notificationList || document.body;
+  const box = notificationsList || document.body;
   const toast = document.createElement('div');
   toast.className = `polish-toast toast-${type}`;
   toast.innerHTML = `
@@ -2230,7 +2249,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '951');
+    url.searchParams.set('v', '952');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
