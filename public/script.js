@@ -2165,7 +2165,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '937');
+    url.searchParams.set('v', '938');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3629,6 +3629,8 @@ async function searchMessages() {
 
 function openSettings() {
   setSettingsCategory('account');
+  if (isMobileLayout && isMobileLayout()) document.body.classList.add('settings-mobile-open');
+  setTimeout(() => document.querySelector('.settings-content-v2')?.scrollTo({ top: 0, behavior: 'auto' }), 0);
   if (!settingsModal || !user) return;
 
   settingsUsernameInput.value = user.username || '';
@@ -3668,6 +3670,7 @@ function openSettings() {
 }
 
 function closeSettings() {
+  document.body.classList.remove('settings-mobile-open');
   settingsModal?.classList.add('hidden');
 }
 
@@ -5335,4 +5338,58 @@ messageInput?.addEventListener('click', mobileKeepComposerVisible);
 messageInput?.addEventListener('input', mobileKeepComposerVisible);
 window.visualViewport?.addEventListener('resize', mobileKeepComposerVisible);
 window.visualViewport?.addEventListener('scroll', mobileKeepComposerVisible);
+
+
+
+/* v9.3.8: iOS mobile no-gap composer + settings close fix */
+function mobileNoGapComposerSnap() {
+  if (!isMobileLayout || !isMobileLayout()) return;
+  stableMobileViewportUpdate?.();
+
+  const focused = document.activeElement === messageInput;
+  document.body.classList.toggle('keyboard-open', focused);
+  document.body.classList.toggle('composer-focused', focused);
+
+  const form = document.getElementById('messageForm');
+  if (form) {
+    form.style.display = 'grid';
+    form.style.visibility = 'visible';
+    form.style.opacity = '1';
+  }
+
+  if (focused) {
+    // iOS Safari bazen viewport'u geç hesaplıyor; birkaç frame en alta zorla.
+    [0, 60, 160, 320].forEach((delay) => {
+      setTimeout(() => {
+        try {
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+          form?.scrollIntoView({ block: 'end', behavior: 'auto' });
+        } catch {}
+      }, delay);
+    });
+  }
+}
+
+messageInput?.addEventListener('focus', mobileNoGapComposerSnap);
+messageInput?.addEventListener('click', mobileNoGapComposerSnap);
+messageInput?.addEventListener('touchend', mobileNoGapComposerSnap, { passive: true });
+messageInput?.addEventListener('input', mobileNoGapComposerSnap);
+window.visualViewport?.addEventListener('resize', mobileNoGapComposerSnap);
+window.visualViewport?.addEventListener('scroll', mobileNoGapComposerSnap);
+
+function closeSettingsMobileSafe() {
+  closeSettings?.();
+  document.body.classList.remove('settings-mobile-open');
+}
+
+settingsModal?.addEventListener('click', (event) => {
+  if (!isMobileLayout || !isMobileLayout()) return;
+  if (event.target === settingsModal) closeSettingsMobileSafe();
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && settingsModal && !settingsModal.classList.contains('hidden')) {
+    closeSettingsMobileSafe();
+  }
+});
 
