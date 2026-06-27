@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.9.3",
-  "description": "Selim Chat v10.9.3 mobile composer profile sidebar fix",
+  "version": "10.9.4",
+  "description": "Selim Chat v10.9.4 mobile final composer sheet list fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
