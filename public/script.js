@@ -550,9 +550,10 @@ messageInput.addEventListener('input', () => {
 
 
 const CHAT_EMOJIS = [
-  '😀','😂','🤣','😍','😘','😎','😭','😡','😈','💀','🔥','❤️','💜','💯','✨','⚡',
-  '🌀','🔴','⚫','🧊','🏛️','🇹🇷','🇷🇸','🐈','🤖','👑','🎮','🎧','🎵','🚀','🌌','🕳️',
-  '👍','👎','🙏','👏','🤝','🫡','😳','🤨','😐','😴','🥶','🤯','🗿','🍀','⭐','💎'
+  '😀','😂','🤣','😍','😭','😎','😡','😈','💀','🔥','❤️','💜',
+  '👍','👎','🙏','👏','🫡','🤝','😳','🤨','😴','🤯','🗿','💯',
+  '✨','⚡','🌀','🔴','⚫','🧊','🏛️','🐈','🤖','👑','🎮','🎧',
+  '🎵','🚀','🌌','⭐','💎','🍀','🇹🇷','🇷🇸','5️⃣','7️⃣','🍒','🔔'
 ];
 
 function renderEmojiPanel() {
@@ -1782,6 +1783,17 @@ function addDmMessage(message) {
 }
 
 
+
+function forceAppRefresh(delay = 550) {
+  setTimeout(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('v', '843');
+    url.searchParams.set('fresh', Date.now().toString());
+    window.location.href = url.toString();
+  }, delay);
+}
+
+
 function rarityClass(rarity) {
   return `rarity-${String(rarity || 'common').toLowerCase()}`;
 }
@@ -1940,8 +1952,9 @@ async function buyMarketItem(itemId) {
       method: 'POST',
       body: JSON.stringify({ itemId })
     });
-    addSystemMessage('Market ürünü satın alındı.');
+    addSystemMessage('Market ürünü satın alındı. Site yenileniyor...');
     await loadGamify();
+    forceAppRefresh();
   } catch (error) {
     addSystemMessage(error.message);
   }
@@ -1957,8 +1970,9 @@ async function equipMarketItem(itemId, slot) {
     user = { ...user, ...data.user };
     localStorage.setItem('chat_user', JSON.stringify(user));
     renderProfile();
-    addSystemMessage(itemId ? 'Kozmetik kuşanıldı.' : 'Kozmetik çıkarıldı.');
+    addSystemMessage(itemId ? 'Kozmetik kuşanıldı. Site yenileniyor...' : 'Kozmetik çıkarıldı. Site yenileniyor...');
     await loadGamify();
+    forceAppRefresh();
   } catch (error) {
     addSystemMessage(error.message);
   }
@@ -3693,22 +3707,35 @@ async function openGroup(group) {
     addSystemMessage('Grup paneli HTML içinde yok. public/index.html dosyasını da güncelle.');
     return;
   }
+
+  clearReply();
   activeGroup = group;
   activeFriend = null;
-  setChatMode('group');
+  chatMode = 'group';
+  document.body.dataset.chatMode = 'group';
+
+  roomModeButton.classList.remove('active');
+  dmModeButton.classList.remove('active');
+  if (groupModeButton) groupModeButton.classList.add('active');
+
+  roomPanel.classList.add('hidden');
+  friendsPanel.classList.add('hidden');
+  groupsPanel.classList.remove('hidden');
+
   chatTitle.textContent = `Grup: ${group.name}`;
-  syncMobileHeader();
-  syncMobileHeader();
   messagesEl.innerHTML = '';
   resetMessageGrouping();
   typingText.textContent = '';
+  updateMessengerUi();
+  markActiveConversation();
 
+  if (window.innerWidth <= 760) document.body.classList.remove('mobile-sidebar-open');
   if (socket && socket.connected) socket.emit('group_join', { groupId: group.id });
 
-  await Promise.allSettled([
-    loadGroupMessages(group.id),
-    loadGroupDetails(group.id)
-  ]);
+  await loadGroupMessages(group.id);
+  await loadGroupDetails(group.id);
+  updateMessengerUi();
+  markActiveConversation();
 }
 
 async function loadGroupMessages(groupId) {
@@ -3911,7 +3938,9 @@ function addGroupMessage(message) {
     time: message.time || formatTime(message.created_at),
     mine: message.sender_id === user.id,
     edited: message.edited_at,
-    deleted: message.deleted_at
+    deleted: message.deleted_at,
+    bubble_theme: message.bubble_theme,
+    name_effect: message.name_effect
   });
 }
 
