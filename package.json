@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "9.3.5",
-  "description": "Selim Chat v9.3.5 mobile composer sticky to keyboard fix",
+  "version": "9.3.6",
+  "description": "Selim Chat v9.3.6 stable mobile composer and profile fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
