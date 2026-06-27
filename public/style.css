@@ -7065,3 +7065,63 @@ body {
 .server-channel-item .mini-left {
   cursor: pointer;
 }
+
+
+/* =========================================================
+   v8.6.2 — Invite Links + Cleaner Server Create Tab
+   ========================================================= */
+
+.server-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+
+.server-tab {
+  min-height: 32px;
+  border-radius: 11px;
+  background: rgba(255,255,255,.045);
+  color: #d4d4d8;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.server-tab.active {
+  color: white;
+  background: linear-gradient(135deg, rgba(139,92,246,.9), rgba(34,211,238,.45));
+}
+
+.server-create-box {
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(255,255,255,.025);
+  margin-bottom: 12px;
+}
+
+.server-create-box input,
+.server-invite-box input {
+  width: 100%;
+  min-width: 0;
+}
+
+.server-invite-box {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 15px;
+  border: 1px solid rgba(34,211,238,.18);
+  background: rgba(34,211,238,.055);
+}
+
+.server-invite-box input {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.32);
+  color: #bae6fd;
+  font-size: 11px;
+}
