@@ -16818,3 +16818,126 @@ button:hover {
   border-color: rgba(125,211,252,.24);
   background: rgba(59,130,246,.14);
 }
+
+
+/* =========================================================
+   v10.8.1 — Replay command + Feiz story poll + Inventory companion
+   ========================================================= */
+
+.story-pet-grid {
+  display: none !important;
+}
+
+.inventory-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.inventory-page-head strong {
+  display: block;
+  color: #fff;
+  font-size: 15px;
+}
+
+.inventory-page-head span {
+  display: block;
+  margin-top: 2px;
+  color: rgba(255,255,255,.56);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.inventory-companion-box,
+.inventory-page-section {
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.045);
+  margin-bottom: 10px;
+}
+
+.inventory-items-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.inventory-item-card {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 15px;
+  background: rgba(0,0,0,.16);
+  border: 1px solid rgba(255,255,255,.07);
+}
+
+.inventory-item-card > span {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.08);
+}
+
+.inventory-item-card strong {
+  display: block;
+  color: #fff;
+  font-size: 13px;
+}
+
+.inventory-item-card small {
+  display: block;
+  margin-top: 2px;
+  color: rgba(255,255,255,.55);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.story-message-card {
+  display: grid;
+  gap: 9px;
+  min-width: min(360px, 72vw);
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(0,0,0,.20);
+  border: 1px solid rgba(255,255,255,.10);
+}
+
+.story-message-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.story-message-head span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(168,85,247,.16);
+  color: rgba(255,255,255,.82);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.story-message-head strong {
+  color: #fff;
+  font-size: 13px;
+}
+
+.story-message-card p {
+  margin: 0;
+  color: #fff;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.story-message-options {
+  display: grid;
+  gap: 7px;
+}
