@@ -316,20 +316,20 @@ async function rewardUserActivity(userId, xpAmount = 5, shardAmount = 1) {
 
 
 const MARKET_ITEMS = [
-  { id: 'bubble_vertex', type: 'bubble', name: 'VERTEX Bubble', icon: '🔴', rarity: 'epic', price: 1, description: 'Mesaj balonuna kırmızı glitch havası verir.' },
-  { id: 'bubble_limbo', type: 'bubble', name: 'Limbo Bubble', icon: '⚫', rarity: 'rare', price: 1, description: 'Karanlık, minimal Limbo mesaj stili.' },
-  { id: 'bubble_ice', type: 'bubble', name: 'Nico Ice Bubble', icon: '🧊', rarity: 'rare', price: 1, description: 'Soğuk mavi buz mesaj efekti.' },
-  { id: 'bubble_gold', type: 'bubble', name: 'Rome Gold Bubble', icon: '🏛️', rarity: 'epic', price: 1, description: 'Altın Roma mesaj balonu.' },
-  { id: 'bubble_serbia', type: 'bubble', name: 'Serbia Portal Bubble', icon: '🇷🇸', rarity: 'epic', price: 1, description: 'Mor portal mesaj balonu.' },
+  { id: 'bubble_vertex', type: 'bubble', name: 'VERTEX Bubble', icon: '🔴', rarity: 'epic', price: 60, description: 'Mesaj balonuna kırmızı glitch havası verir.' },
+  { id: 'bubble_limbo', type: 'bubble', name: 'Limbo Bubble', icon: '⚫', rarity: 'rare', price: 35, description: 'Karanlık, minimal Limbo mesaj stili.' },
+  { id: 'bubble_ice', type: 'bubble', name: 'Nico Ice Bubble', icon: '🧊', rarity: 'rare', price: 45, description: 'Soğuk mavi buz mesaj efekti.' },
+  { id: 'bubble_gold', type: 'bubble', name: 'Rome Gold Bubble', icon: '🏛️', rarity: 'epic', price: 70, description: 'Altın Roma mesaj balonu.' },
+  { id: 'bubble_serbia', type: 'bubble', name: 'Serbia Portal Bubble', icon: '🇷🇸', rarity: 'epic', price: 75, description: 'Mor portal mesaj balonu.' },
 
-  { id: 'frame_vertex', type: 'frame', name: 'VERTEX Frame', icon: '🟥', rarity: 'epic', price: 1, description: 'Profil fotoğrafına kırmızı VERTEX çerçevesi.' },
-  { id: 'frame_limbo', type: 'frame', name: 'Limbo Frame', icon: '⬛', rarity: 'rare', price: 1, description: 'Karanlık Limbo profil çerçevesi.' },
-  { id: 'frame_five', type: 'frame', name: '5ECROPOLIS Frame', icon: '5️⃣', rarity: 'legendary', price: 1, description: 'Özel 5ECROPOLIS profil çerçevesi.' },
-  { id: 'frame_ataturk', type: 'frame', name: 'Respect Frame', icon: '🇹🇷', rarity: 'legendary', price: 1, description: 'Saygı protokolü profil çerçevesi.' },
+  { id: 'frame_vertex', type: 'frame', name: 'VERTEX Frame', icon: '🟥', rarity: 'epic', price: 95, description: 'Profil fotoğrafına kırmızı VERTEX çerçevesi.' },
+  { id: 'frame_limbo', type: 'frame', name: 'Limbo Frame', icon: '⬛', rarity: 'rare', price: 65, description: 'Karanlık Limbo profil çerçevesi.' },
+  { id: 'frame_five', type: 'frame', name: '5ECROPOLIS Frame', icon: '5️⃣', rarity: 'legendary', price: 150, description: 'Özel 5ECROPOLIS profil çerçevesi.' },
+  { id: 'frame_ataturk', type: 'frame', name: 'Respect Frame', icon: '🇹🇷', rarity: 'legendary', price: 160, description: 'Saygı protokolü profil çerçevesi.' },
 
-  { id: 'name_glitch', type: 'name', name: 'Glitch Name', icon: '⚡', rarity: 'rare', price: 1, description: 'İsme hafif glitch efekti.' },
-  { id: 'name_neon', type: 'name', name: 'Neon Name', icon: '💜', rarity: 'epic', price: 1, description: 'İsme neon mor parlama verir.' },
-  { id: 'name_legend', type: 'name', name: 'Legend Name', icon: '👑', rarity: 'legendary', price: 1, description: 'İsme legendary altın efekt verir.' }
+  { id: 'name_glitch', type: 'name', name: 'Glitch Name', icon: '⚡', rarity: 'rare', price: 65, description: 'İsme hafif glitch efekti.' },
+  { id: 'name_neon', type: 'name', name: 'Neon Name', icon: '💜', rarity: 'epic', price: 95, description: 'İsme neon mor parlama verir.' },
+  { id: 'name_legend', type: 'name', name: 'Legend Name', icon: '👑', rarity: 'legendary', price: 180, description: 'İsme legendary altın efekt verir.' }
 ];
 
 
@@ -2493,7 +2493,7 @@ app.get('/api/groups/:groupId/messages', authMiddleware, async (req, res) => {
     `SELECT gm.id, gm.group_id, gm.sender_id, gm.text, gm.message_type,
             gm.file_name, gm.file_mime, gm.file_data, gm.file_path, gm.file_size,
             gm.reply_to_id, gm.edited_at, gm.deleted_at, gm.created_at,
-            u.username, u.display_name, u.avatar_url,
+            u.username, u.display_name, u.avatar_url, u.active_bubble_theme, u.active_name_effect,
             rgm.text AS reply_text,
             ru.username AS reply_username,
             ru.display_name AS reply_display_name
@@ -3328,13 +3328,15 @@ io.on('connection', (socket) => {
         [groupId, socket.user.id, cleanMessage, messageType, fileName, fileMime, fileData || null, filePath, fileSize, replyToId]
       );
 
-      const avatarResult = await pool.query('SELECT username, display_name, avatar_url FROM users WHERE id = $1', [socket.user.id]);
+      const avatarResult = await pool.query('SELECT username, display_name, avatar_url, active_bubble_theme, active_name_effect FROM users WHERE id = $1', [socket.user.id]);
       const sender = avatarResult.rows[0];
 
       const msg = {
         ...saved.rows[0],
         username: sender?.display_name || sender?.username || socket.user.username,
         avatar_url: sender?.avatar_url,
+        bubble_theme: sender?.active_bubble_theme || '',
+        name_effect: sender?.active_name_effect || '',
         reply_username: replyInfo?.display_name || replyInfo?.username || null,
         reply_text: replyInfo?.text || null,
         time: nowTime()
