@@ -46,6 +46,7 @@ const newChannelNameInput = document.getElementById('newChannelNameInput');
 const createChannelButton = document.getElementById('createChannelButton');
 const serverChannelsList = document.getElementById('serverChannelsList');
 const serverMembersList = document.getElementById('serverMembersList');
+const addServerFriendList = document.getElementById('addServerFriendList');
 const groupsPanel = document.getElementById('groupsPanel');
 const newGroupNameInput = document.getElementById('newGroupNameInput');
 const createGroupButton = document.getElementById('createGroupButton');
@@ -1713,6 +1714,7 @@ async function loadFriends() {
     const data = await api('/api/friends');
     friends = data.friends || [];
     if (newGroupFriendsList) renderNewGroupFriends();
+    if (addServerFriendList) renderAddServerFriends();
 
     friendsList.innerHTML = '';
 
@@ -4032,6 +4034,7 @@ async function loadServerDetails(serverId) {
 
     renderServerChannels(window.__serverChannels);
     renderServerMembers();
+    renderAddServerFriends();
 
     if (!activeChannel && window.__serverChannels.length) activeChannel = window.__serverChannels[0];
   } catch (error) {
@@ -4048,13 +4051,32 @@ function renderServerChannels(channels) {
     return;
   }
 
+  const canManage = ['owner', 'admin'].includes(activeServer?.my_role);
+
   channels.forEach((channel) => {
     const item = document.createElement('div');
-    item.className = 'mini-item conversation-item';
+    item.className = 'mini-item conversation-item server-channel-item';
     item.dataset.conversationType = 'server-channel';
     item.dataset.channelId = channel.id;
-    item.innerHTML = `<div class="mini-left"><div class="mini-avatar">#</div><div><strong>#${escapeHtml(channel.name)}</strong><span>${escapeHtml(channel.kind || 'text')}</span></div></div>`;
-    item.onclick = () => openServerChannel(channel);
+
+    const main = document.createElement('div');
+    main.className = 'mini-left';
+    main.innerHTML = `<div class="mini-avatar">#</div><div><strong>#${escapeHtml(channel.name)}</strong><span>${escapeHtml(channel.kind || 'text')}</span></div>`;
+    main.onclick = () => openServerChannel(channel);
+
+    item.appendChild(main);
+
+    if (canManage && channels.length > 1) {
+      const del = document.createElement('button');
+      del.className = 'action-button red';
+      del.textContent = 'Sil';
+      del.onclick = (event) => {
+        event.stopPropagation();
+        deleteServerChannel(channel);
+      };
+      item.appendChild(del);
+    }
+
     serverChannelsList.appendChild(item);
   });
 }
@@ -4076,6 +4098,89 @@ function renderServerMembers() {
     serverMembersList.appendChild(item);
   });
 }
+
+
+function renderAddServerFriends() {
+  if (!addServerFriendList) return;
+  addServerFriendList.innerHTML = '';
+
+  const canManage = ['owner', 'admin'].includes(activeServer?.my_role);
+  if (!activeServer) {
+    addServerFriendList.innerHTML = '<div class="mini-item">Önce sunucu seç.</div>';
+    return;
+  }
+
+  if (!canManage) {
+    addServerFriendList.innerHTML = '<div class="mini-item">Arkadaş eklemek için sunucu admini olmalısın.</div>';
+    return;
+  }
+
+  const memberIds = new Set(serverMembers.map((m) => Number(m.id)));
+  const addable = (friends || []).filter((f) => !memberIds.has(Number(f.id)));
+
+  if (!addable.length) {
+    addServerFriendList.innerHTML = '<div class="mini-item">Eklenebilecek arkadaş yok.</div>';
+    return;
+  }
+
+  addable.forEach((friend) => {
+    const item = document.createElement('div');
+    item.className = 'mini-item';
+    item.innerHTML = `<div class="mini-left">${avatarHtml(friend.display_name || friend.username, friend.avatar_url)}<div><strong>${escapeHtml(friend.display_name || friend.username)}</strong><span>Sunucuya ekle</span></div></div>`;
+
+    const add = document.createElement('button');
+    add.className = 'action-button';
+    add.textContent = 'Ekle';
+    add.onclick = () => addServerMember(friend.id);
+
+    item.appendChild(add);
+    addServerFriendList.appendChild(item);
+  });
+}
+
+async function addServerMember(userId) {
+  if (!activeServer) return;
+
+  try {
+    await api(`/api/servers/${activeServer.id}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ userId })
+    });
+
+    addSystemMessage('Arkadaş sunucuya eklendi.');
+    await loadServerDetails(activeServer.id);
+    await loadServers();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function deleteServerChannel(channel) {
+  if (!activeServer || !channel) return;
+  if (!confirm(`#${channel.name} kanalını silmek istiyor musun?`)) return;
+
+  try {
+    await api(`/api/servers/${activeServer.id}/channels/${channel.id}`, { method: 'DELETE' });
+
+    if (activeChannel && Number(activeChannel.id) === Number(channel.id)) {
+      activeChannel = null;
+      messagesEl.innerHTML = '';
+    }
+
+    await loadServerDetails(activeServer.id);
+
+    if (window.__serverChannels?.length) {
+      await openServerChannel(window.__serverChannels[0]);
+    } else {
+      chatTitle.textContent = `${activeServer.name}`;
+    }
+
+    addSystemMessage('Kanal silindi.');
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
 
 async function createServerChannel() {
   if (!activeServer) {
