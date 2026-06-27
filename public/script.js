@@ -2483,7 +2483,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1035');
+    url.searchParams.set('v', '1036');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3895,6 +3895,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
 
   const bubble = document.createElement('div');
   bubble.className = 'msg-bubble';
+  if (mine) bubble.classList.add('own-bubble');
 
   const meta = document.createElement('div');
   meta.className = 'meta';
