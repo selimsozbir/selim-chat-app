@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "9.0.0",
-  "description": "Selim Chat v9.0.0 full polish update",
+  "version": "9.1.0",
+  "description": "Selim Chat v9.1.0 professional UI refresh",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
