@@ -12311,3 +12311,12 @@ body.admin-panel-visible .admin-panel {
   font-size: 11px;
   margin-top: -4px;
 }
+
+
+/* =========================================================
+   v9.5.2 — Mic Permission + Notification Fix
+   ========================================================= */
+
+.voice-record-hud.error {
+  border-color: rgba(248,113,113,.38);
+}
