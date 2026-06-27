@@ -704,3 +704,283 @@
     height: 46px !important;
   }
 }
+
+
+/* =========================================================
+   Selim Chat v10.9.1 — screenshot-based mobile fixes
+   Fixes from iPhone Safari screenshots:
+   - composer was jumping too high when keyboard opened
+   - left sheet/right sheet/modals were going under Safari bottom bar
+   - profile action buttons overlapped
+   - sidebar/group cards were too wide and clipped
+   ========================================================= */
+
+@media (max-width: 960px) {
+  /* Keyboard: do not pull composer upward with a huge transform.
+     iOS visualViewport already shrinks; transform was causing the toolbar to jump near the top. */
+  body.keyboard-open .message-form,
+  body.composer-focused .message-form {
+    transform: none !important;
+    position: sticky !important;
+    bottom: 0 !important;
+    margin-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+  }
+
+  body.keyboard-open .messages,
+  body.composer-focused .messages {
+    padding-bottom: 10px !important;
+  }
+
+  /* Keep chat content inside the visible visual viewport. */
+  .chat-main {
+    max-height: calc(var(--mobile-vvh, 100dvh) - var(--mobile-topbar-h, 56px) - var(--mobile-bottomnav-h, 64px)) !important;
+  }
+
+  body.keyboard-open .chat-main,
+  body.composer-focused .chat-main {
+    max-height: var(--mobile-vvh, 100dvh) !important;
+  }
+
+  /* Sheets should not run under iPhone Safari bottom toolbar. */
+  .sidebar,
+  .right-panel {
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+    overscroll-behavior: contain !important;
+  }
+
+  .sidebar {
+    width: min(94vw, 390px) !important;
+    padding-left: max(12px, env(safe-area-inset-left)) !important;
+    padding-right: 12px !important;
+  }
+
+  .right-panel {
+    width: 100vw !important;
+    padding-left: max(12px, env(safe-area-inset-left)) !important;
+    padding-right: max(12px, env(safe-area-inset-right)) !important;
+  }
+
+  .sidebar *,
+  .right-panel *,
+  .profile-card *,
+  .settings-card-v2 *,
+  .gallery-card *,
+  .friends-center-card * {
+    box-sizing: border-box !important;
+  }
+
+  /* Sidebar/header cards: avoid clipped borders and giant cards. */
+  .current-user-card,
+  .sidebar-actions,
+  .social-tabs,
+  .panel,
+  .room-panel,
+  .friends-panel,
+  .groups-panel {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .current-user-card {
+    padding: 12px !important;
+    border-radius: 22px !important;
+  }
+
+  .current-user-actions,
+  .sidebar-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .sidebar-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .sidebar-actions button,
+  .current-user-actions button {
+    min-width: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .social-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    padding: 6px !important;
+  }
+
+  .social-tabs button,
+  .nav,
+  .gamify-tab {
+    min-width: 0 !important;
+  }
+
+  .room-join,
+  .group-create-row,
+  .search-row {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 8px !important;
+  }
+
+  .room-join input,
+  .group-create-row input,
+  .search-row input {
+    min-width: 0 !important;
+  }
+
+  .user-row,
+  .friend-row,
+  .group-row,
+  .room-user-item,
+  .new-group-friend {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .user-row strong,
+  .friend-row strong,
+  .group-row strong,
+  .room-user-item strong,
+  .new-group-friend strong {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  /* Profile modal: buttons were overlapping in Hakkında area. */
+  .profile-about-head {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    align-items: start !important;
+  }
+
+  .profile-about-head h3 {
+    font-size: clamp(28px, 8vw, 40px) !important;
+    line-height: 1.05 !important;
+  }
+
+  .profile-self-actions,
+  .profile-action-buttons {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .profile-action-buttons button,
+  .profile-self-actions button {
+    width: 100% !important;
+    min-width: 0 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    line-height: 1.15 !important;
+    padding-inline: 12px !important;
+  }
+
+  .profile-about-meta {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .profile-about-meta span {
+    max-width: 100% !important;
+  }
+
+  .profile-badges-list,
+  .profile-all-badges-list {
+    min-width: 0 !important;
+  }
+
+  .profile-badge,
+  .badges-v2-showcase {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Activity calendar: keep inside profile card. */
+  .activity-calendar-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  }
+
+  .activity-day {
+    min-width: 0 !important;
+  }
+
+  .activity-top-days {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Modals/sheets: leave room above Safari bottom toolbar when running in iOS Safari. */
+  .profile-modal,
+  .settings-modal,
+  .gallery-modal,
+  #friendsCenterModal,
+  .command-palette-modal {
+    overflow: hidden !important;
+  }
+
+  .profile-card,
+  .settings-card-v2,
+  .settings-card,
+  .gallery-card,
+  .friends-center-card,
+  .command-palette-card {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-width: 0 !important;
+  }
+}
+
+/* iPhone Safari specific: prevent fixed sheets from being hidden under the browser bottom bar. */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 960px) {
+    :root {
+      --ios-browser-toolbar-fix: 72px;
+    }
+
+    body:not(.keyboard-open):not(.composer-focused) .sidebar {
+      height: calc(var(--mobile-vvh, 100dvh) - var(--ios-browser-toolbar-fix)) !important;
+      max-height: calc(var(--mobile-vvh, 100dvh) - var(--ios-browser-toolbar-fix)) !important;
+      padding-bottom: calc(18px + env(safe-area-inset-bottom)) !important;
+    }
+
+    body:not(.keyboard-open):not(.composer-focused) .right-panel {
+      bottom: var(--ios-browser-toolbar-fix) !important;
+      height: min(calc(var(--mobile-vvh, 100dvh) - var(--ios-browser-toolbar-fix) - 12px), 78dvh) !important;
+      max-height: calc(var(--mobile-vvh, 100dvh) - var(--ios-browser-toolbar-fix) - 12px) !important;
+    }
+
+    body:not(.keyboard-open):not(.composer-focused) .mobile-bottom-nav {
+      transform: translateY(calc(-1 * var(--ios-browser-toolbar-fix))) !important;
+    }
+
+    body:not(.keyboard-open):not(.composer-focused) .profile-card,
+    body:not(.keyboard-open):not(.composer-focused) .settings-card-v2,
+    body:not(.keyboard-open):not(.composer-focused) .settings-card,
+    body:not(.keyboard-open):not(.composer-focused) .gallery-card,
+    body:not(.keyboard-open):not(.composer-focused) .friends-center-card,
+    body:not(.keyboard-open):not(.composer-focused) .command-palette-card {
+      margin-bottom: var(--ios-browser-toolbar-fix) !important;
+      max-height: calc(var(--mobile-vvh, 100dvh) - var(--ios-browser-toolbar-fix) - 12px) !important;
+    }
+  }
+}
+
+@media (max-width: 380px) {
+  .sidebar-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .activity-calendar-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
