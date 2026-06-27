@@ -2246,73 +2246,119 @@ app.get('/api/me', authMiddleware, async (req, res) => {
 
 
 
+
+async function buildDailyReplay(room) {
+  const totals = await pool.query(
+    `SELECT COUNT(*)::int AS total,
+            COUNT(*) FILTER (WHERE message_type = 'image')::int AS images,
+            COUNT(*) FILTER (WHERE message_type = 'audio')::int AS audio,
+            COUNT(*) FILTER (WHERE message_type = 'file')::int AS files
+     FROM messages
+     WHERE room = $1 AND deleted_at IS NULL AND created_at::date = CURRENT_DATE`,
+    [room]
+  );
+
+  const topUsers = await pool.query(
+    `SELECT COALESCE(u.display_name, m.username) AS username, COUNT(*)::int AS count
+     FROM messages m
+     LEFT JOIN users u ON u.id = m.user_id
+     WHERE m.room = $1 AND m.deleted_at IS NULL AND m.created_at::date = CURRENT_DATE
+     GROUP BY COALESCE(u.display_name, m.username)
+     ORDER BY count DESC, username ASC
+     LIMIT 5`,
+    [room]
+  );
+
+  const topReaction = await pool.query(
+    `SELECT r.emoji, COUNT(*)::int AS count
+     FROM message_reactions r
+     JOIN messages m ON m.id = r.message_id
+     WHERE r.message_scope = 'room' AND m.room = $1 AND r.created_at::date = CURRENT_DATE
+     GROUP BY r.emoji
+     ORDER BY count DESC
+     LIMIT 1`,
+    [room]
+  );
+
+  const recent = await pool.query(
+    `SELECT COALESCE(u.display_name, m.username) AS username, m.text, m.message_type
+     FROM messages m
+     LEFT JOIN users u ON u.id = m.user_id
+     WHERE m.room = $1 AND m.deleted_at IS NULL AND m.created_at::date = CURRENT_DATE
+     ORDER BY m.created_at DESC
+     LIMIT 5`,
+    [room]
+  );
+
+  const total = Number(totals.rows[0]?.total || 0);
+  const top = topUsers.rows[0];
+  const mood = total >= 80 ? 'kaotik' : total >= 30 ? 'aktif' : total >= 8 ? 'sakin ama canlı' : 'sessiz';
+  const summary = total
+    ? `Bugün #${room} odası ${mood}: ${total} mesaj atıldı. ${top ? `${top.username} ${top.count} mesajla öne çıktı.` : ''}`
+    : `Bugün #${room} odası sessiz kaldı. İlk sinyali sen gönderebilirsin.`;
+
+  return {
+    room,
+    date: new Date().toISOString().slice(0, 10),
+    summary,
+    stats: {
+      total,
+      images: Number(totals.rows[0]?.images || 0),
+      audio: Number(totals.rows[0]?.audio || 0),
+      files: Number(totals.rows[0]?.files || 0),
+      top_reaction: topReaction.rows[0] || null
+    },
+    top_users: topUsers.rows,
+    recent: recent.rows
+  };
+}
+
+function formatReplayText(replay) {
+  const top = (replay.top_users || []).slice(0, 3).map((u, i) => `#${i + 1} ${u.username} (${u.count})`).join(' · ') || 'yok';
+  const reaction = replay.stats?.top_reaction ? `${replay.stats.top_reaction.emoji} ×${replay.stats.top_reaction.count}` : 'yok';
+  const recent = (replay.recent || []).slice(0, 3).map((m) => `${m.username}: ${String(m.text || m.message_type || '').slice(0, 45)}`).join('\n');
+  return `📼 Chat Replay · #${replay.room}\n${replay.summary}\n\nTop aktifler: ${top}\nMedya: ${replay.stats.images} foto · ${replay.stats.audio} ses · ${replay.stats.files} dosya\nTop reaction: ${reaction}${recent ? `\n\nSon sinyaller:\n${recent}` : ''}`;
+}
+
+async function emitReplayMessage(room) {
+  const replay = await buildDailyReplay(room);
+  io.to(room).emit('chat_message', {
+    id: `replay_${Date.now()}`,
+    room,
+    user_id: 0,
+    sender_id: 0,
+    username: AI_BOT_NAME,
+    avatar_url: null,
+    text: formatReplayText(replay),
+    message_type: 'text',
+    time: nowTime()
+  });
+}
+
+async function emitStoryDecisionPoll(room, userId = null, force = false) {
+  if (!force && Math.random() > 0.07) return null;
+  const decision = await getOrCreateStoryDecision(room, userId);
+  const payload = serializeStoryDecision(decision);
+  io.to(room).emit('chat_message', {
+    id: `story_${decision.id}_${Date.now()}`,
+    room,
+    user_id: 0,
+    sender_id: 0,
+    username: AI_BOT_NAME,
+    avatar_url: null,
+    text: 'Mini Hikaye Kararı',
+    message_type: 'story_decision',
+    story_decision: payload,
+    time: nowTime()
+  });
+  return payload;
+}
+
+
 app.get('/api/replay/daily/:room', authMiddleware, async (req, res) => {
   try {
     const room = cleanText(req.params.room, 50).toLowerCase() || 'genel';
-
-    const totals = await pool.query(
-      `SELECT COUNT(*)::int AS total,
-              COUNT(*) FILTER (WHERE message_type = 'image')::int AS images,
-              COUNT(*) FILTER (WHERE message_type = 'audio')::int AS audio,
-              COUNT(*) FILTER (WHERE message_type = 'file')::int AS files
-       FROM messages
-       WHERE room = $1 AND deleted_at IS NULL AND created_at::date = CURRENT_DATE`,
-      [room]
-    );
-
-    const topUsers = await pool.query(
-      `SELECT COALESCE(u.display_name, m.username) AS username, COUNT(*)::int AS count
-       FROM messages m
-       LEFT JOIN users u ON u.id = m.user_id
-       WHERE m.room = $1 AND m.deleted_at IS NULL AND m.created_at::date = CURRENT_DATE
-       GROUP BY COALESCE(u.display_name, m.username)
-       ORDER BY count DESC, username ASC
-       LIMIT 5`,
-      [room]
-    );
-
-    const topReaction = await pool.query(
-      `SELECT r.emoji, COUNT(*)::int AS count
-       FROM message_reactions r
-       JOIN messages m ON m.id = r.message_id
-       WHERE r.message_scope = 'room' AND m.room = $1 AND r.created_at::date = CURRENT_DATE
-       GROUP BY r.emoji
-       ORDER BY count DESC
-       LIMIT 1`,
-      [room]
-    );
-
-    const recent = await pool.query(
-      `SELECT COALESCE(u.display_name, m.username) AS username, m.text, m.message_type
-       FROM messages m
-       LEFT JOIN users u ON u.id = m.user_id
-       WHERE m.room = $1 AND m.deleted_at IS NULL AND m.created_at::date = CURRENT_DATE
-       ORDER BY m.created_at DESC
-       LIMIT 5`,
-      [room]
-    );
-
-    const total = Number(totals.rows[0]?.total || 0);
-    const top = topUsers.rows[0];
-    const mood = total >= 80 ? 'kaotik' : total >= 30 ? 'aktif' : total >= 8 ? 'sakin ama canlı' : 'sessiz';
-    const summary = total
-      ? `Bugün #${room} odası ${mood}: ${total} mesaj atıldı. ${top ? `${top.username} ${top.count} mesajla öne çıktı.` : ''}`
-      : `Bugün #${room} odası sessiz kaldı. İlk sinyali sen gönderebilirsin.`;
-
-    res.json({
-      room,
-      date: new Date().toISOString().slice(0, 10),
-      summary,
-      stats: {
-        total,
-        images: Number(totals.rows[0]?.images || 0),
-        audio: Number(totals.rows[0]?.audio || 0),
-        files: Number(totals.rows[0]?.files || 0),
-        top_reaction: topReaction.rows[0] || null
-      },
-      top_users: topUsers.rows,
-      recent: recent.rows
-    });
+    res.json(await buildDailyReplay(room));
   } catch (error) {
     console.error('Daily replay error:', error);
     res.status(500).json({ error: 'Günün özeti yüklenemedi.' });
@@ -2368,6 +2414,23 @@ app.get('/api/companion/me', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Companion yüklenemedi.' });
   }
 });
+
+
+app.get('/api/inventory/me', authMiddleware, async (req, res) => {
+  try {
+    const items = await getUserInventory(req.user.id);
+    const companion = await ensureCompanion(req.user.id);
+    res.json({
+      items,
+      companion: serializeCompanion(companion),
+      pets: PET_DEFS
+    });
+  } catch (error) {
+    console.error('Inventory error:', error);
+    res.status(500).json({ error: 'Envanter yüklenemedi.' });
+  }
+});
+
 
 app.post('/api/companion/select', authMiddleware, async (req, res) => {
   try {
@@ -4743,6 +4806,16 @@ io.on('connection', (socket) => {
       if (messageType === 'text' && await handleUniverseCommand({ socket, room: socket.data.room, text })) {
         return;
       }
+
+      if (messageType === 'text' && text.toLowerCase() === '/replay') {
+        await emitReplayMessage(socket.data.room);
+        return;
+      }
+
+      if (messageType === 'text' && text.toLowerCase() === '/story') {
+        await emitStoryDecisionPoll(socket.data.room, socket.user.id, true);
+        return;
+      }
       if (messageType !== 'text' && !fileData) return;
       if (fileData.startsWith('data:') && fileData.length > 7200000) {
         socket.emit('system_message', 'Dosya çok büyük. Storage kullanarak gönder.');
@@ -4833,6 +4906,8 @@ io.on('connection', (socket) => {
         senderUsername: socket.user.username,
         room
       }).catch((error) => console.error('Oda AI bot işlem hatası:', error));
+
+      emitStoryDecisionPoll(room, socket.user.id).catch((error) => console.error('Story poll error:', error));
     } catch (error) {
       console.error('Mesaj kayıt hatası:', error);
       socket.emit('system_message', 'Mesaj gönderilemedi.');
