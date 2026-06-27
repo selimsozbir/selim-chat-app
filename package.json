@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.0.0",
-  "description": "Selim Chat v10.0.0 cinematic desktop UI refresh",
+  "version": "10.1.0",
+  "description": "Selim Chat v10.1.0 Nova UI redesign",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
