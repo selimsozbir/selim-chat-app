@@ -24,36 +24,15 @@ const mobileTitle = document.getElementById('mobileTitle');
 const mobileStatus = document.getElementById('mobileStatus');
 const mobileBottomNav = document.getElementById('mobileBottomNav');
 const mobileRoomButton = document.getElementById('mobileRoomButton');
-const mobileServerButton = document.getElementById('mobileServerButton');
 const mobileDmButton = document.getElementById('mobileDmButton');
 const mobileGroupButton = document.getElementById('mobileGroupButton');
 const mobilePanelButton = document.getElementById('mobilePanelButton');
 
 const roomModeButton = document.getElementById('roomModeButton');
-const serverModeButton = document.getElementById('serverModeButton');
 const dmModeButton = document.getElementById('dmModeButton');
 const groupModeButton = document.getElementById('groupModeButton');
 const roomPanel = document.getElementById('roomPanel');
 const friendsPanel = document.getElementById('friendsPanel');
-const serversPanel = document.getElementById('serversPanel');
-const serverListTabButton = document.getElementById('serverListTabButton');
-const serverCreateTabButton = document.getElementById('serverCreateTabButton');
-const serverListPanel = document.getElementById('serverListPanel');
-const serverCreatePanel = document.getElementById('serverCreatePanel');
-const newServerNameInput = document.getElementById('newServerNameInput');
-const newServerDescriptionInput = document.getElementById('newServerDescriptionInput');
-const createServerButton = document.getElementById('createServerButton');
-const serversList = document.getElementById('serversList');
-const serverDetailsBox = document.getElementById('serverDetailsBox');
-const activeServerInfo = document.getElementById('activeServerInfo');
-const serverPermissionInfo = document.getElementById('serverPermissionInfo');
-const copyServerInviteButton = document.getElementById('copyServerInviteButton');
-const serverInviteLinkInput = document.getElementById('serverInviteLinkInput');
-const newChannelNameInput = document.getElementById('newChannelNameInput');
-const createChannelButton = document.getElementById('createChannelButton');
-const serverChannelsList = document.getElementById('serverChannelsList');
-const serverMembersList = document.getElementById('serverMembersList');
-const addServerFriendList = document.getElementById('addServerFriendList');
 const groupsPanel = document.getElementById('groupsPanel');
 const newGroupNameInput = document.getElementById('newGroupNameInput');
 const createGroupButton = document.getElementById('createGroupButton');
@@ -245,10 +224,6 @@ let mode = 'login';
 let chatMode = 'room';
 let activeFriend = null;
 let activeGroup = null;
-let servers = [];
-let activeServer = null;
-let activeChannel = null;
-let serverMembers = [];
 let friends = [];
 let groups = [];
 let groupMembers = [];
@@ -413,14 +388,6 @@ dmModeButton.addEventListener('click', () => {
   loadBlocked();
 });
 
-if (serverModeButton) {
-  serverModeButton.addEventListener('click', () => {
-    clearReply();
-    setChatMode('server');
-    loadServers();
-  });
-}
-
 if (groupModeButton) {
   groupModeButton.addEventListener('click', () => {
     clearReply();
@@ -429,12 +396,6 @@ if (groupModeButton) {
     renderNewGroupFriends();
   });
 }
-
-if (serverListTabButton) serverListTabButton.addEventListener('click', () => switchServerPanel('list'));
-if (serverCreateTabButton) serverCreateTabButton.addEventListener('click', () => switchServerPanel('create'));
-if (createServerButton) createServerButton.addEventListener('click', createServer);
-if (copyServerInviteButton) copyServerInviteButton.addEventListener('click', copyServerInviteLink);
-if (createChannelButton) createChannelButton.addEventListener('click', createServerChannel);
 
 joinRoomButton.addEventListener('click', () => joinRoom(roomInput.value.trim() || 'genel'));
 searchButton.addEventListener('click', searchUsers);
@@ -565,16 +526,6 @@ messageForm.addEventListener('submit', (event) => {
     }
     socket.emit('group_message', { groupId: activeGroup.id, text, type: 'text', replyToId: replyingTo?.id || null });
     clearReply();
-  } else if (chatMode === 'server') {
-    if (!activeServer || !activeChannel) {
-      addSystemMessage('Önce bir sunucu kanalı seç.');
-      return;
-    }
-    const room = serverRoomName(activeServer.id, activeChannel.id);
-    currentRoom = room;
-    socket.emit('join', { room });
-    socket.emit('chat_message', { room, text, type: 'text', replyToId: replyingTo?.id || null });
-    clearReply();
   } else {
     socket.emit('chat_message', { text, type: 'text', replyToId: replyingTo?.id || null });
     clearReply();
@@ -606,7 +557,7 @@ messageInput.addEventListener('input', () => {
 
   if (chatMode === 'dm' && activeFriend) {
     socket.emit('dm_typing', { receiverId: activeFriend.id });
-  } else if (chatMode === 'room' || chatMode === 'server') {
+  } else if (chatMode === 'room') {
     socket.emit('typing');
   }
 });
@@ -1156,8 +1107,7 @@ async function startApp() {
   roomInput.value = currentRoom;
   connectSocket();
 
-  await Promise.allSettled([refreshMe(), loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration(), loadGlobalAdminStatus(), loadGroups(), loadServers(), loadGamify()]);
-  await handleInviteLinkOnLoad();
+  await Promise.allSettled([refreshMe(), loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration(), loadGlobalAdminStatus(), loadGroups(), loadGamify()]);
   checkForUnlockedBadges(true);
   updateMessengerUi();
 }
@@ -1189,8 +1139,6 @@ function connectSocket() {
     syncMobileHeader();
     if (chatMode === 'group' && activeGroup) {
       socket.emit('group_join', { groupId: activeGroup.id });
-    } else if (chatMode === 'server' && activeServer && activeChannel) {
-      socket.emit('join', { room: serverRoomName(activeServer.id, activeChannel.id) });
     } else {
       joinRoom(currentRoom);
     }
@@ -1230,12 +1178,8 @@ function connectSocket() {
   });
   socket.on('chat_message', (message) => {
     if (message.sender_id === user.id || message.user_id === user.id) checkForUnlockedBadges();
-    const activeRoom = chatMode === 'server' && activeServer && activeChannel
-      ? serverRoomName(activeServer.id, activeChannel.id).toLowerCase()
-      : String(currentRoom || '').toLowerCase();
-
-    if (!['room', 'server'].includes(chatMode)) return;
-    if (!message.room || String(message.room).toLowerCase() === activeRoom) {
+    if (chatMode !== 'room') return;
+    if (!message.room || message.room === currentRoom) {
       addRoomMessage(message);
       maybeRunFiveEggFromMessage(message);
     }
@@ -1413,8 +1357,6 @@ function updateChatHeaderAvatar() {
 
   if (chatMode === 'dm' && activeFriend) {
     label = (activeFriend.display_name || activeFriend.username || '?').charAt(0).toUpperCase();
-  } else if (chatMode === 'server' && activeServer) {
-    label = (activeServer.name || 'S').charAt(0).toUpperCase();
   } else if (chatMode === 'group' && activeGroup) {
     label = (activeGroup.name || 'G').charAt(0).toUpperCase();
   } else if (chatMode === 'room') {
@@ -1436,10 +1378,6 @@ function updateComposerState() {
     disabled = !activeFriend;
     placeholder = activeFriend ? `@${activeFriend.username} kişisine mesaj yaz...` : 'Mesajlaşmak için soldan bir arkadaş seç...';
     hint = activeFriend ? 'DM açık' : 'DM seçilmedi';
-  } else if (chatMode === 'server') {
-    disabled = !(activeServer && activeChannel);
-    placeholder = activeServer && activeChannel ? `#${activeChannel.name} kanalına mesaj yaz...` : 'Mesajlaşmak için soldan sunucu/kanal seç...';
-    hint = activeServer && activeChannel ? `${activeServer.name} / #${activeChannel.name}` : 'Sunucu kanalı seçilmedi';
   } else if (chatMode === 'group') {
     disabled = !activeGroup;
     placeholder = activeGroup ? `${activeGroup.name} grubuna mesaj yaz...` : 'Mesajlaşmak için soldan bir grup seç...';
@@ -1467,14 +1405,6 @@ function markActiveConversation() {
     document.querySelectorAll(`[data-conversation-type="dm"][data-user-id="${activeFriend.id}"]`).forEach((el) => el.classList.add('active'));
   }
 
-  if (chatMode === 'server' && activeServer) {
-    document.querySelectorAll(`[data-conversation-type="server"][data-server-id="${activeServer.id}"]`).forEach((el) => el.classList.add('active'));
-  }
-
-  if (chatMode === 'server' && activeChannel) {
-    document.querySelectorAll(`[data-conversation-type="server-channel"][data-channel-id="${activeChannel.id}"]`).forEach((el) => el.classList.add('active'));
-  }
-
   if (chatMode === 'group' && activeGroup) {
     document.querySelectorAll(`[data-conversation-type="group"][data-group-id="${activeGroup.id}"]`).forEach((el) => el.classList.add('active'));
   }
@@ -1487,12 +1417,10 @@ function setChatMode(nextMode) {
   document.body.dataset.chatMode = chatMode;
 
   roomModeButton.classList.toggle('active', chatMode === 'room');
-  serverModeButton?.classList.toggle('active', chatMode === 'server');
   dmModeButton.classList.toggle('active', chatMode === 'dm');
   if (groupModeButton) groupModeButton.classList.toggle('active', chatMode === 'group');
 
   roomPanel.classList.toggle('hidden', chatMode !== 'room');
-  if (serversPanel) serversPanel.classList.toggle('hidden', chatMode !== 'server');
   friendsPanel.classList.toggle('hidden', chatMode !== 'dm');
   if (groupsPanel) groupsPanel.classList.toggle('hidden', chatMode !== 'group');
 
@@ -1505,11 +1433,6 @@ function setChatMode(nextMode) {
     activeGroup = null;
     chatTitle.textContent = `# ${currentRoom}`;
     loadOldRoomMessages(currentRoom);
-  } else if (chatMode === 'server') {
-    activeFriend = null;
-    activeGroup = null;
-    chatTitle.textContent = activeServer && activeChannel ? `${activeServer.name} / #${activeChannel.name}` : 'Sunucu seç';
-    if (!activeServer) addSystemMessage('Sunucu için soldan sunucu seç veya yeni sunucu kur.');
   } else if (chatMode === 'dm') {
     activeGroup = null;
     chatTitle.textContent = activeFriend ? `DM: ${activeFriend.username}` : 'DM seç';
@@ -1531,11 +1454,9 @@ async function joinRoom(room) {
   chatMode = 'room';
   roomModeButton.classList.add('active');
   dmModeButton.classList.remove('active');
-  serverModeButton?.classList.remove('active');
   if (groupModeButton) groupModeButton.classList.remove('active');
   roomPanel.classList.remove('hidden');
   friendsPanel.classList.add('hidden');
-  if (serversPanel) serversPanel.classList.add('hidden');
   if (groupsPanel) groupsPanel.classList.add('hidden');
 
   roomInput.value = currentRoom;
@@ -1917,7 +1838,7 @@ function addDmMessage(message) {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '871');
+    url.searchParams.set('v', '872');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3932,363 +3853,6 @@ function formatPresence(profile) {
     hour: '2-digit',
     minute: '2-digit'
   })}`;
-}
-
-
-
-
-function serverRoleLabel(role) {
-  if (role === 'owner') return 'Owner';
-  if (role === 'admin') return 'Admin';
-  if (role === 'mod') return 'Mod';
-  return 'Üye';
-}
-
-function serverRoleClass(role) {
-  return `server-role-${String(role || 'member')}`;
-}
-
-function myServerPermissions() {
-  return activeServer?.permissions || {};
-}
-
-function renderServerPermissions() {
-  if (!serverPermissionInfo || !activeServer) return;
-  const perms = myServerPermissions();
-  const parts = [
-    `Rol: ${serverRoleLabel(activeServer.my_role)}`,
-    perms.can_create_invites ? 'Davet' : '',
-    perms.can_create_channels ? 'Kanal aç' : '',
-    perms.can_delete_channels ? 'Kanal sil' : '',
-    perms.can_manage_roles ? 'Rol ver' : '',
-    perms.can_kick_members ? 'Üye çıkar' : ''
-  ].filter(Boolean);
-
-  serverPermissionInfo.textContent = parts.join(' · ');
-  serverPermissionInfo.className = `server-permission-info ${serverRoleClass(activeServer.my_role)}`;
-}
-
-
-function serverRoomName(serverId, channelId) {
-  return `srv_${Number(serverId)}_${Number(channelId)}`;
-}
-
-async function loadServers() {
-  if (!serversList) return;
-
-  try {
-    const data = await api('/api/servers');
-    servers = data.servers || [];
-    renderServers();
-  } catch (error) {
-    addSystemMessage(error.message);
-  }
-}
-
-function renderServers() {
-  if (!serversList) return;
-  serversList.innerHTML = '';
-
-  if (!servers.length) {
-    serversList.innerHTML = '<div class="mini-item">Henüz sunucu yok. İlk sunucuyu kur.</div>';
-    return;
-  }
-
-  servers.forEach((server) => {
-    const item = document.createElement('div');
-    item.className = 'mini-item conversation-item';
-    item.dataset.conversationType = 'server';
-    item.dataset.serverId = server.id;
-    item.innerHTML = `<div class="mini-left">${avatarHtml(server.name, server.avatar_url)}<div><strong>${escapeHtml(server.name)}</strong><span>${server.member_count || 1} üye • ${server.channel_count || 1} kanal • ${server.my_role}</span></div></div>`;
-    item.onclick = () => openServer(server);
-    serversList.appendChild(item);
-  });
-
-  markActiveConversation();
-}
-
-async function createServer() {
-  const name = newServerNameInput?.value.trim();
-  const description = newServerDescriptionInput?.value.trim() || '';
-
-  if (!name) {
-    addSystemMessage('Sunucu adı yaz.');
-    return;
-  }
-
-  try {
-    const data = await api('/api/servers', {
-      method: 'POST',
-      body: JSON.stringify({ name, description })
-    });
-
-    newServerNameInput.value = '';
-    if (newServerDescriptionInput) newServerDescriptionInput.value = '';
-    await loadServers();
-    switchServerPanel('list');
-    await openServer(data.server);
-  } catch (error) {
-    addSystemMessage(error.message);
-  }
-}
-
-async function openServer(server) {
-  activeServer = server;
-  activeFriend = null;
-  activeGroup = null;
-  activeChannel = null;
-  chatMode = 'server';
-  document.body.dataset.chatMode = 'server';
-
-  roomModeButton.classList.remove('active');
-  serverModeButton?.classList.add('active');
-  dmModeButton.classList.remove('active');
-  if (groupModeButton) groupModeButton.classList.remove('active');
-
-  roomPanel.classList.add('hidden');
-  serversPanel?.classList.remove('hidden');
-  friendsPanel.classList.add('hidden');
-  groupsPanel?.classList.add('hidden');
-
-  if (serverDetailsBox) serverDetailsBox.classList.remove('hidden');
-  messagesEl.innerHTML = '';
-  resetMessageGrouping();
-  typingText.textContent = '';
-  chatTitle.textContent = `${server.name}`;
-
-  await loadServerDetails(server.id);
-
-  const firstChannel = window.__serverChannels?.[0] || null;
-  if (firstChannel) await openServerChannel(firstChannel);
-
-  syncMobileHeader();
-  updateMessengerUi();
-}
-
-async function loadServerDetails(serverId) {
-  try {
-    const data = await api(`/api/servers/${serverId}`);
-    activeServer = data.server;
-    window.__serverChannels = data.channels || [];
-    serverMembers = data.members || [];
-
-    if (activeServerInfo) {
-      activeServerInfo.innerHTML = `<div class="mini-item"><div class="mini-left">${avatarHtml(activeServer.name, activeServer.avatar_url)}<div><strong>${escapeHtml(activeServer.name)}</strong><span>${escapeHtml(activeServer.description || 'Açıklama yok')} • rolün: ${activeServer.my_role}</span></div></div></div>`;
-    }
-
-    if (serverInviteLinkInput) {
-      serverInviteLinkInput.value = activeServer.invite_code ? buildServerInviteUrl(activeServer.invite_code) : '';
-    }
-    if (copyServerInviteButton) {
-      copyServerInviteButton.disabled = !activeServer.permissions?.can_create_invites;
-      copyServerInviteButton.title = activeServer.permissions?.can_create_invites ? '' : 'Davet yetkin yok';
-    }
-
-    renderServerChannels(window.__serverChannels);
-    renderServerPermissions();
-    if (createChannelButton) createChannelButton.disabled = !activeServer.permissions?.can_create_channels;
-    renderServerMembers();
-
-    if (activeChannel && !window.__serverChannels.some((channel) => Number(channel.id) === Number(activeChannel.id))) {
-      activeChannel = null;
-    }
-    if (!activeChannel && window.__serverChannels.length) activeChannel = window.__serverChannels[0];
-  } catch (error) {
-    addSystemMessage(error.message);
-  }
-}
-
-function renderServerChannels(channels) {
-  if (!serverChannelsList) return;
-  serverChannelsList.innerHTML = '';
-
-  if (!channels.length) {
-    serverChannelsList.innerHTML = '<div class="mini-item">Kanal yok.</div>';
-    return;
-  }
-
-  const canManage = Boolean(activeServer?.permissions?.can_delete_channels);
-
-  channels.forEach((channel) => {
-    const item = document.createElement('div');
-    item.className = 'mini-item conversation-item server-channel-item';
-    item.dataset.conversationType = 'server-channel';
-    item.dataset.channelId = channel.id;
-
-    const main = document.createElement('div');
-    main.className = 'mini-left';
-    main.innerHTML = `<div class="mini-avatar">#</div><div><strong>#${escapeHtml(channel.name)}</strong><span>${escapeHtml(channel.kind || 'text')}</span></div>`;
-    main.onclick = () => openServerChannel(channel);
-
-    item.appendChild(main);
-
-    if (canManage && channels.length > 1) {
-      const del = document.createElement('button');
-      del.className = 'action-button red';
-      del.textContent = 'Sil';
-      del.onclick = (event) => {
-        event.stopPropagation();
-        deleteServerChannel(channel);
-      };
-      item.appendChild(del);
-    }
-
-    serverChannelsList.appendChild(item);
-  });
-}
-
-function renderServerMembers() {
-  if (!serverMembersList) return;
-  serverMembersList.innerHTML = '';
-
-  if (!serverMembers.length) {
-    serverMembersList.innerHTML = '<div class="mini-item">Üye yok.</div>';
-    return;
-  }
-
-  serverMembers.forEach((member) => {
-    const item = document.createElement('div');
-    item.className = 'mini-item';
-    item.innerHTML = `<div class="mini-left">${avatarHtml(member.display_name || member.username, member.avatar_url)}<div><strong>${escapeHtml(member.display_name || member.username)}</strong><span>${member.online ? 'Çevrimiçi' : formatPresence(member)} • ${escapeHtml(member.role || 'member')}</span></div></div>`;
-    item.onclick = () => openProfile(member.id);
-    serverMembersList.appendChild(item);
-  });
-}
-
-
-function switchServerPanel(panel) {
-  const showCreate = panel === 'create';
-  serverListTabButton?.classList.toggle('active', !showCreate);
-  serverCreateTabButton?.classList.toggle('active', showCreate);
-  serverListPanel?.classList.toggle('hidden', showCreate);
-  serverCreatePanel?.classList.toggle('hidden', !showCreate);
-}
-
-function buildServerInviteUrl(code) {
-  return `${window.location.origin}${window.location.pathname}?invite=${encodeURIComponent(code)}`;
-}
-
-async function copyServerInviteLink() {
-  if (!activeServer) return;
-  if (!activeServer.permissions?.can_create_invites) {
-    addSystemMessage('Davet linki alma yetkin yok.');
-    return;
-  }
-
-  try {
-    const data = await api(`/api/servers/${activeServer.id}/invite`, { method: 'POST' });
-    const link = buildServerInviteUrl(data.code);
-    if (serverInviteLinkInput) serverInviteLinkInput.value = link;
-
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(link);
-      addSystemMessage('Davet linki kopyalandı.');
-    } else {
-      prompt('Davet linki:', link);
-    }
-  } catch (error) {
-    addSystemMessage(error.message);
-  }
-}
-
-async function handleInviteLinkOnLoad() {
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get('invite');
-  if (!code || !token || !user) return;
-
-  try {
-    const data = await api(`/api/servers/join/${encodeURIComponent(code)}`, { method: 'POST' });
-    addSystemMessage(`${data.server?.name || 'Sunucu'} sunucusuna katıldın.`);
-    await loadServers();
-    switchServerPanel('list');
-    await openServer(data.server);
-
-    params.delete('invite');
-    const cleanUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
-    window.history.replaceState({}, '', cleanUrl);
-  } catch (error) {
-    addSystemMessage(error.message);
-  }
-}
-
-async function deleteServerChannel(channel) {
-  if (!activeServer || !channel) return;
-  if (!confirm(`#${channel.name} kanalını silmek istiyor musun?`)) return;
-
-  try {
-    await api(`/api/servers/${activeServer.id}/channels/${channel.id}`, { method: 'DELETE' });
-
-    if (activeChannel && Number(activeChannel.id) === Number(channel.id)) {
-      activeChannel = null;
-      messagesEl.innerHTML = '';
-    }
-
-    await loadServerDetails(activeServer.id);
-
-    if (window.__serverChannels?.length) {
-      await openServerChannel(window.__serverChannels[0]);
-    } else {
-      chatTitle.textContent = `${activeServer.name}`;
-    }
-
-    addSystemMessage('Kanal silindi.');
-  } catch (error) {
-    addSystemMessage(error.message);
-  }
-}
-
-
-async function createServerChannel() {
-  if (!activeServer) {
-    addSystemMessage('Önce sunucu seç.');
-    return;
-  }
-
-  if (!activeServer.permissions?.can_create_channels) {
-    addSystemMessage('Kanal oluşturma yetkin yok.');
-    return;
-  }
-
-  const name = newChannelNameInput?.value.trim();
-  if (!name) {
-    addSystemMessage('Kanal adı yaz.');
-    return;
-  }
-
-  try {
-    const data = await api(`/api/servers/${activeServer.id}/channels`, {
-      method: 'POST',
-      body: JSON.stringify({ name })
-    });
-
-    if (newChannelNameInput) newChannelNameInput.value = '';
-    await loadServerDetails(activeServer.id);
-    await openServerChannel(data.channel);
-  } catch (error) {
-    addSystemMessage(error.message);
-  }
-}
-
-async function openServerChannel(channel) {
-  if (!activeServer || !channel) return;
-
-  activeChannel = channel;
-  chatMode = 'server';
-  document.body.dataset.chatMode = 'server';
-  chatTitle.textContent = `${activeServer.name} / #${channel.name}`;
-  messagesEl.innerHTML = '';
-  resetMessageGrouping();
-  typingText.textContent = '';
-
-  const room = serverRoomName(activeServer.id, channel.id);
-  currentRoom = room;
-
-  if (socket && socket.connected) socket.emit('join', { room });
-  await loadOldRoomMessages(room);
-  markActiveConversation();
-  updateMessengerUi();
-
-  if (window.innerWidth <= 760) document.body.classList.remove('mobile-sidebar-open');
 }
 
 
