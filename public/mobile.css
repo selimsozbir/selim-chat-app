@@ -277,3 +277,20 @@
     font-size: 10px !important;
   }
 }
+
+
+
+
+/* v10.5.2 mobile own bubble structure */
+.message[data-mine="true"],
+.message.mine.own-message,
+.message.self {
+  grid-template-columns: minmax(0, 1fr) 32px !important;
+  max-width: 90% !important;
+}
+
+.message[data-mine="true"] > .msg-bubble,
+.message.mine.own-message > .msg-bubble,
+.message.self > .msg-bubble {
+  border-radius: 18px 18px 8px 18px !important;
+}
