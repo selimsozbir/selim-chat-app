@@ -1250,6 +1250,12 @@ async function initDatabase() {
     );
   `);
 
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_messages_room_created_polish ON messages(room, created_at DESC);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_dm_sender_receiver_created_polish ON dm_messages(sender_id, receiver_id, created_at DESC);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_group_messages_group_created_polish ON group_messages(group_id, created_at DESC);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_notifications_user_created_polish ON notifications(user_id, created_at DESC);`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS room_message_reads (
       message_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,
