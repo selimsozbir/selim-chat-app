@@ -56,12 +56,17 @@ const roomInput = document.getElementById('roomInput');
 const joinRoomButton = document.getElementById('joinRoomButton');
 const chatTitle = document.getElementById('chatTitle');
 const chatHeaderAvatar = document.getElementById('chatHeaderAvatar');
+const headerSearchButton = document.getElementById('headerSearchButton');
+const headerGalleryButton = document.getElementById('headerGalleryButton');
+const headerFriendsButton = document.getElementById('headerFriendsButton');
+const headerSettingsButton = document.getElementById('headerSettingsButton');
 const focusComposerButton = document.getElementById('focusComposerButton');
 const jumpBottomHeaderButton = document.getElementById('jumpBottomHeaderButton');
 const scrollBottomButton = document.getElementById('scrollBottomButton');
 const composerHint = document.getElementById('composerHint');
 const sendButton = document.getElementById('sendButton');
 const statusText = document.getElementById('statusText');
+const chatMetaText = document.getElementById('chatMetaText');
 
 const messagesEl = document.getElementById('messages');
 const usersList = document.getElementById('usersList');
@@ -1400,6 +1405,55 @@ function syncMobileHeader() {
   syncMobileNav();
 }
 
+function lastActivityText() {
+  const last = messagesEl?.querySelector('.message:last-child');
+  if (!last) return 'son aktivite yok';
+  return 'son aktivite az önce';
+}
+
+function currentHeaderContext() {
+  if (chatMode === 'dm') return activeFriend ? `${activeFriend.username} ile DM` : 'DM seç';
+  if (chatMode === 'group') return activeGroup ? `${activeGroup.name} grubu` : 'Grup seç';
+  return `# ${currentRoom || 'genel'}`;
+}
+
+function updateHeaderMeta() {
+  if (!chatMetaText) return;
+
+  if (chatMode === 'room') {
+    const onlineCount = usersList?.querySelectorAll('li, .room-user-item, .user-row').length || roomMembers?.length || 0;
+    const eventText = activeLiveEvent?.name ? activeLiveEvent.name : 'Serbia Rift stabil';
+    chatMetaText.textContent = `${onlineCount} online · ${eventText} · ${lastActivityText()}`;
+    return;
+  }
+
+  if (chatMode === 'dm') {
+    const state = activeFriend ? formatPresence(activeFriend) : 'soldan chat seç';
+    chatMetaText.textContent = `${state} · ${lastActivityText()}`;
+    return;
+  }
+
+  if (chatMode === 'group') {
+    chatMetaText.textContent = `${currentHeaderContext()} · ${lastActivityText()}`;
+    return;
+  }
+
+  chatMetaText.textContent = 'Hazır';
+}
+
+function focusHeaderSearch() {
+  if (chatMode !== 'room') {
+    openFriendsCenter?.('friends');
+    return;
+  }
+
+  if (messageSearchInput) {
+    messageSearchInput.focus();
+    messageSearchInput.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  }
+}
+
+
 
 function getLocalSettings() {
   return {
@@ -1890,13 +1944,16 @@ function setChatMode(nextMode) {
   } else if (chatMode === 'dm') {
     activeGroup = null;
     chatTitle.textContent = activeFriend ? `DM: ${activeFriend.username}` : 'DM seç';
-    addSystemMessage('DM için soldan arkadaş seç.');
+    loadFriends?.();
+    addSystemMessage('DM için soldan chat seç.');
   } else if (chatMode === 'group') {
     activeFriend = null;
     chatTitle.textContent = activeGroup ? `Grup: ${activeGroup.name}` : 'Grup seç';
     addSystemMessage('Grup için soldan grup seç veya yeni grup kur.');
   }
 
+  updateHeaderMeta?.();
+  updateHeaderMeta?.();
   syncMobileHeader();
 }
 
@@ -2307,13 +2364,16 @@ async function openDm(friend) {
   activeFriend = friend;
   chatMode = 'dm';
 
+  document.body.dataset.chatMode = chatMode;
   roomModeButton.classList.remove('active');
   dmModeButton.classList.add('active');
+  if (groupModeButton) groupModeButton.classList.remove('active');
   roomPanel.classList.add('hidden');
   friendsPanel.classList.remove('hidden');
+  if (groupsPanel) groupsPanel.classList.add('hidden');
 
   chatTitle.textContent = `DM: ${friend.username}`;
-  syncMobileHeader();
+  updateHeaderMeta?.();
   syncMobileHeader();
   messagesEl.innerHTML = '';
   resetMessageGrouping();
@@ -2423,7 +2483,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1032');
+    url.searchParams.set('v', '1033');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3170,6 +3230,7 @@ function renderUniverseData(data) {
   if (universeEventText) universeEventText.textContent = universe.active_event ? universe.active_event.name : 'Event yok';
 
   renderLiveEvent(universe.active_event || null);
+  updateHeaderMeta?.();
 
   if (inventoryList) {
     inventoryList.innerHTML = '';
@@ -3730,6 +3791,7 @@ function renderUsers(users) {
     usersList.appendChild(li);
   });
 
+  updateHeaderMeta?.();
   loadRoomMembers();
   loadModeration();
 }
@@ -6714,5 +6776,22 @@ sidebarGalleryButton?.addEventListener('click', () => {
 });
 
 sidebarSettingsButton?.addEventListener('click', () => {
+  openSettings?.();
+});
+
+
+headerSearchButton?.addEventListener('click', focusHeaderSearch);
+
+headerGalleryButton?.addEventListener('click', () => {
+  syncRailActive?.('gallery');
+  openGalleryModal?.();
+});
+
+headerFriendsButton?.addEventListener('click', () => {
+  syncRailActive?.('friends-center');
+  openFriendsCenter?.('friends');
+});
+
+headerSettingsButton?.addEventListener('click', () => {
   openSettings?.();
 });
