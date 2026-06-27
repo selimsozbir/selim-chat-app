@@ -16337,3 +16337,36 @@ button:hover {
 .media-viewer-nav:hover {
   background: rgba(255,255,255,.16);
 }
+
+
+/* =========================================================
+   v10.6.1 — Command/media fixes
+   ========================================================= */
+
+.link-preview-card.has-thumb {
+  grid-template-columns: 92px minmax(0,1fr) auto;
+  padding: 8px;
+}
+
+.link-preview-thumb {
+  width: 92px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.10);
+}
+
+.message-media img.broken-media {
+  min-width: 180px;
+  min-height: 110px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(255,255,255,.22);
+  background: rgba(255,255,255,.06);
+}
+
+.command-palette-modal:not(.hidden),
+.media-viewer-modal:not(.hidden) {
+  display: grid !important;
+}
