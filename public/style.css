@@ -6935,3 +6935,123 @@ body {
     grid-column: 1 / -1;
   }
 }
+
+
+/* =========================================================
+   v8.6.0 — Server / Channel System + Visible Frames
+   ========================================================= */
+
+.nav-buttons {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+.server-create-box {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.server-create-box input,
+#newChannelNameInput {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: #09090f;
+  color: #fff;
+}
+
+.server-details {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.025);
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+.conversation-item[data-conversation-type="server-channel"] {
+  padding-left: 14px !important;
+}
+
+.conversation-item[data-conversation-type="server-channel"].active {
+  border-color: rgba(34,211,238,.45) !important;
+  background: linear-gradient(135deg, rgba(14,165,233,.16), rgba(139,92,246,.10)) !important;
+}
+
+.profile-avatar-shell.avatar-frame,
+.msg-avatar.avatar-frame,
+.avatar.avatar-frame,
+.avatar-img.avatar-frame {
+  position: relative;
+  border: 2px solid transparent !important;
+}
+
+.profile-avatar-shell.avatar-frame::after,
+.msg-avatar.avatar-frame::after,
+.avatar.avatar-frame::after,
+.avatar-img.avatar-frame::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.profile-avatar-shell.frame_vertex,
+.msg-avatar.frame_vertex,
+.avatar.frame_vertex,
+.avatar-img.frame_vertex,
+.avatar-frame.frame_vertex::after {
+  box-shadow: 0 0 0 3px rgba(239,68,68,.85), 0 0 24px rgba(239,68,68,.48) !important;
+  border-color: rgba(239,68,68,.9) !important;
+}
+
+.profile-avatar-shell.frame_limbo,
+.msg-avatar.frame_limbo,
+.avatar.frame_limbo,
+.avatar-img.frame_limbo,
+.avatar-frame.frame_limbo::after {
+  box-shadow: 0 0 0 3px rgba(255,255,255,.25), 0 0 24px rgba(0,0,0,.95) !important;
+  border-color: rgba(255,255,255,.28) !important;
+}
+
+.profile-avatar-shell.frame_five,
+.msg-avatar.frame_five,
+.avatar.frame_five,
+.avatar-img.frame_five,
+.avatar-frame.frame_five::after {
+  box-shadow: 0 0 0 3px rgba(139,92,246,.9), 0 0 26px rgba(236,72,153,.55), 0 0 42px rgba(34,211,238,.18) !important;
+  border-color: rgba(139,92,246,.95) !important;
+}
+
+.profile-avatar-shell.frame_ataturk,
+.msg-avatar.frame_ataturk,
+.avatar.frame_ataturk,
+.avatar-img.frame_ataturk,
+.avatar-frame.frame_ataturk::after {
+  box-shadow: 0 0 0 3px rgba(239,68,68,.95), 0 0 0 6px rgba(255,255,255,.20), 0 0 28px rgba(239,68,68,.45) !important;
+  border-color: rgba(255,255,255,.85) !important;
+}
+
+.message.framefx-frame_vertex .msg-bubble {
+  border-color: rgba(239,68,68,.28) !important;
+}
+
+.message.framefx-frame_five .msg-bubble {
+  border-color: rgba(139,92,246,.34) !important;
+}
+
+.message.framefx-frame_ataturk .msg-bubble {
+  border-color: rgba(239,68,68,.35) !important;
+}
+
+@media (max-width: 760px) {
+  .mobile-bottom-nav {
+    grid-template-columns: repeat(5, 1fr) !important;
+  }
+
+  .nav-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
