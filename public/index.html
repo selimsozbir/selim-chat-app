@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v9.2.0</title>
-  <link rel="stylesheet" href="style.css?v=920" />
+  <title>Selim Chat v9.3.0</title>
+  <link rel="stylesheet" href="style.css?v=930" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -492,14 +492,29 @@
 
 
   <div id="settingsModal" class="settings-modal hidden">
-    <div class="settings-card">
-      <button id="settingsCloseButton" class="profile-close" type="button">×</button>
-      <h2>Ayarlar</h2>
-      <p class="settings-muted">Hesabını, görünümünü ve yerel tercihlerini buradan değiştir.</p>
+    <div class="settings-card settings-card-v2">
+      <button id="settingsCloseButton" class="profile-close settings-close-v2" type="button">×</button>
 
-      <div class="settings-grid">
-        <section class="settings-section">
-          <h3>Profil</h3>
+      <div class="settings-hero">
+        <div class="settings-hero-icon">⚙</div>
+        <div>
+          <h2>Ayarlar</h2>
+          <p class="settings-muted">Hesap, görünüm, bildirim ve yerel tercihlerini tek yerden yönet.</p>
+        </div>
+      </div>
+
+      <div class="settings-layout">
+        <nav class="settings-nav" aria-label="Ayar kategorileri">
+          <button class="settings-nav-item active" data-settings-target="account" type="button"><span>👤</span><strong>Hesap</strong><small>Profil & şifre</small></button>
+          <button class="settings-nav-item" data-settings-target="appearance" type="button"><span>🎨</span><strong>Görünüm</strong><small>Tema & sohbet</small></button>
+          <button class="settings-nav-item" data-settings-target="notifications" type="button"><span>🔔</span><strong>Bildirim</strong><small>DM, grup, ses</small></button>
+          <button class="settings-nav-item" data-settings-target="extras" type="button"><span>🌀</span><strong>Ekstra</strong><small>Easter egg & bot</small></button>
+          <button class="settings-nav-item" data-settings-target="system" type="button"><span>🛠️</span><strong>Sistem</strong><small>Dil & hızlı işlem</small></button>
+        </nav>
+
+        <div class="settings-grid settings-content-v2">
+        <section class="settings-section" data-settings-section="account">
+          <h3><span>👤</span> Profil</h3>
           <label for="settingsUsernameInput">Kullanıcı adı / @etiket</label>
           <input id="settingsUsernameInput" type="text" maxlength="30" placeholder="kullaniciadi" />
 
@@ -513,8 +528,8 @@
           <p id="settingsProfileStatus" class="settings-status"></p>
         </section>
 
-        <section class="settings-section">
-          <h3>Şifre</h3>
+        <section class="settings-section" data-settings-section="account">
+          <h3><span>🔐</span> Şifre</h3>
           <label for="settingsCurrentPasswordInput">Mevcut şifre</label>
           <input id="settingsCurrentPasswordInput" type="password" autocomplete="current-password" />
 
@@ -528,8 +543,8 @@
           <p id="settingsPasswordStatus" class="settings-status"></p>
         </section>
 
-        <section class="settings-section">
-          <h3>Görünüm</h3>
+        <section class="settings-section" data-settings-section="appearance">
+          <h3><span>🎨</span> Görünüm</h3>
           <label for="settingsThemeSelect">Tema</label>
           <select id="settingsThemeSelect">
             <option value="neon">Neon / Cyber</option>
@@ -558,8 +573,8 @@
         </section>
 
 
-        <section class="settings-section">
-          <h3>Sohbet Görünümü</h3>
+        <section class="settings-section" data-settings-section="appearance">
+          <h3><span>💬</span> Sohbet Görünümü</h3>
 
           <label for="settingsFontSizeSelect">Yazı boyutu</label>
           <select id="settingsFontSizeSelect">
@@ -584,8 +599,8 @@
           </label>
         </section>
 
-        <section class="settings-section">
-          <h3>Bildirim Detayı</h3>
+        <section class="settings-section" data-settings-section="notifications">
+          <h3><span>🔔</span> Bildirim Detayı</h3>
 
           <label class="settings-check">
             <input id="settingsNotifyDmToggle" type="checkbox" />
@@ -613,8 +628,8 @@
           </label>
         </section>
 
-        <section class="settings-section">
-          <h3>Easter Egg Ayarları</h3>
+        <section class="settings-section" data-settings-section="extras">
+          <h3><span>🌀</span> Easter Egg Ayarları</h3>
 
           <label class="settings-check">
             <input id="settingsEggsToggle" type="checkbox" />
@@ -639,8 +654,8 @@
           </label>
         </section>
 
-        <section class="settings-section">
-          <h3>feiz Bot Ayarları</h3>
+        <section class="settings-section" data-settings-section="extras">
+          <h3><span>🤖</span> feiz Bot Ayarları</h3>
 
           <label class="settings-check">
             <input id="settingsBotHideToggle" type="checkbox" />
@@ -658,8 +673,8 @@
           </label>
         </section>
 
-        <section class="settings-section">
-          <h3>Dil</h3>
+        <section class="settings-section" data-settings-section="system">
+          <h3><span>🌐</span> Dil</h3>
 
           <label for="settingsLanguageSelect">Tercih edilen dil</label>
           <select id="settingsLanguageSelect">
@@ -670,19 +685,20 @@
           <p class="settings-muted">Şimdilik ana arayüz Türkçe kalır; bu ayar bot/gelecek arayüz için saklanır.</p>
         </section>
 
-        <section class="settings-section">
-          <h3>Hızlı İşlemler</h3>
+        <section class="settings-section" data-settings-section="system">
+          <h3><span>⚡</span> Hızlı İşlemler</h3>
           <button id="settingsClearLocalButton" class="small-button" type="button">Bu cihazdaki görünüm ayarlarını sıfırla</button>
           <button id="settingsLogoutFromPanelButton" class="small-button danger" type="button">Bu cihazdan çıkış yap</button>
           <p class="settings-muted">Tüm cihazlardan çıkış için ileride sunucu taraflı oturum sistemi ekleyebiliriz.</p>
         </section>
 
-        <section class="settings-section">
-          <h3>Bildirim</h3>
+        <section class="settings-section" data-settings-section="notifications">
+          <h3><span>📣</span> Bildirim</h3>
           <p class="settings-muted">Tarayıcı bildirimi açarsan DM, mention ve grup bildirimleri daha net gelir.</p>
           <button id="settingsEnableNotificationsButton" class="action-button settings-action" type="button">Bildirim İznini Aç</button>
           <button id="settingsClearNotificationsButton" class="small-button" type="button">Bildirimleri Temizle</button>
         </section>
+        </div>
       </div>
     </div>
   </div>
@@ -691,7 +707,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=920"></script>
+  <script src="script.js?v=930"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
