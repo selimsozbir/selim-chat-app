@@ -36,12 +36,18 @@ const groupModeButton = document.getElementById('groupModeButton');
 const roomPanel = document.getElementById('roomPanel');
 const friendsPanel = document.getElementById('friendsPanel');
 const serversPanel = document.getElementById('serversPanel');
+const serverListTabButton = document.getElementById('serverListTabButton');
+const serverCreateTabButton = document.getElementById('serverCreateTabButton');
+const serverListPanel = document.getElementById('serverListPanel');
+const serverCreatePanel = document.getElementById('serverCreatePanel');
 const newServerNameInput = document.getElementById('newServerNameInput');
 const newServerDescriptionInput = document.getElementById('newServerDescriptionInput');
 const createServerButton = document.getElementById('createServerButton');
 const serversList = document.getElementById('serversList');
 const serverDetailsBox = document.getElementById('serverDetailsBox');
 const activeServerInfo = document.getElementById('activeServerInfo');
+const copyServerInviteButton = document.getElementById('copyServerInviteButton');
+const serverInviteLinkInput = document.getElementById('serverInviteLinkInput');
 const newChannelNameInput = document.getElementById('newChannelNameInput');
 const createChannelButton = document.getElementById('createChannelButton');
 const serverChannelsList = document.getElementById('serverChannelsList');
@@ -423,7 +429,10 @@ if (groupModeButton) {
   });
 }
 
+if (serverListTabButton) serverListTabButton.addEventListener('click', () => switchServerPanel('list'));
+if (serverCreateTabButton) serverCreateTabButton.addEventListener('click', () => switchServerPanel('create'));
 if (createServerButton) createServerButton.addEventListener('click', createServer);
+if (copyServerInviteButton) copyServerInviteButton.addEventListener('click', copyServerInviteLink);
 if (createChannelButton) createChannelButton.addEventListener('click', createServerChannel);
 
 joinRoomButton.addEventListener('click', () => joinRoom(roomInput.value.trim() || 'genel'));
@@ -1144,6 +1153,7 @@ async function startApp() {
   connectSocket();
 
   await Promise.allSettled([refreshMe(), loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration(), loadGlobalAdminStatus(), loadGroups(), loadServers(), loadGamify()]);
+  await handleInviteLinkOnLoad();
   checkForUnlockedBadges(true);
   updateMessengerUi();
 }
@@ -1714,7 +1724,6 @@ async function loadFriends() {
     const data = await api('/api/friends');
     friends = data.friends || [];
     if (newGroupFriendsList) renderNewGroupFriends();
-    if (addServerFriendList) renderAddServerFriends();
 
     friendsList.innerHTML = '';
 
@@ -1904,7 +1913,7 @@ function addDmMessage(message) {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '860');
+    url.searchParams.set('v', '862');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3979,6 +3988,7 @@ async function createServer() {
     newServerNameInput.value = '';
     if (newServerDescriptionInput) newServerDescriptionInput.value = '';
     await loadServers();
+    switchServerPanel('list');
     await openServer(data.server);
   } catch (error) {
     addSystemMessage(error.message);
@@ -4032,9 +4042,12 @@ async function loadServerDetails(serverId) {
       activeServerInfo.innerHTML = `<div class="mini-item"><div class="mini-left">${avatarHtml(activeServer.name, activeServer.avatar_url)}<div><strong>${escapeHtml(activeServer.name)}</strong><span>${escapeHtml(activeServer.description || 'Açıklama yok')} • rolün: ${activeServer.my_role}</span></div></div></div>`;
     }
 
+    if (serverInviteLinkInput) {
+      serverInviteLinkInput.value = activeServer.invite_code ? buildServerInviteUrl(activeServer.invite_code) : '';
+    }
+
     renderServerChannels(window.__serverChannels);
     renderServerMembers();
-    renderAddServerFriends();
 
     if (!activeChannel && window.__serverChannels.length) activeChannel = window.__serverChannels[0];
   } catch (error) {
@@ -4100,56 +4113,52 @@ function renderServerMembers() {
 }
 
 
-function renderAddServerFriends() {
-  if (!addServerFriendList) return;
-  addServerFriendList.innerHTML = '';
-
-  const canManage = ['owner', 'admin'].includes(activeServer?.my_role);
-  if (!activeServer) {
-    addServerFriendList.innerHTML = '<div class="mini-item">Önce sunucu seç.</div>';
-    return;
-  }
-
-  if (!canManage) {
-    addServerFriendList.innerHTML = '<div class="mini-item">Arkadaş eklemek için sunucu admini olmalısın.</div>';
-    return;
-  }
-
-  const memberIds = new Set(serverMembers.map((m) => Number(m.id)));
-  const addable = (friends || []).filter((f) => !memberIds.has(Number(f.id)));
-
-  if (!addable.length) {
-    addServerFriendList.innerHTML = '<div class="mini-item">Eklenebilecek arkadaş yok.</div>';
-    return;
-  }
-
-  addable.forEach((friend) => {
-    const item = document.createElement('div');
-    item.className = 'mini-item';
-    item.innerHTML = `<div class="mini-left">${avatarHtml(friend.display_name || friend.username, friend.avatar_url)}<div><strong>${escapeHtml(friend.display_name || friend.username)}</strong><span>Sunucuya ekle</span></div></div>`;
-
-    const add = document.createElement('button');
-    add.className = 'action-button';
-    add.textContent = 'Ekle';
-    add.onclick = () => addServerMember(friend.id);
-
-    item.appendChild(add);
-    addServerFriendList.appendChild(item);
-  });
+function switchServerPanel(panel) {
+  const showCreate = panel === 'create';
+  serverListTabButton?.classList.toggle('active', !showCreate);
+  serverCreateTabButton?.classList.toggle('active', showCreate);
+  serverListPanel?.classList.toggle('hidden', showCreate);
+  serverCreatePanel?.classList.toggle('hidden', !showCreate);
 }
 
-async function addServerMember(userId) {
+function buildServerInviteUrl(code) {
+  return `${window.location.origin}${window.location.pathname}?invite=${encodeURIComponent(code)}`;
+}
+
+async function copyServerInviteLink() {
   if (!activeServer) return;
 
   try {
-    await api(`/api/servers/${activeServer.id}/members`, {
-      method: 'POST',
-      body: JSON.stringify({ userId })
-    });
+    const data = await api(`/api/servers/${activeServer.id}/invite`, { method: 'POST' });
+    const link = buildServerInviteUrl(data.code);
+    if (serverInviteLinkInput) serverInviteLinkInput.value = link;
 
-    addSystemMessage('Arkadaş sunucuya eklendi.');
-    await loadServerDetails(activeServer.id);
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(link);
+      addSystemMessage('Davet linki kopyalandı.');
+    } else {
+      prompt('Davet linki:', link);
+    }
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
+async function handleInviteLinkOnLoad() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('invite');
+  if (!code || !token || !user) return;
+
+  try {
+    const data = await api(`/api/servers/join/${encodeURIComponent(code)}`, { method: 'POST' });
+    addSystemMessage(`${data.server?.name || 'Sunucu'} sunucusuna katıldın.`);
     await loadServers();
+    switchServerPanel('list');
+    await openServer(data.server);
+
+    params.delete('invite');
+    const cleanUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+    window.history.replaceState({}, '', cleanUrl);
   } catch (error) {
     addSystemMessage(error.message);
   }
