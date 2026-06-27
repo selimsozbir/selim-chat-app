@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "8.8.6",
-  "description": "Selim Chat v8.8.6 profile modal size up",
+  "version": "8.8.7",
+  "description": "Selim Chat v8.8.7 slightly bigger profile and clickable chat profiles",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
