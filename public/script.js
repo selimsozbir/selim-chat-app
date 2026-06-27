@@ -574,7 +574,7 @@ function updateMobileViewportHeight() {
   document.documentElement.style.setProperty('--mobile-vvh', `${Math.round(height)}px`);
   document.documentElement.style.setProperty('--keyboard-inset', `${keyboardInset}px`);
   document.documentElement.style.setProperty('--mobile-bottom-inset', `${keyboardInset}px`);
-  const composerShift = keyboardInset > 80 ? Math.min(260, Math.round(keyboardInset * 0.55)) : 0;
+  const composerShift = keyboardInset > 80 ? Math.min(24, Math.round(keyboardInset * 0.05)) : 0;
   document.documentElement.style.setProperty('--composer-keyboard-shift', `${composerShift}px`);
 }
 
@@ -2590,7 +2590,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1094');
+    url.searchParams.set('v', '1095');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
