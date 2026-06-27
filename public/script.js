@@ -489,6 +489,7 @@ messageInput.addEventListener('keydown', (event) => {
 
 messageForm.addEventListener('submit', (event) => {
   event.preventDefault();
+  closeEmojiPanel();
 
   const text = messageInput.value.trim();
   if (!text || !socket) return;
@@ -576,25 +577,40 @@ function insertEmoji(emoji) {
   messageInput.focus();
   const pos = start + emoji.length;
   messageInput.setSelectionRange(pos, pos);
-  emojiPanel?.classList.add('hidden');
+  closeEmojiPanel();
   updateMentionSuggestions();
+}
+
+function closeEmojiPanel() {
+  if (emojiPanel) emojiPanel.classList.add('hidden');
+}
+
+function openEmojiPanel() {
+  if (!emojiPanel) return;
+  renderEmojiPanel();
+  emojiPanel.classList.remove('hidden');
 }
 
 function toggleEmojiPanel() {
   if (!emojiPanel) return;
-  renderEmojiPanel();
-  emojiPanel.classList.toggle('hidden');
+  if (emojiPanel.classList.contains('hidden')) openEmojiPanel();
+  else closeEmojiPanel();
 }
 
 if (emojiButton) emojiButton.addEventListener('click', (event) => {
+  event.preventDefault();
   event.stopPropagation();
   toggleEmojiPanel();
 });
 
-document.addEventListener('click', (event) => {
+document.addEventListener('pointerdown', (event) => {
   if (!emojiPanel || emojiPanel.classList.contains('hidden')) return;
   if (emojiPanel.contains(event.target) || emojiButton?.contains(event.target)) return;
-  emojiPanel.classList.add('hidden');
+  closeEmojiPanel();
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeEmojiPanel();
 });
 
 
@@ -2606,6 +2622,7 @@ async function loadAdminUsers() {
           <div>
             <strong>${escapeHtml(displayName(u))} ${u.is_banned ? '🚫' : ''}</strong>
             <span>@${escapeHtml(u.username)} • ${escapeHtml(u.global_role || 'user')}</span>
+            <span>💎 ${Number(u.shards || 0)} Shards • XP ${Number(u.xp || 0)}</span>
             <span>IP: ${escapeHtml(u.last_ip || 'yok')}</span>
             <span>${escapeHtml(u.last_user_agent || 'cihaz yok')}</span>
             <span>${u.online ? 'Çevrimiçi' : formatPresence(u)}</span>
@@ -2626,6 +2643,11 @@ async function loadAdminUsers() {
       roleBtn.textContent = 'Rol';
       roleBtn.onclick = () => changeGlobalRole(u);
 
+      const shardBtn = document.createElement('button');
+      shardBtn.className = 'action-button';
+      shardBtn.textContent = 'Shards';
+      shardBtn.onclick = () => changeUserShards(u);
+
       const banBtn = document.createElement('button');
       banBtn.className = `action-button ${u.is_banned ? 'gray' : 'red'}`;
       banBtn.textContent = u.is_banned ? 'Ban kaldır' : 'Ban';
@@ -2638,6 +2660,7 @@ async function loadAdminUsers() {
 
       actions.appendChild(nameBtn);
       actions.appendChild(roleBtn);
+      actions.appendChild(shardBtn);
       actions.appendChild(banBtn);
       actions.appendChild(ipBtn);
       item.appendChild(actions);
@@ -2677,6 +2700,42 @@ async function changeGlobalRole(u) {
     addSystemMessage(error.message);
   }
 }
+
+
+async function changeUserShards(u) {
+  const current = Number(u.shards || 0);
+  const value = prompt(
+    `${displayName(u)} için yeni Shards miktarı yaz.\n\nDirekt sayı yazarsan bakiye o olur.\n+100 veya -50 yazarsan ekleme/çıkarma yapar.`,
+    String(current)
+  );
+
+  if (value === null) return;
+
+  const raw = String(value).trim();
+  if (!raw) return;
+
+  try {
+    if (/^[+-]\d+$/.test(raw)) {
+      await api(`/api/admin/users/${u.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ shardDelta: Number(raw) })
+      });
+    } else {
+      const shards = Math.max(0, Math.min(9999999, Math.floor(Number(raw) || 0)));
+      await api(`/api/admin/users/${u.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ shards })
+      });
+    }
+
+    addSystemMessage('Shards güncellendi.');
+    await loadAdminUsers();
+    await loadGamify();
+  } catch (error) {
+    addSystemMessage(error.message);
+  }
+}
+
 
 async function toggleGlobalBan(u) {
   const reason = u.is_banned ? '' : prompt('Ban sebebi:', 'Kurallara aykırı davranış') || 'Banlandı.';
