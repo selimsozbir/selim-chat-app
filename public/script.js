@@ -439,6 +439,46 @@ if (profileSaveBadgesButton) profileSaveBadgesButton.addEventListener('click', s
 if (refreshFriendActivityButton) refreshFriendActivityButton.addEventListener('click', loadFriendActivity);
 
 
+
+function updateMobileViewportHeight() {
+  const height = window.visualViewport?.height || window.innerHeight;
+  document.documentElement.style.setProperty('--mobile-vvh', `${Math.round(height)}px`);
+}
+
+function setMobileKeyboardOpen(open) {
+  if (!isMobileLayout()) return;
+  document.body.classList.toggle('keyboard-open', Boolean(open));
+  document.body.classList.toggle('composer-focused', Boolean(open));
+  updateMobileViewportHeight();
+  if (open) {
+    setTimeout(() => {
+      scrollToBottom?.();
+      messageInput?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 80);
+    setTimeout(() => scrollToBottom?.(), 260);
+  }
+}
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    updateMobileViewportHeight();
+    if (isMobileLayout() && document.activeElement === messageInput) {
+      document.body.classList.add('keyboard-open', 'composer-focused');
+      setTimeout(() => scrollToBottom?.(), 90);
+    }
+  });
+}
+
+window.addEventListener('resize', updateMobileViewportHeight);
+document.addEventListener('DOMContentLoaded', updateMobileViewportHeight);
+
+messageInput?.addEventListener('focus', () => setMobileKeyboardOpen(true));
+messageInput?.addEventListener('blur', () => {
+  setTimeout(() => {
+    if (document.activeElement !== messageInput) setMobileKeyboardOpen(false);
+  }, 180);
+});
+
 function syncRailActive(mode = chatMode) {
   document.getElementById('railRoomButton')?.classList.toggle('active', mode === 'room');
   document.getElementById('railDmButton')?.classList.toggle('active', mode === 'dm');
@@ -2105,7 +2145,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '932');
+    url.searchParams.set('v', '933');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
