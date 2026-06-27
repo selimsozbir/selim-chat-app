@@ -2007,7 +2007,7 @@ app.post('/api/login', async (req, res) => {
     const password = String(req.body.password || '');
 
     const result = await pool.query(
-      'SELECT id, username, display_name, password_hash, avatar_url, bio, global_role, presence_status, custom_status, story_text, story_expires_at, is_banned, ban_reason, last_seen FROM users WHERE LOWER(username) = LOWER($1)',
+      'SELECT id, username, display_name, password_hash, avatar_url, bio, global_role, presence_status, custom_status, story_text, story_expires_at, is_banned, ban_reason, last_seen, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme FROM users WHERE LOWER(username) = LOWER($1)',
       [username]
     );
 
@@ -2578,6 +2578,7 @@ app.get('/api/messages/:room', authMiddleware, async (req, res) => {
     `SELECT m.id, m.room, m.user_id, m.username, m.text, m.created_at, m.edited_at, m.deleted_at,
             m.message_type, m.file_name, m.file_mime, m.file_data, m.file_path, m.file_size, m.reply_to_id,
             u.avatar_url,
+            u.display_name,
             u.active_bubble_theme AS bubble_theme,
             u.active_name_effect AS name_effect,
             u.active_profile_frame AS frame_theme,
