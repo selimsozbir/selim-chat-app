@@ -2037,7 +2037,11 @@ app.post('/api/login', async (req, res) => {
       custom_status: dbUser.custom_status || '',
       story_text: dbUser.story_text || '',
       story_expires_at: dbUser.story_expires_at,
-      last_seen: dbUser.last_seen
+      last_seen: dbUser.last_seen,
+      active_bubble_theme: dbUser.active_bubble_theme || '',
+      active_profile_frame: dbUser.active_profile_frame || '',
+      active_name_effect: dbUser.active_name_effect || '',
+      active_profile_theme: dbUser.active_profile_theme || ''
     };
     res.json({ token: createToken(user), user });
   } catch (error) {
@@ -2047,7 +2051,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.get('/api/me', authMiddleware, async (req, res) => {
-  const result = await pool.query('SELECT id, username, display_name, avatar_url, bio, global_role, presence_status, custom_status, story_text, story_expires_at, last_seen, last_active FROM users WHERE id = $1', [req.user.id]);
+  const result = await pool.query('SELECT id, username, display_name, avatar_url, bio, global_role, presence_status, custom_status, story_text, story_expires_at, last_seen, last_active, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme FROM users WHERE id = $1', [req.user.id]);
   if (result.rows.length === 0) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
   res.json({ user: { ...result.rows[0], online: userSockets.has(String(req.user.id)) } });
 });
@@ -3981,7 +3985,11 @@ app.get('/api/dm/:friendId', authMiddleware, async (req, res) => {
     `SELECT dm.id, dm.sender_id, dm.receiver_id, dm.text, dm.created_at, dm.edited_at, dm.deleted_at, dm.read_at,
             dm.message_type, dm.file_name, dm.file_mime, dm.file_data, dm.file_path, dm.file_size, dm.reply_to_id,
             sender.username AS sender_username,
+            sender.display_name AS sender_display_name,
             sender.avatar_url AS sender_avatar_url,
+            sender.active_bubble_theme AS bubble_theme,
+            sender.active_name_effect AS name_effect,
+            sender.active_profile_frame AS frame_theme,
             rdm.text AS reply_text,
             reply_sender.username AS reply_username
      FROM dm_messages dm
@@ -4584,7 +4592,11 @@ io.on('connection', (socket) => {
         sender_id: saved.rows[0].sender_id,
         receiver_id: saved.rows[0].receiver_id,
         sender_username: avatarResult.rows[0]?.display_name || socket.user.username,
+        sender_display_name: avatarResult.rows[0]?.display_name || null,
         sender_avatar_url: avatarResult.rows[0]?.avatar_url || null,
+        bubble_theme: avatarResult.rows[0]?.active_bubble_theme || '',
+        name_effect: avatarResult.rows[0]?.active_name_effect || '',
+        frame_theme: avatarResult.rows[0]?.active_profile_frame || '',
         text: saved.rows[0].text,
         message_type: saved.rows[0].message_type,
         file_name: saved.rows[0].file_name,
@@ -4736,7 +4748,7 @@ io.on('connection', (socket) => {
         [groupId, socket.user.id, cleanMessage, messageType, fileName, fileMime, fileData || null, filePath, fileSize, replyToId]
       );
 
-      const avatarResult = await pool.query('SELECT username, display_name, avatar_url, active_bubble_theme, active_name_effect FROM users WHERE id = $1', [socket.user.id]);
+      const avatarResult = await pool.query('SELECT username, display_name, avatar_url, active_bubble_theme, active_name_effect, active_profile_frame FROM users WHERE id = $1', [socket.user.id]);
       const sender = avatarResult.rows[0];
 
       const msg = {
