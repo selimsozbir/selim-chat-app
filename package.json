@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "9.8.5",
-  "description": "Selim Chat v9.8.5 polished online status, roles and story separation",
+  "version": "10.0.0",
+  "description": "Selim Chat v10.0.0 cinematic desktop UI refresh",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
