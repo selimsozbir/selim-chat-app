@@ -351,6 +351,7 @@ let commandPaletteItems = [];
 let commandPaletteIndex = 0;
 let mediaViewerItems = [];
 let mediaViewerIndex = 0;
+let storyVoteCache = new Map();
 
 let token = localStorage.getItem('chat_token');
 let user = null;
@@ -1317,6 +1318,11 @@ function bindGamifyControls() {
     universeTabButton.addEventListener('click', () => switchGamifyTab('universe'));
   }
 
+  if (inventoryTabButton && !inventoryTabButton.dataset.bound) {
+    inventoryTabButton.dataset.bound = '1';
+    inventoryTabButton.addEventListener('click', () => switchGamifyTab('inventory'));
+  }
+
   if (galleryTabButton && !galleryTabButton.dataset.bound) {
     galleryTabButton.dataset.bound = '1';
     galleryTabButton.addEventListener('click', () => switchGamifyTab('gallery'));
@@ -2076,7 +2082,8 @@ async function loadOldRoomMessages(room) {
         deleted_at: message.deleted_at,
         time: formatTime(message.created_at),
         user_id: message.user_id,
-        readers: message.readers || []
+        readers: message.readers || [],
+        story_decision: message.story_decision || message.extra_data?.story_decision
       });
     });
     scrollToBottom();
@@ -2550,7 +2557,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1081');
+    url.searchParams.set('v', '1082');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2587,6 +2594,7 @@ function switchGamifyTab(tab) {
   casinoTabButton?.classList.toggle('active', tab === 'casino');
   shardsHistoryTabButton?.classList.toggle('active', tab === 'shards');
   universeTabButton?.classList.toggle('active', tab === 'universe');
+  inventoryTabButton?.classList.toggle('active', tab === 'inventory');
   dailyPanel?.classList.toggle('hidden', tab !== 'daily');
   questsPanel?.classList.toggle('hidden', tab !== 'quests');
   lootboxPanel?.classList.toggle('hidden', tab !== 'lootbox');
@@ -4233,6 +4241,7 @@ function renderStoryDecisionMessage(decision) {
   }
 
   const total = Number(decision.total_votes || 0);
+  const voted = String(decision.voted_by_me || storyVoteCache.get(String(decision.id || '')) || '');
   box.innerHTML = `
     <div class="story-message-head">
       <span>🗳️ feiz anketi</span>
@@ -4243,19 +4252,22 @@ function renderStoryDecisionMessage(decision) {
       ${(decision.options || []).map((option) => {
         const votes = Number(option.votes || 0);
         const pct = total ? Math.round((votes / total) * 100) : 0;
-        return `<button class="story-option" data-story-option="${escapeHtml(option.key)}" type="button">
-          <span>${escapeHtml(option.label)}</span>
+        const selected = voted === option.key;
+        return `<button class="story-option ${selected ? 'selected' : ''}" data-story-option="${escapeHtml(option.key)}" type="button" ${voted ? 'disabled' : ''}>
+          <span>${escapeHtml(option.label)}${selected ? ' ✓' : ''}</span>
           <b>${votes} oy · ${pct}%</b>
           <i style="width:${pct}%"></i>
         </button>`;
       }).join('')}
     </div>
-    <div class="story-result">Şu anki sonuç: ${escapeHtml(decision.result_text || 'Henüz karar verilmedi.')}</div>
+    <div class="story-result">${voted ? 'Oy kullandın. ' : ''}Şu anki sonuç: ${escapeHtml(decision.result_text || 'Henüz karar verilmedi.')}</div>
   `;
 
-  box.querySelectorAll('[data-story-option]').forEach((button) => {
-    button.addEventListener('click', () => voteStoryDecision(button.dataset.storyOption));
-  });
+  if (!voted) {
+    box.querySelectorAll('[data-story-option]').forEach((button) => {
+      button.addEventListener('click', () => voteStoryDecision(button.dataset.storyOption));
+    });
+  }
 
   return box;
 }
@@ -7096,6 +7108,8 @@ function resizeImage(file, maxSize) {
 function updateStoryDecisionCards(data) {
   const decision = data?.decision || data;
   if (!decision) return;
+  const cachedVote = storyVoteCache.get(String(decision.id || ''));
+  if (cachedVote && !decision.voted_by_me) decision.voted_by_me = cachedVote;
   document.querySelectorAll('.story-message-card').forEach((card) => {
     const fresh = renderStoryDecisionMessage(decision);
     card.replaceWith(fresh);
@@ -7108,16 +7122,40 @@ function renderInventory(data = {}) {
   const items = Array.isArray(data.items) ? data.items : [];
   const pet = data.companion || {};
   const pets = data.pets || {};
+  const balance = Number(data.balance ?? user?.shards ?? 0);
+
+  if (data.balance !== undefined && user) {
+    user.shards = balance;
+    localStorage.setItem('chat_user', JSON.stringify(user));
+    if (gamifyStats) gamifyStats.textContent = `Level ${user.level || 1} · ${balance} Shards`;
+  }
 
   if (inventoryItemsList) {
-    inventoryItemsList.innerHTML = items.length
-      ? items.map((item) => `<div class="inventory-item-card"><span>🎒</span><div><strong>${escapeHtml(item.item_name || item.item_id)}</strong><small>${escapeHtml(item.item_id || '')} · ×${Number(item.quantity || 0)}</small></div></div>`).join('')
-      : '<div class="mini-item">Henüz item yok. Eventlere katıl, lootbox aç veya hikaye oyu ver.</div>';
+    const nonPetItems = items.filter((item) => !String(item.item_key || item.item_id || '').startsWith('pet_'));
+    inventoryItemsList.innerHTML = nonPetItems.length
+      ? nonPetItems.map((item) => `<div class="inventory-item-card"><span>🎒</span><div><strong>${escapeHtml(item.item_name || item.item_id)}</strong><small>${escapeHtml(item.item_key || item.item_id || '')} · ×${Number(item.quantity || 0)}</small></div></div>`).join('')
+      : '<div class="mini-item">Henüz normal item yok. Eventlere katıl, lootbox aç veya hikaye oyu ver.</div>';
   }
 
   if (inventoryCompanionBox) {
-    const petOptions = Object.entries(pets).map(([key, def]) => `<button class="pet-choice ${pet.pet_type === key ? 'active' : ''}" data-pet-type="${escapeHtml(key)}" type="button">${escapeHtml(def.icon)} <span>${escapeHtml(def.name)}</span></button>`).join('');
+    const petOptions = Object.entries(pets).map(([key, def]) => {
+      const owned = Boolean(def.owned);
+      const active = pet.pet_type === key;
+      const price = Number(def.price || 0);
+      const canBuy = balance >= price;
+      const label = active ? 'Aktif' : owned ? 'Seç' : `${price} Shards`;
+      return `<button class="pet-choice ${active ? 'active' : ''} ${!owned && !canBuy ? 'locked' : ''}" data-pet-type="${escapeHtml(key)}" type="button" ${active ? 'disabled' : ''}>
+        <span class="pet-choice-icon">${escapeHtml(def.icon)}</span>
+        <span class="pet-choice-copy">
+          <b>${escapeHtml(def.name)}</b>
+          <small>${owned ? 'Sahip' : 'Satın al'} · ${escapeHtml(def.desc || '')}</small>
+        </span>
+        <em>${escapeHtml(label)}</em>
+      </button>`;
+    }).join('');
+
     inventoryCompanionBox.innerHTML = `
+      <div class="pet-wallet">Shards: <b>${balance.toLocaleString('tr-TR')}</b></div>
       <div class="pet-main">
         <div class="pet-orb">${escapeHtml(pet.icon || '🐈‍⬛')}</div>
         <div>
@@ -7127,8 +7165,9 @@ function renderInventory(data = {}) {
       </div>
       <div class="pet-xp"><div style="width:${Math.max(0, Math.min(100, Number(pet.progress || 0)))}%"></div></div>
       <div class="pet-meta"><span>${Number(pet.xp || 0)} XP</span><span>Next ${Number(pet.next_xp || 0)} XP</span></div>
-      <div class="pet-choices">${petOptions}</div>
+      <div class="pet-choices pet-shop">${petOptions}</div>
     `;
+
     inventoryCompanionBox.querySelectorAll('[data-pet-type]').forEach((button) => {
       button.addEventListener('click', () => selectCompanion(button.dataset.petType));
     });
@@ -7232,11 +7271,15 @@ async function voteStoryDecision(optionKey) {
       method: 'POST',
       body: JSON.stringify({ optionKey })
     });
+    const decision = data?.decision;
+    if (decision?.id) storyVoteCache.set(String(decision.id), optionKey);
     renderStoryDecision(data);
+    updateStoryDecisionCards(data);
     showPolishToast?.('Oy kaydedildi', '+2 shards · companion XP', 'success');
     loadGamify?.();
   } catch (error) {
     addSystemMessage(error.message);
+    if (/zaten oy/i.test(String(error.message || ''))) loadStoryDecision?.();
   }
 }
 
@@ -7286,9 +7329,9 @@ async function selectCompanion(petType) {
       method: 'POST',
       body: JSON.stringify({ petType })
     });
-    renderInventory({ companion: data.companion, pets: data.pets, items: [] });
-    loadInventory?.();
-    showPolishToast?.('Companion değişti', data?.companion?.pet_name || '', 'success');
+    showPolishToast?.('Companion güncellendi', data?.companion?.pet_name || '', 'success');
+    await loadInventory();
+    await loadGamify?.();
   } catch (error) {
     addSystemMessage(error.message);
   }
