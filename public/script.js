@@ -17,6 +17,9 @@ const avatarImg = document.getElementById('avatarImg');
 const avatarLetter = document.getElementById('avatarLetter');
 const removeAvatarButton = document.getElementById('removeAvatarButton');
 const settingsButton = document.getElementById('settingsButton');
+const sidebarFriendsButton = document.getElementById('sidebarFriendsButton');
+const sidebarGalleryButton = document.getElementById('sidebarGalleryButton');
+const sidebarSettingsButton = document.getElementById('sidebarSettingsButton');
 const mobileTopBar = document.getElementById('mobileTopBar');
 const mobileMenuButton = document.getElementById('mobileMenuButton');
 const mobileSettingsButton = document.getElementById('mobileSettingsButton');
@@ -2420,7 +2423,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1030');
+    url.searchParams.set('v', '1031');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -6697,4 +6700,19 @@ clearCustomStatusButton?.addEventListener('click', () => {
   if (customStatusInput) customStatusInput.value = '';
   if (socialSaveHint) socialSaveHint.textContent = 'Kaydetmeyi unutma.';
   updateSocialPreview();
+});
+
+
+sidebarFriendsButton?.addEventListener('click', () => {
+  syncRailActive?.('friends-center');
+  openFriendsCenter?.('friends');
+});
+
+sidebarGalleryButton?.addEventListener('click', () => {
+  syncRailActive?.('gallery');
+  openGalleryModal?.();
+});
+
+sidebarSettingsButton?.addEventListener('click', () => {
+  openSettings?.();
 });
