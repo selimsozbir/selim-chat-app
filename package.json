@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "9.5.3",
-  "description": "Selim Chat v9.5.3 voice send button and clean audio constraints",
+  "version": "9.6.0",
+  "description": "Selim Chat v9.6.0 live events, portal drops and universe systems",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
