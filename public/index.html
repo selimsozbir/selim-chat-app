@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v8.8.9</title>
-  <link rel="stylesheet" href="style.css?v=889" />
+  <title>Selim Chat v8.9.0</title>
+  <link rel="stylesheet" href="style.css?v=890" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -131,6 +131,17 @@
           <div class="requests-box">
             <h3>İstekler</h3>
             <div id="requestsList" class="mini-list"></div>
+          </div>
+
+
+          <div class="friend-activity-box">
+            <div class="friend-activity-head">
+              <h3>Friend Activity</h3>
+              <button id="refreshFriendActivityButton" class="small-button secondary" type="button">Yenile</button>
+            </div>
+            <div id="friendActivityList" class="mini-list friend-activity-list">
+              <div class="mini-item">Aktivite yükleniyor...</div>
+            </div>
           </div>
 
           <div class="friends-box">
@@ -380,7 +391,16 @@
             <span id="profileBadgeCounter">0 / 0 açık</span>
           </div>
           <p id="profileBadgeHint" class="profile-badge-hint">Kendi profilinde gözükecek rozetleri seçebilirsin. En fazla 8 rozet.</p>
-          <div id="profileAllBadgesList" class="profile-all-badges-list"></div>
+          <div id="profileBadgeFilters" class="profile-badge-filters">
+            <button class="badge-filter active" data-badge-filter="all" type="button">Tümü</button>
+            <button class="badge-filter" data-badge-filter="unlocked" type="button">Açık</button>
+            <button class="badge-filter" data-badge-filter="locked" type="button">Kilitli</button>
+            <button class="badge-filter" data-badge-filter="legendary" type="button">Legendary</button>
+            <button class="badge-filter" data-badge-filter="epic" type="button">Epic</button>
+            <button class="badge-filter" data-badge-filter="rare" type="button">Rare</button>
+          </div>
+          <div id="profileBadgeSummary" class="profile-badge-summary"></div>
+          <div id="profileAllBadgesList" class="profile-all-badges-list badges-v2-list"></div>
           <button id="profileSaveBadgesButton" class="small-button" type="button">Vitrini Kaydet</button>
         </div>
       </div>
@@ -636,7 +656,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=889"></script>
+  <script src="script.js?v=890"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
