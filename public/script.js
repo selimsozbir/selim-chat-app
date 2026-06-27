@@ -451,7 +451,7 @@ authForm.addEventListener('submit', async (event) => {
 
     localStorage.setItem('chat_token', token);
     localStorage.setItem('chat_user', JSON.stringify(user));
-    startApp();
+    await startApp();
   } catch (error) {
     authError.textContent = error.message;
   } finally {
@@ -776,7 +776,7 @@ messageForm.addEventListener('submit', (event) => {
   const text = messageInput.value.trim();
   if (!text) return;
   if (!socket || !socket.connected) {
-    addSystemMessage('Bağlantı hazırlanıyor, tekrar dene.');
+    addSystemMessage('Bağlantı hazırlanıyor, birkaç saniye sonra tekrar dene.');
     connectSocket();
     return;
   }
@@ -1205,7 +1205,7 @@ clearNotificationsButton.addEventListener('click', async () => {
   }
 });
 
-enableNotificationsButton.addEventListener('click', async () => {
+enableNotificationsButton?.addEventListener('click', async () => {
   if (!('Notification' in window)) {
     addSystemMessage('Tarayıcın bildirim desteklemiyor.');
     return;
@@ -1525,26 +1525,30 @@ function applyLocalSettings() {
 
 async function restoreSessionUser() {
   if (!token) return false;
+  if (user?.id && user?.username) return true;
+
   try {
     const data = await api('/api/me');
     user = { ...(user || {}), ...(data.user || {}) };
     localStorage.setItem('chat_user', JSON.stringify(user));
     return true;
   } catch (error) {
-    // Token gerçekten geçersizse temizle, geçici network hatasında kullanıcıyı düşürme.
-    if (/401|Token|token|geçersiz|yok/i.test(String(error.message || ''))) {
+    const msg = String(error?.message || '');
+    if (/401|403|Token geçersiz|Geçersiz token|Yetkisiz/i.test(msg)) {
       localStorage.removeItem('chat_token');
       localStorage.removeItem('chat_user');
       token = null;
       user = null;
       return false;
     }
-    return Boolean(user);
+    return Boolean(user?.id && user?.username);
   }
 }
 
+
 async function startApp() {
   applyLocalSettings();
+
   if (!token) {
     authScreen.classList.remove('hidden');
     chatScreen.classList.add('hidden');
@@ -1560,15 +1564,29 @@ async function startApp() {
 
   authScreen.classList.add('hidden');
   chatScreen.classList.remove('hidden');
+
   renderProfile();
   syncMobileHeader();
   roomInput.value = currentRoom;
   connectSocket();
 
-  await Promise.allSettled([refreshMe(), loadFriends(), loadRequests(), loadBlocked(), loadNotifications(), loadRoomMembers(), loadModeration(), loadGlobalAdminStatus(), loadGroups(), loadGamify()]);
-  checkForUnlockedBadges(true);
-  updateMessengerUi();
+  Promise.allSettled([
+    refreshMe(),
+    loadFriends(),
+    loadRequests(),
+    loadBlocked(),
+    loadNotifications(),
+    loadRoomMembers(),
+    loadModeration(),
+    loadGlobalAdminStatus(),
+    loadGroups(),
+    loadGamify()
+  ]).then(() => {
+    checkForUnlockedBadges(true);
+    updateMessengerUi();
+  }).catch(() => {});
 }
+
 
 function renderProfile() {
   document.body.classList.remove('active-frame-frame_vertex', 'active-frame-frame_limbo', 'active-frame-frame_five', 'active-frame-frame_ataturk', 'active-name-name_glitch', 'active-name-name_neon', 'active-name-name_legend', 'active-theme-theme_limbo', 'active-theme-theme_serbia', 'active-theme-theme_egypt', 'active-theme-theme_rome', 'active-theme-theme_vertex', 'active-theme-theme_five');
@@ -2483,7 +2501,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1037');
+    url.searchParams.set('v', '1038');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3859,7 +3877,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
     (user && String(username || '').trim().toLowerCase() === String(user.username || '').trim().toLowerCase()) ||
     (user && String(username || '').trim().toLowerCase() === String(user.display_name || '').trim().toLowerCase())
   );
-  const activeBubble = bubble_theme || (isOwnMessage ? user?.active_bubble_theme : '') || '';
+  const activeBubble = isOwnMessage ? '' : (bubble_theme || '');
   const activeName = name_effect || (isOwnMessage ? user?.active_name_effect : '') || '';
   const activeFrame = frame_theme || (isOwnMessage ? user?.active_profile_frame : '') || '';
 
