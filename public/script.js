@@ -447,7 +447,7 @@ authForm.addEventListener('submit', async (event) => {
     }, false);
 
     token = data.token;
-    user = data.user;
+    user = { ...(user || {}), ...(data.user || {}) };
 
     localStorage.setItem('chat_token', token);
     localStorage.setItem('chat_user', JSON.stringify(user));
@@ -2072,7 +2072,7 @@ function addRoomMessage(message) {
     edited: Boolean(message.edited_at),
     deleted: Boolean(message.deleted_at),
     readers: message.readers || [],
-    bubble_theme: message.bubble_theme,
+    bubble_theme: message.bubble_theme || message.active_bubble_theme || (Number(message.sender_id || message.user_id) === Number(user.id) ? user?.active_bubble_theme : ''),
     name_effect: message.name_effect,
     frame_theme: message.frame_theme || message.active_profile_frame
   });
@@ -2431,7 +2431,7 @@ function addDmMessage(message) {
     id: message.id,
     user_id: message.sender_id,
     sender_id: message.sender_id,
-    username: message.sender_username || (Number(message.sender_id) === Number(user.id) ? user.username : 'Arkadaş'),
+    username: message.sender_display_name || message.sender_username || (Number(message.sender_id) === Number(user.id) ? user.username : 'Arkadaş'),
     avatar_url: message.sender_avatar_url || (Number(message.sender_id) === Number(user.id) ? user.avatar_url : null),
     text: message.text,
     message_type: message.message_type,
@@ -2448,7 +2448,7 @@ function addDmMessage(message) {
     edited: Boolean(message.edited_at),
     deleted: Boolean(message.deleted_at),
     read: Boolean(message.read_at),
-    bubble_theme: message.bubble_theme,
+    bubble_theme: message.bubble_theme || message.active_bubble_theme || (Number(message.sender_id || message.user_id) === Number(user.id) ? user?.active_bubble_theme : ''),
     name_effect: message.name_effect,
     frame_theme: message.frame_theme || message.active_profile_frame
   });
@@ -2508,7 +2508,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1052');
+    url.searchParams.set('v', '1053');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3875,10 +3875,11 @@ function markVisibleRoomMessagesRead() {
 
 
 
-function markOwnBubble(row, bubble) {
+function markOwnBubble(row, bubble, activeBubble = '') {
   if (!row || !bubble) return;
   row.classList.add('mine', 'own-message', 'self');
   bubble.classList.add('own-bubble');
+  if (activeBubble) bubble.classList.add('cosmetic-bubble-direct', `cosmetic-${activeBubble}`);
 }
 
 function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, message_type, file_name, file_mime, file_data, file_path, file_size, reply_to_id, reply_username, reply_text, time, mine, edited, deleted, read, readers, bubble_theme, name_effect, frame_theme }) {
@@ -3891,7 +3892,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
     (user && String(username || '').trim().toLowerCase() === String(user.username || '').trim().toLowerCase()) ||
     (user && String(username || '').trim().toLowerCase() === String(user.display_name || '').trim().toLowerCase())
   );
-  const activeBubble = bubble_theme || (isOwnMessage ? user?.active_bubble_theme : '') || '';
+  const activeBubble = (isOwnMessage ? (bubble_theme || user?.active_bubble_theme) : bubble_theme) || '';
   const activeName = name_effect || (isOwnMessage ? user?.active_name_effect : '') || '';
   const activeFrame = frame_theme || (isOwnMessage ? user?.active_profile_frame : '') || '';
 
@@ -3934,7 +3935,7 @@ function addMessage({ type, id, user_id, sender_id, username, avatar_url, text, 
 
   const bubble = document.createElement('div');
   bubble.className = 'msg-bubble';
-  if (isOwnMessage) markOwnBubble(div, bubble);
+  if (isOwnMessage) markOwnBubble(div, bubble, activeBubble);
 
   const meta = document.createElement('div');
   meta.className = 'meta';
@@ -6082,7 +6083,7 @@ function addGroupMessage(message) {
     mine: Number(message.sender_id) === Number(user.id),
     edited: message.edited_at,
     deleted: message.deleted_at,
-    bubble_theme: message.bubble_theme,
+    bubble_theme: message.bubble_theme || message.active_bubble_theme || (Number(message.sender_id || message.user_id) === Number(user.id) ? user?.active_bubble_theme : ''),
     name_effect: message.name_effect,
     frame_theme: message.frame_theme || message.active_profile_frame
   });
