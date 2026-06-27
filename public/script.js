@@ -2381,7 +2381,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '984');
+    url.searchParams.set('v', '985');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -4360,14 +4360,32 @@ function renderOnlineUsersDetailed() {
   usersList.innerHTML = '';
   roomMembers.forEach((member) => {
     const li = document.createElement('li');
-    li.className = 'user-row';
     const name = member.display_name || member.username;
-    const status = String(member.presence_status || 'online').toLowerCase();
-    const custom = String(member.custom_status || '').trim();
-    const storyText = storyActive(member) ? String(member.story_text || '').trim() : '';
-    const bubbleText = custom || storyText;
-    const bubbleHtml = bubbleText ? `<div class="online-status-bubble" title="${escapeHtml(bubbleText)}">${escapeHtml(bubbleText)}</div>` : '';
-    li.innerHTML = `${avatarHtml(name, member.avatar_url)}<div class="user-meta"><strong>${escapeHtml(name)}</strong><span>${member.role ? member.role + ' • ' : ''}${presenceIcon(status)} ${presenceLabel(status)}</span>${bubbleHtml}</div>`;
+    const meta = onlineStatusMeta(member);
+    const role = member.role || 'member';
+    const customHtml = meta.custom
+      ? `<div class="online-custom-status" title="${escapeHtml(meta.custom)}"><span>💬</span>${escapeHtml(meta.custom)}</div>`
+      : '';
+    const storyHtml = meta.story
+      ? `<div class="online-story-status" title="${escapeHtml(meta.story)}"><span>◌</span>${escapeHtml(meta.story)}</div>`
+      : '';
+
+    li.className = `user-row online-user-row presence-${meta.status}`;
+    li.innerHTML = `
+      ${avatarHtml(name, member.avatar_url)}
+      <div class="user-meta">
+        <div class="online-user-top">
+          <strong>${escapeHtml(name)}</strong>
+          <b class="online-role-pill ${roleClass(role)}">${escapeHtml(roleLabel(role))}</b>
+        </div>
+        <div class="online-presence-line">
+          <span class="presence-dot-mini" data-presence="${escapeHtml(meta.status)}"></span>
+          <span>${escapeHtml(meta.icon)} ${escapeHtml(meta.label)}</span>
+        </div>
+        ${customHtml}
+        ${storyHtml}
+      </div>
+    `;
     li.onclick = () => openProfile(member.id);
     usersList.appendChild(li);
   });
@@ -5330,6 +5348,33 @@ function roomPresenceLine(profile) {
   const status = String(profile?.presence_status || 'online').toLowerCase();
   const custom = String(profile?.custom_status || '').trim();
   return `${presenceIcon(status)} ${presenceLabel(status)}${custom ? ' · ' + custom : ''}`;
+}
+
+function roleLabel(role = 'üye') {
+  const clean = String(role || 'üye').toLowerCase();
+  if (clean === 'owner') return 'Owner';
+  if (clean === 'admin') return 'Admin';
+  if (clean === 'mod') return 'Mod';
+  return 'Üye';
+}
+
+function roleClass(role = 'member') {
+  const clean = String(role || 'member').toLowerCase();
+  if (clean === 'owner') return 'role-owner';
+  if (clean === 'admin') return 'role-admin';
+  if (clean === 'mod') return 'role-mod';
+  return 'role-member';
+}
+
+function onlineStatusMeta(profile) {
+  const status = String(profile?.presence_status || 'online').toLowerCase();
+  return {
+    status,
+    icon: presenceIcon(status),
+    label: presenceLabel(status),
+    custom: String(profile?.custom_status || '').trim(),
+    story: storyActive(profile) ? String(profile?.story_text || '').trim() : ''
+  };
 }
 
 
