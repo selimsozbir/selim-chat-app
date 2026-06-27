@@ -8030,3 +8030,91 @@ body {
     font-size: 21px !important;
   }
 }
+
+
+/* =========================================================
+   v8.8.7 — Slightly Bigger Profile + Clickable Chat Profiles
+   ========================================================= */
+
+#profileModal:not(.hidden) .profile-card-v2 {
+  width: min(700px, 97vw) !important;
+}
+
+#profileModal:not(.hidden) .profile-cover-v2 {
+  height: 162px !important;
+  min-height: 162px !important;
+}
+
+#profileModal:not(.hidden) .profile-main-v2 {
+  margin-top: -48px !important;
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+}
+
+#profileModal:not(.hidden) .profile-avatar-v2 {
+  width: 104px !important;
+  height: 104px !important;
+  flex: 0 0 104px !important;
+}
+
+#profileModal:not(.hidden) .profile-identity-v2 h2,
+#profileModal:not(.hidden) #profileUsername {
+  font-size: 28px !important;
+}
+
+#profileModal:not(.hidden) .profile-stats-v2,
+#profileModal:not(.hidden) .profile-level-box,
+#profileModal:not(.hidden) .profile-meta-v2,
+#profileModal:not(.hidden) .profile-badges-v2 {
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+}
+
+#profileModal:not(.hidden) .profile-about-box,
+#profileModal:not(.hidden) .profile-edit-panel {
+  margin-left: 24px !important;
+  margin-right: 24px !important;
+}
+
+.clickable-profile,
+.clickable-profile-name {
+  cursor: pointer;
+}
+
+.clickable-profile:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+
+.clickable-profile-name:hover {
+  color: #c4b5fd !important;
+  text-decoration: underline;
+}
+
+@media (max-width: 760px) {
+  #profileModal:not(.hidden) .profile-card-v2 {
+    width: min(100%, 98vw) !important;
+  }
+
+  #profileModal:not(.hidden) .profile-cover-v2 {
+    height: 132px !important;
+    min-height: 132px !important;
+  }
+
+  #profileModal:not(.hidden) .profile-main-v2 {
+    margin-top: -36px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  #profileModal:not(.hidden) .profile-avatar-v2 {
+    width: 86px !important;
+    height: 86px !important;
+    flex-basis: 86px !important;
+  }
+
+  #profileModal:not(.hidden) .profile-identity-v2 h2,
+  #profileModal:not(.hidden) #profileUsername {
+    font-size: 22px !important;
+  }
+}
