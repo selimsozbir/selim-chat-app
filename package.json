@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.3.1",
-  "description": "Selim Chat v10.3.1 clean left panel layout",
+  "version": "10.3.2",
+  "description": "Selim Chat v10.3.2 polished message bubbles and media cards",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
