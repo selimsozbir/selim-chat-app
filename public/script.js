@@ -101,7 +101,6 @@ const leaderboardTabButton = document.getElementById('leaderboardTabButton');
 const casinoTabButton = document.getElementById('casinoTabButton');
 const shardsHistoryTabButton = document.getElementById('shardsHistoryTabButton');
 const universeTabButton = document.getElementById('universeTabButton');
-const socialTabButton = document.getElementById('socialTabButton');
 const galleryTabButton = document.getElementById('galleryTabButton');
 const dailyPanel = document.getElementById('dailyPanel');
 const questsPanel = document.getElementById('questsPanel');
@@ -2381,7 +2380,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1010');
+    url.searchParams.set('v', '1020');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -2418,7 +2417,6 @@ function switchGamifyTab(tab) {
   casinoTabButton?.classList.toggle('active', tab === 'casino');
   shardsHistoryTabButton?.classList.toggle('active', tab === 'shards');
   universeTabButton?.classList.toggle('active', tab === 'universe');
-  socialTabButton?.classList.toggle('active', tab === 'social');
   dailyPanel?.classList.toggle('hidden', tab !== 'daily');
   questsPanel?.classList.toggle('hidden', tab !== 'quests');
   lootboxPanel?.classList.toggle('hidden', tab !== 'lootbox');
@@ -2427,14 +2425,12 @@ function switchGamifyTab(tab) {
   casinoPanel?.classList.toggle('hidden', tab !== 'casino');
   shardsHistoryPanel?.classList.toggle('hidden', tab !== 'shards');
   universePanel?.classList.toggle('hidden', tab !== 'universe');
-  socialPanel?.classList.toggle('hidden', tab !== 'social');
   galleryPanel?.classList.toggle('hidden', tab !== 'gallery');
 
   if (tab === 'market' || tab === 'daily' || tab === 'lootbox') loadGamify();
   if (tab === 'leaderboard') loadLeaderboard();
   if (tab === 'shards') loadShardsHistory();
   if (tab === 'universe') loadUniversePanel();
-  if (tab === 'social') { syncSocialInputs(); loadStories(); }
 
   const box = document.querySelector('.gamify-box');
   if (box) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -2665,7 +2661,6 @@ async function claimQuest(questId) {
 function syncSocialInputs() {
   if (presenceSelect) presenceSelect.value = user?.presence_status || 'online';
   if (customStatusInput) customStatusInput.value = user?.custom_status || '';
-  if (storyTextInput) storyTextInput.value = storyActive(user) ? (user.story_text || '') : '';
 }
 
 async function savePresence() {
@@ -3445,7 +3440,7 @@ function renderUsers(users) {
     }
     const li = document.createElement('li');
     li.className = `room-user-item presence-${String(profile.presence_status || 'online').toLowerCase()}`;
-    li.innerHTML = `<div class="mini-left">${avatarHtml(profile.display_name || profile.username, profile.avatar_url)}<div><strong>${escapeHtml(profile.display_name || profile.username)}</strong><span>${escapeHtml(roomPresenceLine(profile))}</span>${storyActive(profile) ? `<em>Story: ${escapeHtml(profile.story_text)}</em>` : ''}</div></div>`;
+    li.innerHTML = `<div class="mini-left">${avatarHtml(profile.display_name || profile.username, profile.avatar_url)}<div><strong>${escapeHtml(profile.display_name || profile.username)}</strong><span>${escapeHtml(roomPresenceLine(profile))}</span></div></div>`;
     if (profile.id) li.onclick = () => openProfile(profile.id);
     usersList.appendChild(li);
   });
@@ -4366,9 +4361,7 @@ function renderOnlineUsersDetailed() {
     const customHtml = meta.custom
       ? `<div class="online-custom-status" title="${escapeHtml(meta.custom)}"><span>💬</span>${escapeHtml(meta.custom)}</div>`
       : '';
-    const storyHtml = meta.story
-      ? `<div class="online-story-status" title="${escapeHtml(meta.story)}"><span>◌</span>${escapeHtml(meta.story)}</div>`
-      : '';
+    const storyHtml = '';
 
     li.className = `user-row online-user-row presence-${meta.status}`;
     li.innerHTML = `
