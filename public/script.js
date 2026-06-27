@@ -445,6 +445,23 @@ function syncRailActive(mode = chatMode) {
   document.getElementById('railGroupButton')?.classList.toggle('active', mode === 'group');
 }
 
+
+function setSettingsCategory(category = 'account') {
+  const target = category || 'account';
+  document.querySelectorAll('.settings-nav-item').forEach((button) => {
+    button.classList.toggle('active', button.dataset.settingsTarget === target);
+  });
+  document.querySelectorAll('.settings-section[data-settings-section]').forEach((section) => {
+    section.classList.toggle('settings-section-hidden', section.dataset.settingsSection !== target);
+  });
+  const content = document.querySelector('.settings-content-v2');
+  if (content) content.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.querySelectorAll('.settings-nav-item').forEach((button) => {
+  button.addEventListener('click', () => setSettingsCategory(button.dataset.settingsTarget || 'account'));
+});
+
 function scrollRightPanelToHub() {
   const panel = document.querySelector('.right-panel');
   const hub = document.querySelector('.gamify-box');
@@ -2038,7 +2055,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '920');
+    url.searchParams.set('v', '930');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3499,6 +3516,7 @@ async function searchMessages() {
 
 
 function openSettings() {
+  setSettingsCategory('account');
   if (!settingsModal || !user) return;
 
   settingsUsernameInput.value = user.username || '';
