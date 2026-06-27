@@ -1,112 +1,991 @@
-/* =========================================================
-   Selim Chat v10.5.0 — DESKTOP CSS
-   Desktop-only layout and spacing.
-   Layout: Rail | Left Panel | Chat | Hub
-   ========================================================= */
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>Selim Chat v10.9.3</title>
+  <link rel="stylesheet" href="style.css?v=1093" />
+  <link rel="stylesheet" href="desktop.css?v=1093" media="(min-width: 961px)" />
+  <link rel="stylesheet" href="mobile.css?v=1093" media="(max-width: 960px)" />
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <section id="authScreen" class="auth-screen">
+      <div class="auth-card">
+        <h1>Selim Chat</h1>
+        <p>Giriş yap veya yeni hesap oluştur.</p>
 
-@media (min-width: 961px) {
-  html,
-  body {
-    height: 100%;
-    overflow: hidden !important;
-  }
+        <div class="tabs">
+          <button id="loginTab" class="tab active">Giriş</button>
+          <button id="registerTab" class="tab">Kayıt Ol</button>
+        </div>
 
-  .app {
-    height: 100dvh !important;
-    overflow: hidden !important;
-  }
+        <form id="authForm">
+          <input id="usernameInput" type="text" placeholder="Kullanıcı adı" maxlength="30" required />
+          <input id="passwordInput" type="password" placeholder="Şifre" minlength="6" required />
+          <button id="authButton" type="submit">Giriş Yap</button>
+        </form>
 
-  .chat-screen {
-    display: grid !important;
-    grid-template-columns: 68px 300px minmax(520px, 1fr) 352px !important;
-    grid-template-areas: "rail sidebar chat hub" !important;
-    gap: 12px !important;
-    padding: 12px !important;
-    height: 100dvh !important;
-    width: 100vw !important;
-    overflow: hidden !important;
-    background: transparent !important;
-  }
+        <p id="authError" class="error"></p>
+      </div>
+    </section>
 
-  .app-rail {
-    grid-area: rail !important;
-    display: flex !important;
-    height: calc(100dvh - 24px) !important;
-    border-radius: 26px !important;
-  }
+    <section id="chatScreen" class="chat-screen hidden">
+      <div id="mobileBackdrop" class="mobile-backdrop hidden"></div>
+      <div id="mobileTopBar" class="mobile-topbar">
+        <button id="mobileMenuButton" class="mobile-icon-button" type="button">☰</button>
+        <div class="mobile-title-wrap">
+          <strong id="mobileTitle"># genel</strong>
+          <span id="mobileStatus">Bağlanıyor...</span>
+        </div>
+        <button id="mobileSettingsButton" class="mobile-icon-button" type="button">⚙</button>
+      </div>
+      <nav class="app-rail" aria-label="Hızlı menü">
+        <button id="railRoomButton" class="rail-button active" type="button" title="Odalar">#</button>
+        <button id="railDmButton" class="rail-button" type="button" title="DM">💬</button>
+        <button id="railGroupButton" class="rail-button" type="button" title="Gruplar">👥</button>
+        <button id="railHubButton" class="rail-button" type="button" title="Hub">5</button>
+        <button id="railFriendsCenterButton" class="rail-button" type="button" title="Arkadaşlar">🤝</button>
+        <button id="railGalleryButton" class="rail-button" type="button" title="Galeri">🗂️</button>
+        <button id="railSettingsButton" class="rail-button rail-bottom" type="button" title="Ayarlar">⚙</button>
+      </nav>
 
-  .sidebar {
-    grid-area: sidebar !important;
-    display: flex !important;
-    flex-direction: column !important;
-    height: calc(100dvh - 24px) !important;
-    min-height: 0 !important;
-    overflow-y: auto !important;
-    border-radius: 26px !important;
-  }
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <div class="brand-mark">5</div>
+          <div>
+            <strong>Selim Chat</strong>
+            <span>Network</span>
+          </div>
+        </div>
+        <div class="profile-box">
+          <div id="currentStatusBubble" class="current-status-bubble hidden"></div>
+          <label class="avatar-wrap" title="Profil fotoğrafı değiştir">
+            <img id="avatarImg" class="avatar-img hidden" alt="Avatar" />
+            <div id="avatarLetter" class="avatar">?</div>
+            <input id="avatarInput" type="file" accept="image/*" hidden />
+          </label>
 
-  .chat-main {
-    grid-area: chat !important;
-    display: flex !important;
-    flex-direction: column !important;
-    height: calc(100dvh - 24px) !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    border-radius: 26px !important;
-  }
+          <div>
+            <strong id="currentUsername">Kullanıcı</strong>
+            <button id="settingsButton" class="small-button">Ayarlar</button>
+            <button id="removeAvatarButton" class="small-button">PP kaldır</button>
+            <button id="logoutButton" class="small-button">Çıkış</button>
+          </div>
+        </div>
 
-  .right-panel {
-    grid-area: hub !important;
-    display: block !important;
-    height: calc(100dvh - 24px) !important;
-    min-height: 0 !important;
-    overflow-y: auto !important;
-    border-radius: 26px !important;
-  }
+        <div id="sidebarQuickActions" class="sidebar-quick-actions">
+          <button id="sidebarFriendsButton" class="small-button gray" type="button">🤝 Arkadaşlar</button>
+          <button id="sidebarGalleryButton" class="small-button gray" type="button">🗂️ Galeri</button>
+          <button id="sidebarSettingsButton" class="small-button gray" type="button">⚙️ Ayarlar</button>
+        </div>
 
-  .mobile-topbar,
-  .mobile-bottom-nav,
-  .mobile-backdrop {
-    display: none !important;
-  }
+        <div class="nav-buttons">
+          <button id="roomModeButton" class="nav active">Odalar</button>
+          <button id="dmModeButton" class="nav">DM</button>
+          <button id="groupModeButton" class="nav">Gruplar</button>
+        </div>
 
-  .chat-header {
-    display: flex !important;
-    flex: 0 0 auto !important;
-  }
+        <div id="roomPanel">
+          <div class="room-box">
+            <label>Oda</label>
+            <div class="room-row">
+              <input id="roomInput" type="text" value="genel" maxlength="50" />
+              <button id="joinRoomButton">Gir</button>
+            </div>
+          </div>
 
-  .messages {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    overflow-y: auto !important;
-  }
+          <div class="users-box">
+            <h3>Online</h3>
+            <ul id="usersList"></ul>
+          </div>
 
-  .message-form {
-    flex: 0 0 auto !important;
-  }
+          <div class="search-panel">
+            <h3>Mesaj Ara</h3>
+            <div class="room-row">
+              <input id="messageSearchInput" type="text" placeholder="Mesaj ara..." />
+              <button id="messageSearchButton">Ara</button>
+            </div>
+            <div id="messageSearchResults" class="mini-list"></div>
+          </div>
 
-  #roomPanel {
-    min-height: 0 !important;
-  }
+          <div class="admin-panel">
+            <h3>Admin / Mod</h3>
+            <div id="myRoleText" class="role-text">Rol: üye</div>
+            <div id="adminMembersList" class="mini-list"></div>
+            <h3>Susturulanlar</h3>
+            <div id="mutedMembersList" class="mini-list"></div>
+          </div>
+        </div>
+        <div id="groupsPanel" class="friends-panel hidden">
+          <h3>Grup DM</h3>
+          <div class="room-row">
+            <input id="newGroupNameInput" type="text" placeholder="Grup adı" maxlength="80" />
+            <button id="createGroupButton">Kur</button>
+          </div>
+          <div id="newGroupFriendsList" class="mini-list"></div>
 
-  #usersList,
-  #friendsList,
-  #groupsList,
-  .mini-list,
-  .gamify-list {
-    min-height: 0;
-  }
+          <h3>Gruplarım</h3>
+          <div id="groupsList" class="mini-list"></div>
 
-  /* Desktop rail stays useful but calmer because header is cleaner now. */
-  .rail-button[title="Galeri"],
-  .rail-button[title="Arkadaşlar"],
-  .rail-button[title="Ayarlar"] {
-    opacity: .78 !important;
-  }
-}
+          <div id="groupDetailsBox" class="group-details hidden">
+            <h3>Grup Ayarları</h3>
+            <div id="activeGroupInfo" class="mini-list"></div>
+            <input id="groupAvatarInput" type="file" accept="image/*" hidden />
+            <button id="changeGroupAvatarButton" class="small-button">Grup fotoğrafı değiştir</button>
+            <button id="removeGroupAvatarButton" class="small-button">Grup fotoğrafı kaldır</button>
+            <button id="leaveGroupButton" class="small-button danger-button">Gruptan çık</button>
+            <h3>Üyeler</h3>
+            <div id="groupMembersList" class="mini-list"></div>
+            <h3>Arkadaş ekle</h3>
+            <div id="addGroupFriendList" class="mini-list"></div>
+          </div>
+        </div>
+
+
+        <div id="friendsPanel" class="hidden">
+          <div class="search-box">
+            <label>Arkadaş ara</label>
+            <div class="room-row">
+              <input id="searchInput" type="text" placeholder="Kullanıcı adı" />
+              <button id="searchButton">Ara</button>
+            </div>
+            <div id="searchResults" class="mini-list"></div>
+          </div>
+
+          <div class="requests-box">
+            <h3>İstekler</h3>
+            <div id="requestsList" class="mini-list"></div>
+          </div>
+
+
+          <div class="friend-activity-box">
+            <div class="friend-activity-head">
+              <h3>Friend Activity</h3>
+              <button id="refreshFriendActivityButton" class="small-button secondary" type="button">Yenile</button>
+            </div>
+            <div id="friendActivityList" class="mini-list friend-activity-list">
+              <div class="mini-item">Aktivite yükleniyor...</div>
+            </div>
+          </div>
+
+          <div class="friends-box">
+            <h3>Arkadaşlar</h3>
+            <div id="friendsList" class="mini-list"></div>
+          </div>
+
+          <div class="blocked-box">
+            <h3>Engellenenler</h3>
+            <div id="blockedList" class="mini-list"></div>
+          </div>
+        </div>
+
+
+      </aside>
+
+      <main class="chat-main">
+        <header class="chat-header">
+          <div class="chat-title-block">
+            <div class="chat-title-row">
+              <div id="chatHeaderAvatar" class="chat-header-avatar">#</div>
+              <div class="chat-title-copy">
+                <h2 id="chatTitle"># genel</h2>
+                <div class="chat-subline">
+                  <span id="chatMetaText" class="chat-meta-text">0 online · Evren stabil · son aktivite şimdi</span>
+                  <span id="statusText" class="connection-status">Bağlanıyor...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-header-actions hidden" aria-hidden="true"></div>
+        </header>
+
+        <div id="messages" class="messages"></div>
+        <button id="scrollBottomButton" class="scroll-bottom-button hidden" type="button">↓ Yeni mesajlar</button>
+        <div id="typingText" class="typing"></div>
+
+        <div id="replyBar" class="reply-bar hidden">
+          <div>
+            <strong id="replyUsername"></strong>
+            <span id="replyText"></span>
+          </div>
+          <button id="cancelReplyButton" type="button">×</button>
+        </div>
+
+        <form id="messageForm" class="message-form">
+          <button id="emojiButton" type="button" title="Emoji">😊</button>
+          <button id="attachButton" type="button" title="Dosya gönder">📎</button>
+          <button id="voiceButton" type="button" title="Sesli mesaj">🎙️</button>
+          <input id="fileInput" type="file" accept="image/*,audio/*,.pdf,.txt,.zip,.rar,.doc,.docx" hidden />
+          <div class="composer-field">
+            <input id="messageInput" type="text" placeholder="Mesaj yaz..." maxlength="1000" autocomplete="off" />
+            <span id="composerHint" class="composer-hint">Enter gönderir</span>
+          </div>
+          <button id="sendButton" type="submit">Gönder</button>
+          <div id="emojiPanel" class="emoji-panel hidden" aria-label="Emoji paneli"></div>
+        </form>
+
+        <div id="voiceRecordHud" class="voice-record-hud hidden">
+          <div class="voice-record-pulse">●</div>
+          <div>
+            <strong>Ses kaydediliyor</strong>
+            <span id="voiceRecordTimer">00:00</span>
+          </div>
+          <button id="voiceCancelButton" type="button">İptal</button>
+        </div>
+
+        <div id="portalDropOverlay" class="portal-drop-overlay hidden">
+          <div class="portal-drop-card">
+            <div class="portal-drop-icon">🌀</div>
+            <strong id="portalDropTitle">Portal açıldı!</strong>
+            <span id="portalDropText">İlk tıklayan ödülü alır.</span>
+            <button id="claimPortalButton" type="button">Portal'a Gir</button>
+          </div>
+        </div>
+
+        <nav id="mobileBottomNav" class="mobile-bottom-nav">
+          <button id="mobileRoomButton" class="mobile-nav-item active" type="button">🏠<span>Oda</span></button>
+          <button id="mobileDmButton" class="mobile-nav-item" type="button">💬<span>DM</span></button>
+          <button id="mobileGroupButton" class="mobile-nav-item" type="button">👥<span>Grup</span></button>
+          <button id="mobilePanelButton" class="mobile-nav-item" type="button">📋<span>Hub</span></button>
+          <button id="mobileGalleryButton" class="mobile-nav-item" type="button">🗂️<span>Galeri</span></button>
+        </nav>
+      </main>
+
+      <aside class="right-panel">
+        <div class="right-panel-header">
+          <strong>Hub & Kontrol</strong>
+          <span>Ödüller ve bildirimler</span>
+          <button id="adminPrivacyToggleButton" class="admin-privacy-toggle" type="button" title="Admin panelini göster/gizle">🔒</button>
+        </div>
+        <div class="gamify-box">
+          <div class="gamify-header">
+            <div>
+              <h3>5ECROPOLIS Hub</h3>
+              <span id="gamifyStats">Level - · Shards -</span>
+            </div>
+            <button id="refreshGamifyButton" class="small-button" type="button">Yenile</button>
+          </div>
+          <div id="polishQuickStats" class="polish-quick-stats">
+            <span>⚡ Full Polish</span>
+            <span>🎁 Daily</span>
+            <span>🎰 Casino</span>
+            <span>📦 Lootbox</span>
+          </div>
+
+          <div class="gamify-tabs">
+            <button id="dailyTabButton" class="gamify-tab active" type="button">Günlük</button>
+            <button id="questsTabButton" class="gamify-tab" type="button">Görev</button>
+            <button id="lootboxTabButton" class="gamify-tab" type="button">Kasa</button>
+            <button id="marketTabButton" class="gamify-tab" type="button">Market</button>
+            <button id="leaderboardTabButton" class="gamify-tab" type="button">Liderlik</button>
+            <button id="casinoTabButton" class="gamify-tab" type="button">Casino</button>
+            <button id="shardsHistoryTabButton" class="gamify-tab" type="button">Geçmiş</button>
+            <button id="universeTabButton" class="gamify-tab" type="button">Evren</button>
+            <button id="inventoryTabButton" class="gamify-tab" type="button">Envanter</button>
+          </div>
+
+          <div id="dailyPanel" class="gamify-panel">
+            <div id="dailyRewardCard" class="daily-card">
+              <div class="daily-icon">🎁</div>
+              <div class="daily-main">
+                <strong>Günlük ödül</strong>
+                <span id="dailyRewardText">Yükleniyor...</span>
+                <div id="dailyStreakText" class="daily-streak">Streak: -</div>
+              </div>
+              <button id="dailyClaimButton" class="small-button" type="button">Al</button>
+            </div>
+          </div>
+
+          <div id="questsPanel" class="gamify-panel hidden">
+            <div id="questsList" class="gamify-list"></div>
+          </div>
+
+          <div id="lootboxPanel" class="gamify-panel hidden">
+            <div id="lootboxCratesList" class="lootbox-crates"></div>
+            <div class="lootbox-card active-crate-card">
+              <div id="activeCrateIcon" class="lootbox-crate">📦</div>
+              <div>
+                <strong id="activeCrateName">Kasa seç</strong>
+                <span id="activeCrateInfo">Fiyat ve oranlar burada görünür.</span>
+              </div>
+              <button id="openLootboxButton" class="small-button" type="button">Kasa Aç</button>
+            </div>
+            <div id="lootboxAnimationStage" class="lootbox-animation-stage hidden">
+              <div class="lootbox-spinner">
+                <span>📦</span>
+              </div>
+              <strong>Kasa açılıyor...</strong>
+            </div>
+            <div id="lootboxResult" class="lootbox-result">Kasa açılmayı bekliyor.</div>
+            <div id="lootboxHistoryList" class="gamify-list"></div>
+          </div>
+
+          <div id="marketPanel" class="gamify-panel hidden">
+            <div id="marketPreviewBox" class="market-preview-box hidden"></div>
+            <div id="marketList" class="gamify-list"></div>
+          </div>
+
+          <div id="shardsHistoryPanel" class="gamify-panel hidden">
+            <div class="shards-history-head">
+              <div>
+                <strong>Shards History</strong>
+                <span>Kazanç, harcama ve admin değişiklikleri</span>
+              </div>
+              <button id="refreshShardsHistoryButton" class="small-button" type="button">Yenile</button>
+            </div>
+            <div id="shardsHistoryList" class="gamify-list"></div>
+          </div>
+
+          <div id="universePanel" class="gamify-panel hidden">
+            <div class="universe-card">
+              <div class="universe-title">
+                <div>
+                  <strong>5ECROPOLIS Universe</strong>
+                  <span id="universeStatusText">Evren yükleniyor...</span>
+                </div>
+                <button id="refreshUniverseButton" class="small-button" type="button">Yenile</button>
+              </div>
+              <div class="universe-meter">
+                <div id="universeEnergyBar"></div>
+              </div>
+              <div class="universe-stats">
+                <span id="universeLevelText">Level -</span>
+                <span id="universeEnergyText">Energy -</span>
+                <span id="universeEventText">Event -</span>
+              </div>
+            </div>
+
+            <div id="liveEventBox" class="live-event-box hidden"></div>
+
+            <div class="universe-section">
+              <strong>Inventory</strong>
+              <div id="inventoryList" class="inventory-list"></div>
+            </div>
+
+            <div class="universe-section">
+              <strong>Titles</strong>
+              <div id="titlesList" class="titles-list"></div>
+            </div>
+
+            <div id="feizPersonalityBox" class="universe-section feiz-personality-box">
+              <div class="feiz-personality-head">
+                <div>
+                  <strong>feiz Entity</strong>
+                  <span id="feizMoodText">Mood yükleniyor...</span>
+                </div>
+                <button id="refreshFeizButton" class="small-button" type="button">Yenile</button>
+              </div>
+              <div id="feizNicknamesList" class="feiz-nickname-list"></div>
+              <div id="feizAdminControls" class="feiz-admin-controls hidden">
+                <select id="feizMoodSelect">
+                  <option value="calm">sakin</option>
+                  <option value="aggressive">agresif</option>
+                  <option value="cursed">cursed</option>
+                  <option value="serious">serious</option>
+                  <option value="lore">lore</option>
+                </select>
+                <button id="saveFeizMoodButton" class="small-button" type="button">Mood Kaydet</button>
+              </div>
+              <small>Komut: <b>/feiz mood cursed</b> · sadece admin/owner.</small>
+            </div>
+          </div>
+
+
+          <div id="inventoryPanel" class="gamify-panel hidden">
+            <div class="inventory-page-head">
+              <div>
+                <strong>Envanter</strong>
+                <span>Event itemleri, companion ve pet seçimi</span>
+              </div>
+              <button id="refreshInventoryButton" class="small-button" type="button">Yenile</button>
+            </div>
+
+            <div id="inventoryCompanionBox" class="inventory-companion-box">
+              <p>Companion yükleniyor...</p>
+            </div>
+
+            <div class="inventory-page-section">
+              <strong>Itemler</strong>
+              <div id="inventoryItemsList" class="inventory-items-list"></div>
+            </div>
+          </div>
+
+          <div id="leaderboardPanel" class="gamify-panel hidden">
+            <div class="leaderboard-filters">
+              <button class="leaderboard-filter active" data-leaderboard="level" type="button">Level</button>
+              <button class="leaderboard-filter" data-leaderboard="shards" type="button">Shards</button>
+              <button class="leaderboard-filter" data-leaderboard="messages" type="button">Mesaj</button>
+              <button class="leaderboard-filter" data-leaderboard="friends" type="button">Arkadaş</button>
+            </div>
+            <div id="leaderboardList" class="gamify-list"></div>
+          </div>
+
+          <div id="casinoPanel" class="gamify-panel casino-panel hidden">
+            <p class="casino-note">Sadece sanal Shards ile test oyunudur. Gerçek para yoktur.</p>
+
+            <div class="casino-card">
+              <h4>🎰 Slot Çevir</h4>
+              <div class="casino-row">
+                <input id="slotBetInput" type="number" min="1" max="1000" value="1" />
+                <button id="slotSpinButton" class="small-button" type="button">Çevir</button>
+              </div>
+              <div id="slotResult" class="casino-result">🍒 🍋 🔔</div>
+            </div>
+
+            <div class="casino-card">
+              <h4>🃏 Blackjack</h4>
+              <div class="casino-row">
+                <input id="blackjackBetInput" type="number" min="1" max="1000" value="1" />
+                <button id="blackjackStartButton" class="small-button" type="button">Başlat</button>
+              </div>
+              <div id="blackjackTable" class="blackjack-table">Oyun bekliyor.</div>
+              <div class="casino-actions">
+                <button id="blackjackHitButton" class="small-button" type="button">Kart Çek</button>
+                <button id="blackjackStandButton" class="small-button" type="button">Dur</button>
+              </div>
+            </div>
+          </div>
+        </div>
+<div class="notifications-box">
+          <h3>Bildirimler <span id="notificationBadge"></span></h3>
+          <button id="clearNotificationsButton" class="small-button">Bildirimleri temizle</button>
+          <div id="notificationsList" class="mini-list"></div>
+        </div>
+
+        <div id="globalAdminPanel" class="global-admin-panel hidden">
+          <h3>Site Admin</h3>
+          <button id="refreshAdminButton" class="small-button">Paneli yenile</button>
+          <div class="room-row">
+            <input id="ipBanInput" type="text" placeholder="IP ban" />
+            <button id="ipBanButton">Ban</button>
+          </div>
+          <div id="adminUsersList" class="mini-list"></div>
+          <h3>Admin Logları</h3>
+          <button id="refreshAdminLogsButton" class="small-button" type="button">Logları yenile</button>
+          <div id="adminLogsList" class="mini-list admin-logs-list"></div>
+          <h3>IP Banları</h3>
+          <div id="ipBansList" class="mini-list"></div>
+        </div>
+
+      </aside>
+      <div id="galleryModal" class="gallery-modal hidden">
+        <div id="galleryPanel" class="gallery-card">
+            <div class="gallery-head">
+              <div>
+                <strong>Dosya Galerisi</strong>
+                <span>Bu odadaki fotoğraf, ses ve dosyalar</span>
+              </div>
+              <button id="refreshGalleryButton" class="small-button" type="button">Yenile</button>
+            </div>
+            <div class="gallery-filters">
+              <button class="gallery-filter active" data-gallery-filter="all" type="button">Hepsi</button>
+              <button class="gallery-filter" data-gallery-filter="image" type="button">Foto</button>
+              <button class="gallery-filter" data-gallery-filter="audio" type="button">Ses</button>
+              <button class="gallery-filter" data-gallery-filter="file" type="button">Dosya</button>
+            </div>
+            <div id="galleryList" class="gallery-list"></div>
+        </div>
+      </div>
 
 
 
+      <div id="friendsCenterModal" class="friends-center-modal hidden">
+        <div class="friends-center-card">
+          <div class="friends-center-head">
+            <div>
+              <strong>Arkadaşlar</strong>
+              <span>Arkadaşlar, istekler, engeller ve sosyal durum</span>
+            </div>
+            <button id="friendsCenterCloseButton" class="small-button gray" type="button">Kapat</button>
+          </div>
 
-/* v10.5.2 desktop keeps own bubble structural fix from style.css. */
+          <div class="friends-center-tabs">
+            <button class="friends-center-tab active" data-friends-center-tab="friends" type="button"><span>🤝</span><b>Arkadaşlar</b></button>
+            <button class="friends-center-tab" data-friends-center-tab="requests" type="button"><span>📨</span><b>İstekler</b></button>
+            <button class="friends-center-tab" data-friends-center-tab="blocked" type="button"><span>🚫</span><b>Engellenen</b></button>
+            <button class="friends-center-tab" data-friends-center-tab="social" type="button"><span>✨</span><b>Sosyal</b></button>
+          </div>
+
+          <div id="friendsCenterFriendsPanel" class="friends-center-panel">
+            <div class="friends-center-search">
+              <input id="friendsCenterSearchInput" type="text" placeholder="Kullanıcı ara..." />
+              <button id="friendsCenterSearchButton" class="small-button" type="button">Ara</button>
+            </div>
+            <div id="friendsCenterSearchResults" class="friends-center-list"></div>
+            <h3>Arkadaşlarım</h3>
+            <div id="friendsCenterList" class="friends-center-list"></div>
+          </div>
+
+          <div id="friendsCenterRequestsPanel" class="friends-center-panel hidden">
+            <h3>Arkadaş İstekleri</h3>
+            <div id="friendsCenterRequestsList" class="friends-center-list"></div>
+          </div>
+
+          <div id="friendsCenterBlockedPanel" class="friends-center-panel hidden">
+            <h3>Engellenenler</h3>
+            <div id="friendsCenterBlockedList" class="friends-center-list"></div>
+          </div>
+
+          <div id="friendsCenterSocialPanel" class="friends-center-panel hidden">
+            <div id="socialPanel" class="social-control-box social-control-box-v2">
+              <div class="social-hero">
+                <div class="social-orb">✨</div>
+                <div>
+                  <strong>Sosyal Durum</strong>
+                  <span>Online listesinde nasıl görüneceğini ayarla.</span>
+                </div>
+              </div>
+
+              <div class="social-preview-card">
+                <div class="social-preview-avatar" id="socialPreviewAvatar">?</div>
+                <div class="social-preview-main">
+                  <strong id="socialPreviewName">Kullanıcı</strong>
+                  <span id="socialPreviewPresence">🟢 Aktif</span>
+                  <em id="socialPreviewCustom" class="hidden">Özel durum yok</em>
+                </div>
+              </div>
+
+              <div class="social-status-grid">
+                <button class="presence-choice active" data-presence-choice="online" type="button"><span>🟢</span><b>Aktif</b><small>Uygun</small></button>
+                <button class="presence-choice" data-presence-choice="idle" type="button"><span>🌙</span><b>Boşta</b><small>AFK</small></button>
+                <button class="presence-choice" data-presence-choice="dnd" type="button"><span>⛔</span><b>Rahatsız Etmeyin</b><small>Sessiz</small></button>
+                <button class="presence-choice" data-presence-choice="invisible" type="button"><span>👻</span><b>Görünmez</b><small>Gizli</small></button>
+              </div>
+
+              <select id="presenceSelect" class="social-input social-hidden-select" aria-label="Online durumu">
+                <option value="online">🟢 Aktif</option>
+                <option value="idle">🌙 Boşta</option>
+                <option value="dnd">⛔ Rahatsız Etmeyin</option>
+                <option value="invisible">👻 Görünmez</option>
+              </select>
+
+              <div class="social-custom-row">
+                <label for="customStatusInput">Özel durum</label>
+                <div class="social-custom-input-wrap">
+                  <input id="customStatusInput" class="social-input" maxlength="80" placeholder="müzik yapıyor, AFK, kod yazıyor..." />
+                  <button id="clearCustomStatusButton" class="small-button gray" type="button">Temizle</button>
+                </div>
+              </div>
+
+              <div class="social-actions-row">
+                <button id="savePresenceButton" class="small-button social-save-button" type="button">Durumu Kaydet</button>
+                <span id="socialSaveHint">Online listesi anında güncellenir.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <div id="profileModal" class="profile-modal hidden">
+    <div id="profileCardV2" class="profile-card profile-card-v2">
+      <button id="profileCloseButton" class="profile-close" type="button">×</button>
+
+      <div id="profileCover" class="profile-cover-v2">
+        <div class="profile-cover-shine"></div>
+      </div>
+
+      <div class="profile-main-v2">
+        <div id="profileAvatar" class="profile-avatar profile-avatar-v2"></div>
+        <div class="profile-identity-v2">
+          <div class="profile-name-row"><h2 id="profileUsername"></h2><span id="profileRoleBadge" class="profile-role-badge hidden">USER</span></div>
+          <p id="profileStatus"></p>
+          <p id="profileBio"></p>
+        </div>
+      </div>
+
+      <div class="profile-stats-v2">
+        <div><em>⚡</em><strong id="profileLevel">1</strong><span>Level</span></div>
+        <div><em>✦</em><strong id="profileShards">0</strong><span>Shards</span></div>
+        <div><em>💬</em><strong id="profileTotalMessages">0</strong><span>Mesaj</span></div>
+      </div>
+
+      <div class="profile-level-box">
+        <div class="profile-level-top">
+          <span id="profileXpText">0 XP</span>
+          <span id="profileNextXpText">Next 100 XP</span>
+        </div>
+        <div class="profile-level-track">
+          <div id="profileLevelFill" class="profile-level-fill"></div>
+        </div>
+      </div>
+
+      <div class="profile-meta-v2">
+        <div><span>Katılma</span><strong id="profileJoinDate">-</strong></div>
+        <div><span>Son aktiflik</span><strong id="profileLastActive">-</strong></div>
+        <div><span>Favori Egg</span><strong id="profileFavoriteEgg">/serbia</strong></div>
+      </div>
+
+
+      <div class="profile-activity-box">
+        <div class="profile-activity-head">
+          <div>
+            <h3>Aktivite Takvimi</h3>
+            <p>Son 30 gün mesaj aktivitesi</p>
+          </div>
+          <span id="profileActivityStreak" class="activity-streak-pill">0 gün streak</span>
+        </div>
+
+        <div class="profile-activity-stats">
+          <div><strong id="profileActivityTotal">0</strong><span>30 gün mesaj</span></div>
+          <div><strong id="profileActivityActiveDays">0</strong><span>aktif gün</span></div>
+          <div><strong id="profileActivityBestDay">-</strong><span>en aktif gün</span></div>
+        </div>
+
+        <div id="profileActivityGrid" class="activity-calendar-grid" aria-label="Son 30 gün aktivite takvimi"></div>
+        <div id="profileActivityTopDays" class="activity-top-days"></div>
+      </div>
+
+      <div class="profile-about-box">
+        <div class="profile-about-head">
+          <h3>Hakkında</h3>
+          <div class="profile-self-actions">
+            <button id="profileSelfExportButton" class="small-button secondary" type="button">Profil PNG</button>
+          </div>
+          <div id="profileActionButtons" class="profile-action-buttons hidden">
+            <button id="profileMessageButton" class="small-button" type="button">Mesaj gönder</button>
+            <button id="profileFriendButton" class="small-button secondary" type="button">Arkadaş ekle</button>
+            <button id="profileExportButton" class="small-button secondary" type="button">PNG indir</button>
+          </div>
+        </div>
+        <p id="profileAboutText">Bu kullanıcı henüz kendini tanıtmadı.</p>
+        <div id="profileAboutMeta" class="profile-about-meta"></div>
+      </div>
+
+      <div class="profile-badges-v2">
+        <div class="profile-badges-head">
+          <h3>Rozetler</h3>
+          <button id="profileToggleAllBadgesButton" class="small-button secondary" type="button">Tüm rozetler</button>
+        </div>
+        <div id="profileBadges" class="profile-badges-list"></div>
+
+        <div id="profileAllBadgesPanel" class="profile-all-badges-panel hidden">
+          <div class="profile-all-badges-title">
+            <strong>Rozet Vitrini</strong>
+            <span id="profileBadgeCounter">0 / 0 açık</span>
+          </div>
+          <p id="profileBadgeHint" class="profile-badge-hint">Kendi profilinde gözükecek rozetleri seçebilirsin. En fazla 8 rozet.</p>
+          <div id="profileBadgeFilters" class="profile-badge-filters">
+            <button class="badge-filter active" data-badge-filter="all" type="button">Tümü</button>
+            <button class="badge-filter" data-badge-filter="unlocked" type="button">Açık</button>
+            <button class="badge-filter" data-badge-filter="locked" type="button">Kilitli</button>
+            <button class="badge-filter" data-badge-filter="legendary" type="button">Legendary</button>
+            <button class="badge-filter" data-badge-filter="epic" type="button">Epic</button>
+            <button class="badge-filter" data-badge-filter="rare" type="button">Rare</button>
+          </div>
+          <div id="profileBadgeSummary" class="profile-badge-summary"></div>
+          <div id="profileAllBadgesList" class="profile-all-badges-list badges-v2-list"></div>
+          <button id="profileSaveBadgesButton" class="small-button" type="button">Vitrini Kaydet</button>
+        </div>
+      </div>
+
+      <div id="profileEditPanel" class="profile-edit-panel hidden">
+        <h3>Profil Kartı Düzenle</h3>
+
+        <textarea id="profileBioInput" maxlength="160" placeholder="Bio yaz..."></textarea>
+
+        <label for="profileCoverInput">Profil kapağı</label>
+        <label for="profileCoverInput" class="profile-file-label">
+            <span>Kapak görseli seç</span>
+            <small id="profileCoverFileName">Dosya seçilmedi</small>
+          </label>
+          <input id="profileCoverInput" class="hidden" type="file" accept="image/*" />
+
+        <div class="profile-edit-row">
+          <label for="profileColorInput">Tema rengi</label>
+          <input id="profileColorInput" type="color" value="#8b5cf6" />
+        </div>
+
+        <label for="profileFavoriteEggSelect">Favori easter egg</label>
+        <select id="profileFavoriteEggSelect">
+          <option value="/serbia">/serbia</option>
+          <option value="/limbo">/limbo</option>
+          <option value="/vertex">/vertex</option>
+          <option value="/rome">/rome</option>
+          <option value="/egypt">/egypt</option>
+          <option value="/anitkabir">/anitkabir</option>
+          <option value="/cat">/cat</option>
+          <option value="/reset">/reset</option>
+          <option value="/rift">/rift</option>
+          <option value="/5ecropolis">/5ecropolis</option>
+          <option value="/selim">/selim</option>
+          <option value="/xara">/xara</option>
+          <option value="/nico">/nico</option>
+          <option value="/yasin">/yasin</option>
+          <option value="/jung">/jung</option>
+          <option value="/fetullah">/fetullah</option>
+          <option value="/blake">/blake</option>
+          <option value="/feiz">/feiz</option>
+          <option value="/pnico">/pnico</option>
+          <option value="/pyasin">/pyasin</option>
+          <option value="/ataturk">/ataturk</option>
+        </select>
+
+        <div class="profile-edit-actions">
+          <button id="profileSaveBioButton" class="small-button" type="button">Kartı Kaydet</button>
+          <button id="profileRemoveCoverButton" class="small-button danger" type="button">Kapağı Kaldır</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="settingsModal" class="settings-modal hidden">
+    <div class="settings-card settings-card-v2">
+      <button id="settingsCloseButton" class="profile-close settings-close-v2" type="button">×</button>
+
+      <div class="settings-hero">
+        <div class="settings-hero-icon">⚙</div>
+        <div>
+          <h2>Ayarlar</h2>
+          <p class="settings-muted">Hesap, görünüm, bildirim ve yerel tercihlerini tek yerden yönet.</p>
+        </div>
+      </div>
+
+      <div class="settings-layout">
+        <nav class="settings-nav" aria-label="Ayar kategorileri">
+          <button class="settings-nav-item active" data-settings-target="account" type="button"><span>👤</span><strong>Hesap</strong><small>Profil & şifre</small></button>
+          <button class="settings-nav-item" data-settings-target="appearance" type="button"><span>🎨</span><strong>Görünüm</strong><small>Tema & sohbet</small></button>
+          <button class="settings-nav-item" data-settings-target="notifications" type="button"><span>🔔</span><strong>Bildirim</strong><small>DM, grup, ses</small></button>
+          <button class="settings-nav-item" data-settings-target="extras" type="button"><span>🌀</span><strong>Ekstra</strong><small>Easter egg & bot</small></button>
+          <button class="settings-nav-item" data-settings-target="system" type="button"><span>🛠️</span><strong>Sistem</strong><small>Dil & hızlı işlem</small></button>
+        </nav>
+
+        <div class="settings-grid settings-content-v2">
+        <section class="settings-section" data-settings-section="account">
+          <h3><span>👤</span> Profil</h3>
+          <label for="settingsUsernameInput">Kullanıcı adı / @etiket</label>
+          <input id="settingsUsernameInput" type="text" maxlength="30" placeholder="kullaniciadi" />
+
+          <label for="settingsDisplayNameInput">Görünen nick</label>
+          <input id="settingsDisplayNameInput" type="text" maxlength="40" placeholder="Nick" />
+
+          <label for="settingsBioInput">Bio</label>
+          <textarea id="settingsBioInput" maxlength="160" placeholder="Kısa bio..."></textarea>
+
+          <button id="settingsSaveProfileButton" class="action-button settings-action" type="button">Profili Kaydet</button>
+          <p id="settingsProfileStatus" class="settings-status"></p>
+        </section>
+
+        <section class="settings-section" data-settings-section="account">
+          <h3><span>🔐</span> Şifre</h3>
+          <label for="settingsCurrentPasswordInput">Mevcut şifre</label>
+          <input id="settingsCurrentPasswordInput" type="password" autocomplete="current-password" />
+
+          <label for="settingsNewPasswordInput">Yeni şifre</label>
+          <input id="settingsNewPasswordInput" type="password" minlength="6" autocomplete="new-password" />
+
+          <label for="settingsNewPasswordAgainInput">Yeni şifre tekrar</label>
+          <input id="settingsNewPasswordAgainInput" type="password" minlength="6" autocomplete="new-password" />
+
+          <button id="settingsChangePasswordButton" class="action-button settings-action" type="button">Şifreyi Değiştir</button>
+          <p id="settingsPasswordStatus" class="settings-status"></p>
+        </section>
+
+        <section class="settings-section" data-settings-section="appearance">
+          <h3><span>🎨</span> Görünüm</h3>
+          <label for="settingsThemeSelect">Tema</label>
+          <select id="settingsThemeSelect">
+            <option value="neon">Neon / Cyber</option>
+            <option value="dark">Koyu</option>
+            <option value="light">Açık</option>
+            <option value="vertex">VERTEX Kırmızı</option>
+            <option value="serbia">Serbia Portal</option>
+            <option value="limbo">Limbo</option>
+            <option value="rome">Rome Altın</option>
+            <option value="egypt">Egypt Çöl</option>
+            <option value="five">5ECROPOLIS</option>
+          </select>
+
+          <label class="settings-check">
+            <input id="settingsCompactToggle" type="checkbox" />
+            <span>Kompakt mod</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsReducedMotionToggle" type="checkbox" />
+            <span>Az animasyon</span>
+          </label>
+
+          <button id="settingsSaveLocalButton" class="action-button settings-action" type="button">Görünümü Kaydet</button>
+          <p id="settingsLocalStatus" class="settings-status"></p>
+        </section>
+
+
+        <section class="settings-section" data-settings-section="appearance">
+          <h3><span>💬</span> Sohbet Görünümü</h3>
+
+          <label for="settingsFontSizeSelect">Yazı boyutu</label>
+          <select id="settingsFontSizeSelect">
+            <option value="normal">Normal</option>
+            <option value="small">Küçük</option>
+            <option value="large">Büyük</option>
+          </select>
+
+          <label class="settings-check">
+            <input id="settingsEnterSendToggle" type="checkbox" />
+            <span>Enter ile gönder</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsShowAvatarsToggle" type="checkbox" />
+            <span>Mesaj avatarlarını göster</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsShowTimesToggle" type="checkbox" />
+            <span>Mesaj saatlerini göster</span>
+          </label>
+        </section>
+
+        <section class="settings-section" data-settings-section="notifications">
+          <h3><span>🔔</span> Bildirim Detayı</h3>
+
+          <label class="settings-check">
+            <input id="settingsNotifyDmToggle" type="checkbox" />
+            <span>DM bildirimleri</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsNotifyGroupToggle" type="checkbox" />
+            <span>Grup bildirimleri</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsNotifyMentionToggle" type="checkbox" />
+            <span>Etiket / @everyone bildirimleri</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsNotifyFriendToggle" type="checkbox" />
+            <span>Arkadaşlık bildirimleri</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsNotificationSoundToggle" type="checkbox" />
+            <span>Bildirim sesi</span>
+          </label>
+        </section>
+
+        <section class="settings-section" data-settings-section="extras">
+          <h3><span>🌀</span> Easter Egg Ayarları</h3>
+
+          <label class="settings-check">
+            <input id="settingsEggsToggle" type="checkbox" />
+            <span>Easter egg efektleri açık</span>
+          </label>
+
+          <label for="settingsEggIntensitySelect">Efekt yoğunluğu</label>
+          <select id="settingsEggIntensitySelect">
+            <option value="low">Düşük</option>
+            <option value="normal">Normal</option>
+            <option value="high">Yüksek</option>
+          </select>
+
+          <label class="settings-check">
+            <input id="settingsEggSoundToggle" type="checkbox" />
+            <span>Easter egg ses efekti</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsEggOwnOnlyToggle" type="checkbox" />
+            <span>Sadece kendi yazdığım komutlarda efekt göster</span>
+          </label>
+        </section>
+
+        <section class="settings-section" data-settings-section="extras">
+          <h3><span>🤖</span> feiz Bot Ayarları</h3>
+
+          <label class="settings-check">
+            <input id="settingsBotHideToggle" type="checkbox" />
+            <span>Bot mesajlarını gizle</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsBotHighlightToggle" type="checkbox" />
+            <span>Bot mesajlarını özel renkle göster</span>
+          </label>
+
+          <label class="settings-check">
+            <input id="settingsBotCompactToggle" type="checkbox" />
+            <span>Bot mesajlarını kompakt göster</span>
+          </label>
+        </section>
+
+        <section class="settings-section" data-settings-section="system">
+          <h3><span>🌐</span> Dil</h3>
+
+          <label for="settingsLanguageSelect">Tercih edilen dil</label>
+          <select id="settingsLanguageSelect">
+            <option value="tr">Türkçe</option>
+            <option value="en">English</option>
+          </select>
+
+          <p class="settings-muted">Şimdilik ana arayüz Türkçe kalır; bu ayar bot/gelecek arayüz için saklanır.</p>
+        </section>
+
+        <section class="settings-section" data-settings-section="system">
+          <h3><span>⚡</span> Hızlı İşlemler</h3>
+          <button id="settingsClearLocalButton" class="small-button" type="button">Bu cihazdaki görünüm ayarlarını sıfırla</button>
+          <button id="settingsLogoutFromPanelButton" class="small-button danger" type="button">Bu cihazdan çıkış yap</button>
+          <p class="settings-muted">Tüm cihazlardan çıkış için ileride sunucu taraflı oturum sistemi ekleyebiliriz.</p>
+        </section>
+
+        <section class="settings-section" data-settings-section="notifications">
+          <h3><span>📣</span> Bildirim</h3>
+          <p class="settings-muted">Tarayıcı bildirimi açarsan DM, mention ve grup bildirimleri daha net gelir.</p>
+          <button id="settingsEnableNotificationsButton" class="action-button settings-action" type="button">Bildirim İznini Aç</button>
+          <button id="settingsClearNotificationsButton" class="small-button" type="button">Bildirimleri Temizle</button>
+        </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="mentionPopup" class="mention-popup hidden"></div>
+
+
+
+  <!-- v10.6.0 Command Palette + Media Viewer -->
+  <div id="commandPaletteModal" class="command-palette-modal hidden" aria-hidden="true">
+    <div class="command-palette-card" role="dialog" aria-modal="true" aria-label="Komut paleti">
+      <div class="command-palette-search">
+        <span>⌘K</span>
+        <input id="commandPaletteInput" type="text" placeholder="Komut ara, oda aç, DM bul..." autocomplete="off" />
+        <button id="commandPaletteCloseButton" type="button" aria-label="Kapat">×</button>
+      </div>
+      <div id="commandPaletteList" class="command-palette-list"></div>
+      <div class="command-palette-hint">
+        <span>↑↓ seç</span>
+        <span>Enter çalıştır</span>
+        <span>Esc kapat</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="mediaViewerModal" class="media-viewer-modal hidden" aria-hidden="true">
+    <div class="media-viewer-topbar">
+      <div>
+        <strong id="mediaViewerTitle">Medya</strong>
+        <span id="mediaViewerMeta">Önizleme</span>
+      </div>
+      <div class="media-viewer-actions">
+        <a id="mediaViewerOpenLink" class="small-button gray" href="#" target="_blank" rel="noopener">Aç</a>
+        <button id="mediaViewerCloseButton" class="small-button" type="button">Kapat</button>
+      </div>
+    </div>
+    <button id="mediaViewerPrevButton" class="media-viewer-nav media-viewer-prev" type="button">‹</button>
+    <div id="mediaViewerStage" class="media-viewer-stage"></div>
+    <button id="mediaViewerNextButton" class="media-viewer-nav media-viewer-next" type="button">›</button>
+  </div>
+
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js?v=1093"></script>
+  <div id="achievementToastContainer" class="achievement-toast-container"></div></body>
+</html>
