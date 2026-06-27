@@ -16570,3 +16570,251 @@ button:hover {
   font-size: 12px;
   font-weight: 800;
 }
+
+
+/* =========================================================
+   v10.8.0 — Chat Replay + Story Decisions + Companion Pet
+   ========================================================= */
+
+.story-pet-grid {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.hub-feature-card {
+  padding: 14px;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+}
+
+.hub-feature-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.hub-feature-head strong {
+  display: block;
+  color: #fff;
+  font-size: 14px;
+}
+
+.hub-feature-head span {
+  display: block;
+  margin-top: 2px;
+  color: rgba(255,255,255,.55);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.chat-replay-box,
+.story-decision-box,
+.companion-box {
+  color: rgba(255,255,255,.78);
+  font-size: 12px;
+}
+
+.replay-summary,
+.story-prompt {
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(0,0,0,.18);
+  border: 1px solid rgba(255,255,255,.075);
+  color: #fff;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.replay-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.replay-stats span {
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.62);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.replay-stats b {
+  color: #fff;
+  font-size: 14px;
+}
+
+.replay-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.replay-list strong {
+  color: rgba(255,255,255,.85);
+  font-size: 12px;
+}
+
+.replay-list span {
+  padding: 7px 8px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.045);
+  color: rgba(255,255,255,.68);
+}
+
+.story-options {
+  display: grid;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.story-option {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 15px;
+  background: rgba(255,255,255,.055);
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+}
+
+.story-option:hover {
+  background: rgba(255,255,255,.09);
+}
+
+.story-option span,
+.story-option b {
+  position: relative;
+  z-index: 1;
+}
+
+.story-option span {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.story-option b {
+  color: rgba(255,255,255,.62);
+  font-size: 11px;
+}
+
+.story-option i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, rgba(59,130,246,.26), rgba(168,85,247,.18));
+  pointer-events: none;
+}
+
+.story-result {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(34,197,94,.10);
+  border: 1px solid rgba(74,222,128,.14);
+  color: rgba(220,252,231,.90);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pet-main {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.pet-orb {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background: radial-gradient(circle at 30% 20%, rgba(255,255,255,.28), transparent 44%), linear-gradient(135deg, rgba(59,130,246,.30), rgba(168,85,247,.22));
+  border: 1px solid rgba(255,255,255,.13);
+  font-size: 28px;
+  box-shadow: 0 14px 36px rgba(59,130,246,.14);
+}
+
+.pet-main strong {
+  display: block;
+  color: #fff;
+  font-size: 14px;
+}
+
+.pet-main span {
+  display: block;
+  margin-top: 3px;
+  color: rgba(255,255,255,.56);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pet-xp {
+  height: 9px;
+  margin-top: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,.07);
+}
+
+.pet-xp div {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22c55e, #3b82f6, #a855f7);
+}
+
+.pet-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  color: rgba(255,255,255,.54);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.pet-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.pet-choice {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 13px;
+  background: rgba(255,255,255,.045);
+  color: rgba(255,255,255,.72);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.pet-choice span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pet-choice.active {
+  color: #fff;
+  border-color: rgba(125,211,252,.24);
+  background: rgba(59,130,246,.14);
+}
