@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.5.0",
-  "description": "Selim Chat v10.5.0 CSS split rebuild with separate desktop and mobile styles",
+  "version": "10.5.2",
+  "description": "Selim Chat v10.5.2 own messages use equipped market bubble",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
