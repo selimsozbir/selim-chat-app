@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.1.0",
-  "description": "Selim Chat v10.1.0 Nova UI redesign",
+  "version": "10.2.0",
+  "description": "Selim Chat v10.2.0 separated social panel and story removal",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
