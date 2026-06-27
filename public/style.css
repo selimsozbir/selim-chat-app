@@ -16324,3 +16324,46 @@ button:hover {
     border-radius: 18px 18px 8px 18px !important;
   }
 }
+
+
+/* =========================================================
+   v10.3.8 — Header buttons removed without JS crash + own bubble stable
+   ========================================================= */
+
+.chat-header-actions,
+#headerSearchButton,
+#headerGalleryButton,
+#headerFriendsButton,
+#headerSettingsButton,
+#focusComposerButton,
+#enableNotificationsButton {
+  display: none !important;
+}
+
+/* Own bubble no cosmetic fallback: final absolute override */
+.message.own-message > .msg-bubble,
+.message.own-message > .own-bubble,
+.message.mine.own-message > .msg-bubble,
+.message.mine.own-message > .own-bubble,
+.message.self > .msg-bubble,
+.message.self > .own-bubble {
+  background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #bf5af2 100%) !important;
+  background-color: #0a84ff !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.22) !important;
+  border-radius: 21px 21px 9px 21px !important;
+  box-shadow: 0 14px 34px rgba(10,132,255,.30), inset 0 1px 0 rgba(255,255,255,.22) !important;
+}
+
+.message.own-message > .msg-bubble *,
+.message.own-message > .own-bubble *,
+.message.mine.own-message > .msg-bubble *,
+.message.self > .msg-bubble * {
+  color: #fff !important;
+}
+
+.message.own-message.same-sender > .msg-bubble,
+.message.own-message.same-sender > .own-bubble {
+  background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #bf5af2 100%) !important;
+  border-radius: 18px !important;
+}
