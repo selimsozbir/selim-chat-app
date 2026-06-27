@@ -1862,7 +1862,7 @@ function addDmMessage(message) {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '887');
+    url.searchParams.set('v', '888');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
