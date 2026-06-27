@@ -10898,3 +10898,161 @@ body.admin-panel-visible .admin-panel {
     min-width: 48px !important;
   }
 }
+
+
+/* =========================================================
+   v9.3.4 — iOS Keyboard Composer Fix
+   Önceki fixte iOS Safari composer'ı yukarıda bırakabiliyordu.
+   Bu sürümde composer gerçek klavye üstüne fixed oturur, boşluk kalmaz.
+   ========================================================= */
+
+@media (max-width: 760px) {
+  :root {
+    --keyboard-inset: 0px;
+  }
+
+  body.keyboard-open .chat-main,
+  body.composer-focused .chat-main {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    display: block !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body.keyboard-open .chat-header,
+  body.composer-focused .chat-header,
+  body.keyboard-open .mobile-bottom-nav,
+  body.composer-focused .mobile-bottom-nav,
+  body.keyboard-open .app-rail,
+  body.composer-focused .app-rail {
+    display: none !important;
+  }
+
+  body.keyboard-open .messages,
+  body.composer-focused .messages {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: env(safe-area-inset-top) !important;
+    bottom: calc(58px + var(--keyboard-inset)) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    padding: 10px 12px 12px !important;
+    scroll-padding-bottom: 76px !important;
+    z-index: 5 !important;
+  }
+
+  body.keyboard-open .message-form,
+  body.composer-focused .message-form {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: var(--keyboard-inset) !important;
+    z-index: 10060 !important;
+    display: grid !important;
+    grid-template-columns: 40px 40px 40px minmax(0, 1fr) 50px !important;
+    gap: 6px !important;
+    min-height: 58px !important;
+    height: 58px !important;
+    padding: 7px 8px !important;
+    border-radius: 18px 18px 0 0 !important;
+    border-top: 1px solid rgba(255,255,255,.10) !important;
+    background: rgba(8,10,20,.98) !important;
+    box-shadow: 0 -10px 30px rgba(0,0,0,.38) !important;
+    transform: translateZ(0);
+  }
+
+  body.keyboard-open .message-form button,
+  body.composer-focused .message-form button {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    border-radius: 14px !important;
+    font-size: 18px !important;
+  }
+
+  body.keyboard-open #sendButton,
+  body.composer-focused #sendButton {
+    width: 50px !important;
+    min-width: 50px !important;
+    border-radius: 16px !important;
+  }
+
+  body.keyboard-open .composer-field,
+  body.keyboard-open #messageInput,
+  body.composer-focused .composer-field,
+  body.composer-focused #messageInput {
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+  }
+
+  body.keyboard-open #messageInput,
+  body.composer-focused #messageInput {
+    padding: 9px 11px !important;
+    font-size: 16px !important;
+  }
+
+  body.keyboard-open .composer-hint,
+  body.composer-focused .composer-hint,
+  body.keyboard-open .typing,
+  body.composer-focused .typing {
+    display: none !important;
+  }
+
+  body.keyboard-open .reply-bar,
+  body.composer-focused .reply-bar {
+    position: fixed !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: calc(58px + var(--keyboard-inset)) !important;
+    z-index: 10061 !important;
+  }
+
+  body.keyboard-open .emoji-panel,
+  body.composer-focused .emoji-panel {
+    bottom: calc(60px + var(--keyboard-inset)) !important;
+  }
+
+  body.keyboard-open .scroll-bottom-button,
+  body.composer-focused .scroll-bottom-button {
+    bottom: calc(68px + var(--keyboard-inset)) !important;
+  }
+}
+
+@media (max-width: 390px) {
+  body.keyboard-open .message-form,
+  body.composer-focused .message-form {
+    grid-template-columns: 38px 38px 38px minmax(0, 1fr) 48px !important;
+    gap: 5px !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+
+  body.keyboard-open .message-form button,
+  body.composer-focused .message-form button {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+  }
+
+  body.keyboard-open #sendButton,
+  body.composer-focused #sendButton {
+    width: 48px !important;
+    min-width: 48px !important;
+  }
+
+  body.keyboard-open .messages,
+  body.composer-focused .messages {
+    bottom: calc(56px + var(--keyboard-inset)) !important;
+  }
+}
