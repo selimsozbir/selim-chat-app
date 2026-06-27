@@ -329,9 +329,79 @@ const MARKET_ITEMS = [
 
   { id: 'name_glitch', type: 'name', name: 'Glitch Name', icon: '⚡', rarity: 'rare', price: 280, description: 'İsme hafif glitch efekti.' },
   { id: 'name_neon', type: 'name', name: 'Neon Name', icon: '💜', rarity: 'epic', price: 420, description: 'İsme neon mor parlama verir.' },
-  { id: 'name_legend', type: 'name', name: 'Legend Name', icon: '👑', rarity: 'legendary', price: 1000, description: 'İsme legendary altın efekt verir.' }
+  { id: 'name_legend', type: 'name', name: 'Legend Name', icon: '👑', rarity: 'legendary', price: 1000, description: 'İsme legendary altın efekt verir.' },
+
+  { id: 'theme_limbo', type: 'theme', name: 'Limbo Dark Profile', icon: '⚫', rarity: 'rare', price: 420, description: 'Profil kartına karanlık Limbo teması verir.' },
+  { id: 'theme_serbia', type: 'theme', name: 'Serbia Rift Profile', icon: '🇷🇸', rarity: 'epic', price: 650, description: 'Profil kartına mor-kırmızı Serbia Rift teması verir.' },
+  { id: 'theme_egypt', type: 'theme', name: 'Egypt Sand Profile', icon: '🏜️', rarity: 'rare', price: 480, description: 'Profil kartına sıcak Mısır çölü teması verir.' },
+  { id: 'theme_rome', type: 'theme', name: 'Rome Gold Profile', icon: '🏛️', rarity: 'epic', price: 700, description: 'Profil kartına altın Antik Roma havası verir.' },
+  { id: 'theme_vertex', type: 'theme', name: 'VERTEX Red Profile', icon: '🔴', rarity: 'legendary', price: 1000, description: 'Profil kartına kırmızı VERTEX anomalisi verir.' },
+  { id: 'theme_five', type: 'theme', name: '5ECROPOLIS Neon Profile', icon: '5️⃣', rarity: 'legendary', price: 1000, description: 'Profil kartına özel 5ECROPOLIS neon teması verir.' }
 ];
 
+
+
+
+const LOOTBOX_CRATES = [
+  {
+    id: 'serbia_rift',
+    name: 'Serbia Rift Crate',
+    icon: '🇷🇸',
+    price: 250,
+    rarities: { common: 45, rare: 32, epic: 18, legendary: 5 },
+    poolTypes: ['bubble', 'frame', 'name', 'theme'],
+    description: 'Dengeli kasa. Her tür item çıkabilir.'
+  },
+  {
+    id: 'limbo_crate',
+    name: 'Limbo Crate',
+    icon: '⚫',
+    price: 180,
+    rarities: { common: 55, rare: 34, epic: 10, legendary: 1 },
+    poolTags: ['limbo'],
+    description: 'Daha ucuz kasa. Limbo ağırlıklı itemler.'
+  },
+  {
+    id: 'rome_egypt_crate',
+    name: 'Rome / Egypt Crate',
+    icon: '🏛️',
+    price: 320,
+    rarities: { common: 35, rare: 35, epic: 24, legendary: 6 },
+    poolTags: ['rome', 'egypt', 'gold'],
+    description: 'Roma ve Mısır temalı itemler.'
+  },
+  {
+    id: 'vertex_legendary',
+    name: 'VERTEX Legendary Crate',
+    icon: '🔴',
+    price: 650,
+    rarities: { common: 15, rare: 28, epic: 37, legendary: 20 },
+    poolTags: ['vertex', 'five', 'legend', 'ataturk'],
+    description: 'Pahalı ama legendary şansı yüksek kasa.'
+  }
+];
+
+function getLootboxCrate(crateId) {
+  return LOOTBOX_CRATES.find((crate) => crate.id === crateId) || LOOTBOX_CRATES[0];
+}
+
+function itemMatchesCrate(item, crate) {
+  if (crate.poolTypes && !crate.poolTypes.includes(item.type)) return false;
+  if (!crate.poolTags || !crate.poolTags.length) return true;
+  const haystack = `${item.id} ${item.name} ${item.description}`.toLowerCase();
+  return crate.poolTags.some((tag) => haystack.includes(tag));
+}
+
+function pickLootboxRarityForCrate(crate) {
+  const rarities = crate.rarities || { common: 52, rare: 30, epic: 14, legendary: 4 };
+  const roll = Math.random() * 100;
+  let acc = 0;
+  for (const rarity of ['common', 'rare', 'epic', 'legendary']) {
+    acc += Number(rarities[rarity] || 0);
+    if (roll <= acc) return rarity;
+  }
+  return 'common';
+}
 
 const casinoSessions = new Map();
 
@@ -1098,6 +1168,7 @@ async function initDatabase() {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_bubble_theme VARCHAR(40) DEFAULT ''`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_profile_frame VARCHAR(40) DEFAULT ''`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_name_effect VARCHAR(40) DEFAULT ''`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_profile_theme VARCHAR(40) DEFAULT ''`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_items (
@@ -1343,7 +1414,7 @@ app.post('/api/register', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO users (username, password_hash, display_name, last_ip, last_user_agent, last_active)
        VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards`,
       [username, passwordHash, username, ip, getClientUserAgent(req)]
     );
 
@@ -1411,7 +1482,7 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
 
   const result = await pool.query(
     `SELECT id, username, display_name, avatar_url, bio, global_role, created_at, last_seen, last_active,
-            profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards
+            profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards
      FROM users WHERE id = $1`,
     [id]
   );
@@ -1503,7 +1574,7 @@ app.get('/api/profile/:id', authMiddleware, async (req, res) => {
 app.post('/api/profile/bio', authMiddleware, async (req, res) => {
   const bio = cleanText(req.body.bio, 160);
   const result = await pool.query(
-    'UPDATE users SET bio = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards',
+    'UPDATE users SET bio = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards',
     [bio, req.user.id]
   );
 
@@ -1523,7 +1594,7 @@ app.post('/api/profile/badges', authMiddleware, async (req, res) => {
 
     const profileResult = await pool.query(
       `SELECT id, username, display_name, avatar_url, bio, global_role, created_at, last_seen, last_active,
-              profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards
+              profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards
        FROM users WHERE id = $1`,
       [req.user.id]
     );
@@ -1581,8 +1652,8 @@ app.post('/api/profile/v2', authMiddleware, async (req, res) => {
            favorite_egg = $2,
            profile_cover_url = COALESCE(NULLIF($3, ''), profile_cover_url)
        WHERE id = $4
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards,
-                 profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards,
+                 profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards`,
       [profileColor, favoriteEgg, coverData, req.user.id]
     );
 
@@ -1599,8 +1670,8 @@ app.delete('/api/profile/cover', authMiddleware, async (req, res) => {
       `UPDATE users
        SET profile_cover_url = NULL
        WHERE id = $1
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards,
-                 profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards,
+                 profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards`,
       [req.user.id]
     );
 
@@ -1641,7 +1712,7 @@ app.patch('/api/settings/profile', authMiddleware, async (req, res) => {
            display_name = $2,
            bio = $3
        WHERE id = $4
-       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards`,
+       RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards`,
       [username, displayName || username, bio, req.user.id]
     );
 
@@ -1838,7 +1909,7 @@ app.post('/api/avatar', authMiddleware, async (req, res) => {
     if (avatarData.length > 1500000) return res.status(400).json({ error: 'Profil fotoğrafı çok büyük. Daha küçük görsel seç.' });
 
     const result = await pool.query(
-      'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards',
+      'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards',
       [avatarData, req.user.id]
     );
 
@@ -1852,7 +1923,7 @@ app.post('/api/avatar', authMiddleware, async (req, res) => {
 app.delete('/api/avatar', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'UPDATE users SET avatar_url = NULL WHERE id = $1 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, xp, shards',
+      'UPDATE users SET avatar_url = NULL WHERE id = $1 RETURNING id, username, display_name, avatar_url, bio, global_role, last_seen, profile_cover_url, profile_color, favorite_egg, profile_visible_badges, active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards',
       [req.user.id]
     );
 
@@ -2273,7 +2344,7 @@ app.get('/api/gamify/summary', authMiddleware, async (req, res) => {
   try {
     const userResult = await pool.query(
       `SELECT id, username, display_name, avatar_url, xp, shards,
-              active_bubble_theme, active_profile_frame, active_name_effect
+              active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme
        FROM users WHERE id = $1`,
       [req.user.id]
     );
@@ -2294,9 +2365,8 @@ app.get('/api/gamify/summary', authMiddleware, async (req, res) => {
       },
       daily,
       lootbox: {
-        crate_id: 'serbia_rift',
-        name: 'Serbia Rift Crate',
-        price: 250,
+        crates: LOOTBOX_CRATES,
+        selected_crate_id: 'serbia_rift',
         history: lootboxHistory
       },
       quests: quests.map((q) => ({
@@ -2356,17 +2426,25 @@ app.post('/api/daily/claim', authMiddleware, async (req, res) => {
 
 app.post('/api/lootbox/open', authMiddleware, async (req, res) => {
   try {
-    const cost = 250;
+    const crateId = cleanText(req.body.crateId || 'serbia_rift', 80);
+    const crate = getLootboxCrate(crateId);
+    const cost = Number(crate.price || 250);
     const balance = await getShardBalance(req.user.id);
     if (balance < cost) return res.status(400).json({ error: `Yetersiz Shards. Kasa fiyatı: ${cost}` });
 
     const inventory = await getUserInventory(req.user.id);
     const ownedIds = new Set(inventory.map((item) => item.item_id));
-    const rarity = pickLootboxRarity();
+    const rarity = pickLootboxRarityForCrate(crate);
 
     let candidates = MARKET_ITEMS
-      .filter((item) => item.rarity === rarity && !ownedIds.has(item.id))
+      .filter((item) => item.rarity === rarity && !ownedIds.has(item.id) && itemMatchesCrate(item, crate))
       .sort((a, b) => itemRarityWeight(b.rarity) - itemRarityWeight(a.rarity));
+
+    if (!candidates.length) {
+      candidates = MARKET_ITEMS
+        .filter((item) => !ownedIds.has(item.id) && itemMatchesCrate(item, crate))
+        .sort((a, b) => itemRarityWeight(b.rarity) - itemRarityWeight(a.rarity));
+    }
 
     if (!candidates.length) {
       candidates = MARKET_ITEMS
@@ -2389,28 +2467,28 @@ app.post('/api/lootbox/open', authMiddleware, async (req, res) => {
 
       await pool.query(
         `INSERT INTO lootbox_history (user_id, crate_id, reward_type, reward_id, reward_name, reward_rarity, reward_shards, cost_shards)
-         VALUES ($1, 'serbia_rift', 'item', $2, $3, $4, 0, $5)`,
-        [req.user.id, item.id, item.name, item.rarity, cost]
+         VALUES ($1, $2, 'item', $3, $4, $5, 0, $6)`,
+        [req.user.id, crate.id, item.id, item.name, item.rarity, cost]
       );
 
-      reward = { type: 'item', item };
+      reward = { type: 'item', item, crate };
     } else {
-      const shardReward = 120 + Math.floor(Math.random() * 181);
+      const shardReward = Math.max(80, Math.floor(cost * (0.45 + Math.random() * 0.55)));
       await addShards(req.user.id, shardReward);
 
       await pool.query(
         `INSERT INTO lootbox_history (user_id, crate_id, reward_type, reward_name, reward_rarity, reward_shards, cost_shards)
-         VALUES ($1, 'serbia_rift', 'shards', 'Shard Refund', 'rare', $2, $3)`,
-        [req.user.id, shardReward, cost]
+         VALUES ($1, $2, 'shards', 'Shard Refund', 'rare', $3, $4)`,
+        [req.user.id, crate.id, shardReward, cost]
       );
 
-      reward = { type: 'shards', shards: shardReward };
+      reward = { type: 'shards', shards: shardReward, crate };
     }
 
     await pool.query('COMMIT');
 
     const me = await pool.query('SELECT xp, shards FROM users WHERE id = $1', [req.user.id]);
-    res.json({ ok: true, cost, reward, user: me.rows[0], history: await getLootboxHistory(req.user.id) });
+    res.json({ ok: true, cost, crate, reward, user: me.rows[0], history: await getLootboxHistory(req.user.id) });
   } catch (error) {
     await pool.query('ROLLBACK').catch(() => {});
     console.error('Lootbox error:', error);
@@ -2523,7 +2601,8 @@ app.post('/api/market/equip', authMiddleware, async (req, res) => {
     const columnBySlot = {
       bubble: 'active_bubble_theme',
       frame: 'active_profile_frame',
-      name: 'active_name_effect'
+      name: 'active_name_effect',
+      theme: 'active_profile_theme'
     };
 
     const column = columnBySlot[slot];
@@ -2539,7 +2618,7 @@ app.post('/api/market/equip', authMiddleware, async (req, res) => {
     const me = await pool.query(
       `SELECT id, username, display_name, avatar_url, bio, global_role, last_seen,
               profile_cover_url, profile_color, favorite_egg, profile_visible_badges,
-              active_bubble_theme, active_profile_frame, active_name_effect, xp, shards
+              active_bubble_theme, active_profile_frame, active_name_effect, active_profile_theme, xp, shards
        FROM users WHERE id = $1`,
       [req.user.id]
     );
