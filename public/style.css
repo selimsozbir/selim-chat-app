@@ -12305,7 +12305,7 @@ body.admin-panel-visible .admin-panel {
 }
 
 .voice-record-hud::after {
-  content: "Gönder tuşu kaydı durdurup yollar";
+  content: "Gönder'e basınca direkt yollar";
   grid-column: 2 / 4;
   color: #86efac;
   font-size: 11px;
@@ -12319,4 +12319,13 @@ body.admin-panel-visible .admin-panel {
 
 .voice-record-hud.error {
   border-color: rgba(248,113,113,.38);
+}
+
+
+/* =========================================================
+   v9.5.3 — Voice Send Button + Clean Audio
+   ========================================================= */
+
+#sendButton.voice-send-ready {
+  background: linear-gradient(135deg, #15803d, #22c55e) !important;
 }
