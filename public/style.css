@@ -11056,3 +11056,62 @@ body.admin-panel-visible .admin-panel {
     bottom: calc(56px + var(--keyboard-inset)) !important;
   }
 }
+
+
+/* =========================================================
+   v9.3.5 — Mobile Composer Stick Fix
+   Klavye açıkken composer artık yukarıda kalmaz; visual viewport'un en altına yapışır.
+   Boşluk/manuel kaydırma hissi azaltıldı.
+   ========================================================= */
+
+@media (max-width: 760px) {
+  body.keyboard-open .messages,
+  body.composer-focused .messages {
+    top: env(safe-area-inset-top) !important;
+    bottom: 58px !important;
+    padding-bottom: 12px !important;
+    overscroll-behavior: contain !important;
+  }
+
+  body.keyboard-open .message-form,
+  body.composer-focused .message-form {
+    /* iOS Safari'de visualViewport zaten klavye üstüne kadar küçülüyor.
+       keyboard-inset kullanmak composer'ı gereksiz yukarı taşıyordu. */
+    bottom: 0 !important;
+    transform: translate3d(0, 0, 0) !important;
+    -webkit-transform: translate3d(0, 0, 0) !important;
+  }
+
+  body.keyboard-open .reply-bar,
+  body.composer-focused .reply-bar {
+    bottom: 58px !important;
+  }
+
+  body.keyboard-open .emoji-panel,
+  body.composer-focused .emoji-panel {
+    bottom: 60px !important;
+  }
+
+  body.keyboard-open .scroll-bottom-button,
+  body.composer-focused .scroll-bottom-button {
+    bottom: 66px !important;
+  }
+
+  /* Yazarken ekran içinde altta fazladan karanlık alan kalmasın */
+  body.keyboard-open .chat-layout,
+  body.composer-focused .chat-layout {
+    padding-bottom: 0 !important;
+  }
+}
+
+@media (max-width: 390px) {
+  body.keyboard-open .messages,
+  body.composer-focused .messages {
+    bottom: 56px !important;
+  }
+
+  body.keyboard-open .reply-bar,
+  body.composer-focused .reply-bar {
+    bottom: 56px !important;
+  }
+}
