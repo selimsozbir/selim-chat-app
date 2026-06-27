@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v9.3.8</title>
-  <link rel="stylesheet" href="style.css?v=938" />
+  <title>Selim Chat v9.4.0</title>
+  <link rel="stylesheet" href="style.css?v=940" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -255,6 +255,7 @@
             <button id="marketTabButton" class="gamify-tab" type="button">Market</button>
             <button id="leaderboardTabButton" class="gamify-tab" type="button">Liderlik</button>
             <button id="casinoTabButton" class="gamify-tab" type="button">Casino</button>
+            <button id="shardsHistoryTabButton" class="gamify-tab" type="button">Geçmiş</button>
           </div>
 
           <div id="dailyPanel" class="gamify-panel">
@@ -294,7 +295,19 @@
           </div>
 
           <div id="marketPanel" class="gamify-panel hidden">
+            <div id="marketPreviewBox" class="market-preview-box hidden"></div>
             <div id="marketList" class="gamify-list"></div>
+          </div>
+
+          <div id="shardsHistoryPanel" class="gamify-panel hidden">
+            <div class="shards-history-head">
+              <div>
+                <strong>Shards History</strong>
+                <span>Kazanç, harcama ve admin değişiklikleri</span>
+              </div>
+              <button id="refreshShardsHistoryButton" class="small-button" type="button">Yenile</button>
+            </div>
+            <div id="shardsHistoryList" class="gamify-list"></div>
           </div>
 
           <div id="leaderboardPanel" class="gamify-panel hidden">
@@ -708,7 +721,7 @@
   <div id="mentionPopup" class="mention-popup hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=938"></script>
+  <script src="script.js?v=940"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div>
 </body>
 </html>
