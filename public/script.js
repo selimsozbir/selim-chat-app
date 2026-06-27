@@ -46,6 +46,7 @@ const createServerButton = document.getElementById('createServerButton');
 const serversList = document.getElementById('serversList');
 const serverDetailsBox = document.getElementById('serverDetailsBox');
 const activeServerInfo = document.getElementById('activeServerInfo');
+const serverPermissionInfo = document.getElementById('serverPermissionInfo');
 const copyServerInviteButton = document.getElementById('copyServerInviteButton');
 const serverInviteLinkInput = document.getElementById('serverInviteLinkInput');
 const newChannelNameInput = document.getElementById('newChannelNameInput');
@@ -569,7 +570,10 @@ messageForm.addEventListener('submit', (event) => {
       addSystemMessage('Önce bir sunucu kanalı seç.');
       return;
     }
-    socket.emit('chat_message', { text, type: 'text', replyToId: replyingTo?.id || null });
+    const room = serverRoomName(activeServer.id, activeChannel.id);
+    currentRoom = room;
+    socket.emit('join', { room });
+    socket.emit('chat_message', { room, text, type: 'text', replyToId: replyingTo?.id || null });
     clearReply();
   } else {
     socket.emit('chat_message', { text, type: 'text', replyToId: replyingTo?.id || null });
@@ -1227,11 +1231,11 @@ function connectSocket() {
   socket.on('chat_message', (message) => {
     if (message.sender_id === user.id || message.user_id === user.id) checkForUnlockedBadges();
     const activeRoom = chatMode === 'server' && activeServer && activeChannel
-      ? serverRoomName(activeServer.id, activeChannel.id)
-      : currentRoom;
+      ? serverRoomName(activeServer.id, activeChannel.id).toLowerCase()
+      : String(currentRoom || '').toLowerCase();
 
     if (!['room', 'server'].includes(chatMode)) return;
-    if (!message.room || message.room === activeRoom) {
+    if (!message.room || String(message.room).toLowerCase() === activeRoom) {
       addRoomMessage(message);
       maybeRunFiveEggFromMessage(message);
     }
@@ -1913,7 +1917,7 @@ function addDmMessage(message) {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '862');
+    url.searchParams.set('v', '871');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3932,6 +3936,39 @@ function formatPresence(profile) {
 
 
 
+
+function serverRoleLabel(role) {
+  if (role === 'owner') return 'Owner';
+  if (role === 'admin') return 'Admin';
+  if (role === 'mod') return 'Mod';
+  return 'Üye';
+}
+
+function serverRoleClass(role) {
+  return `server-role-${String(role || 'member')}`;
+}
+
+function myServerPermissions() {
+  return activeServer?.permissions || {};
+}
+
+function renderServerPermissions() {
+  if (!serverPermissionInfo || !activeServer) return;
+  const perms = myServerPermissions();
+  const parts = [
+    `Rol: ${serverRoleLabel(activeServer.my_role)}`,
+    perms.can_create_invites ? 'Davet' : '',
+    perms.can_create_channels ? 'Kanal aç' : '',
+    perms.can_delete_channels ? 'Kanal sil' : '',
+    perms.can_manage_roles ? 'Rol ver' : '',
+    perms.can_kick_members ? 'Üye çıkar' : ''
+  ].filter(Boolean);
+
+  serverPermissionInfo.textContent = parts.join(' · ');
+  serverPermissionInfo.className = `server-permission-info ${serverRoleClass(activeServer.my_role)}`;
+}
+
+
 function serverRoomName(serverId, channelId) {
   return `srv_${Number(serverId)}_${Number(channelId)}`;
 }
@@ -3999,6 +4036,7 @@ async function openServer(server) {
   activeServer = server;
   activeFriend = null;
   activeGroup = null;
+  activeChannel = null;
   chatMode = 'server';
   document.body.dataset.chatMode = 'server';
 
@@ -4020,12 +4058,8 @@ async function openServer(server) {
 
   await loadServerDetails(server.id);
 
-  const firstChannel = activeChannel || document.querySelector('[data-channel-id]')?.dataset.channelObject;
-  if (!activeChannel && window.__serverChannels?.length) {
-    await openServerChannel(window.__serverChannels[0]);
-  } else if (activeChannel) {
-    await openServerChannel(activeChannel);
-  }
+  const firstChannel = window.__serverChannels?.[0] || null;
+  if (firstChannel) await openServerChannel(firstChannel);
 
   syncMobileHeader();
   updateMessengerUi();
@@ -4045,10 +4079,19 @@ async function loadServerDetails(serverId) {
     if (serverInviteLinkInput) {
       serverInviteLinkInput.value = activeServer.invite_code ? buildServerInviteUrl(activeServer.invite_code) : '';
     }
+    if (copyServerInviteButton) {
+      copyServerInviteButton.disabled = !activeServer.permissions?.can_create_invites;
+      copyServerInviteButton.title = activeServer.permissions?.can_create_invites ? '' : 'Davet yetkin yok';
+    }
 
     renderServerChannels(window.__serverChannels);
+    renderServerPermissions();
+    if (createChannelButton) createChannelButton.disabled = !activeServer.permissions?.can_create_channels;
     renderServerMembers();
 
+    if (activeChannel && !window.__serverChannels.some((channel) => Number(channel.id) === Number(activeChannel.id))) {
+      activeChannel = null;
+    }
     if (!activeChannel && window.__serverChannels.length) activeChannel = window.__serverChannels[0];
   } catch (error) {
     addSystemMessage(error.message);
@@ -4064,7 +4107,7 @@ function renderServerChannels(channels) {
     return;
   }
 
-  const canManage = ['owner', 'admin'].includes(activeServer?.my_role);
+  const canManage = Boolean(activeServer?.permissions?.can_delete_channels);
 
   channels.forEach((channel) => {
     const item = document.createElement('div');
@@ -4127,6 +4170,10 @@ function buildServerInviteUrl(code) {
 
 async function copyServerInviteLink() {
   if (!activeServer) return;
+  if (!activeServer.permissions?.can_create_invites) {
+    addSystemMessage('Davet linki alma yetkin yok.');
+    return;
+  }
 
   try {
     const data = await api(`/api/servers/${activeServer.id}/invite`, { method: 'POST' });
@@ -4194,6 +4241,11 @@ async function deleteServerChannel(channel) {
 async function createServerChannel() {
   if (!activeServer) {
     addSystemMessage('Önce sunucu seç.');
+    return;
+  }
+
+  if (!activeServer.permissions?.can_create_channels) {
+    addSystemMessage('Kanal oluşturma yetkin yok.');
     return;
   }
 
