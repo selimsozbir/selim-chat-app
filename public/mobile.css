@@ -2615,3 +2615,56 @@
     min-width: 58px !important;
   }
 }
+
+
+/* =========================================================
+   Selim Chat v10.9.8 — remove giant keyboard gap
+   Root cause: previous fixed pseudo-element created a huge dark block
+   above the keyboard. Kill that block and pin composer tighter.
+   ========================================================= */
+@media (max-width: 960px) {
+  body.keyboard-open::before,
+  body.composer-focused::before {
+    content: none !important;
+    display: none !important;
+    height: 0 !important;
+  }
+
+  body.keyboard-open,
+  body.composer-focused,
+  body.keyboard-open .app,
+  body.composer-focused .app,
+  body.keyboard-open .chat-screen,
+  body.composer-focused .chat-screen,
+  body.keyboard-open .chat-main,
+  body.composer-focused .chat-main,
+  body.keyboard-open .messages,
+  body.composer-focused .messages {
+    background: #05070d !important;
+  }
+
+  body.keyboard-open .chat-main,
+  body.composer-focused .chat-main {
+    padding-bottom: 0 !important;
+  }
+
+  body.keyboard-open .messages,
+  body.composer-focused .messages {
+    padding-bottom: 94px !important;
+  }
+
+  body.keyboard-open .message-form,
+  body.composer-focused .message-form {
+    bottom: 0 !important;
+    margin: 0 !important;
+    transform: translateY(min(var(--composer-keyboard-shift, 0px), 34px)) !important;
+  }
+
+  /* hide floating “new messages” chip while typing so it can't sit over bubbles */
+  body.keyboard-open .scroll-bottom-button,
+  body.composer-focused .scroll-bottom-button {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+}
