@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v11.0</title>
-  <link rel="stylesheet" href="style.css?v=1100" />
-  <link rel="stylesheet" href="desktop.css?v=1100" media="(min-width: 961px)" />
-  <link rel="stylesheet" href="mobile.css?v=1100" media="(max-width: 960px)" />
+  <title>Selim Chat v11.1</title>
+  <link rel="stylesheet" href="style.css?v=1110" />
+  <link rel="stylesheet" href="desktop.css?v=1110" media="(min-width: 961px)" />
+  <link rel="stylesheet" href="mobile.css?v=1110" media="(max-width: 960px)" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -81,6 +81,84 @@
           <button id="sidebarSettingsButton" class="small-button gray" type="button">⚙️ Ayarlar</button>
         </div>
 
+
+
+
+        <div id="desktopChatsPanel" class="desktop-chats-panel" aria-label="Chats">
+          <div class="desktop-chats-head">
+            <div>
+              <strong>Chats</strong>
+              <span>Rooms, DMs & groups</span>
+            </div>
+            <div class="desktop-chats-actions">
+              <button id="desktopSearchButton" type="button" title="Ara">⌕</button>
+              <button id="desktopNewChatButton" type="button" title="Yeni sohbet">✎</button>
+            </div>
+          </div>
+
+          <div class="desktop-chat-tabs">
+            <button class="active" type="button" data-desktop-chat-tab="all">All</button>
+            <button type="button" data-desktop-chat-tab="unread">Unread</button>
+            <button type="button" data-desktop-chat-tab="groups">Groups</button>
+            <button type="button" data-desktop-chat-tab="rooms">Rooms</button>
+          </div>
+
+          <div class="desktop-chat-list">
+            <button class="desktop-chat-card active" type="button" data-desktop-open="room">
+              <span class="desktop-chat-avatar">#</span>
+              <span class="desktop-chat-copy">
+                <b># selim</b>
+                <em>Aktif oda · canlı sohbet</em>
+              </span>
+              <small>Live</small>
+            </button>
+
+            <button class="desktop-chat-card" type="button" data-desktop-open="dm">
+              <span class="desktop-chat-avatar">💬</span>
+              <span class="desktop-chat-copy">
+                <b>DMs</b>
+                <em>Arkadaşlarla özel mesaj</em>
+              </span>
+              <small>DM</small>
+            </button>
+
+            <button class="desktop-chat-card" type="button" data-desktop-open="groups">
+              <span class="desktop-chat-avatar">👥</span>
+              <span class="desktop-chat-copy">
+                <b>Groups</b>
+                <em>Grup sohbetleri</em>
+              </span>
+              <small>12</small>
+            </button>
+
+            <button class="desktop-chat-card" type="button" data-desktop-open="gallery">
+              <span class="desktop-chat-avatar">🖼</span>
+              <span class="desktop-chat-copy">
+                <b>Gallery</b>
+                <em>Fotoğraf, ses ve dosyalar</em>
+              </span>
+              <small>Media</small>
+            </button>
+
+            <button class="desktop-chat-card" type="button" data-desktop-open="friends">
+              <span class="desktop-chat-avatar">🤝</span>
+              <span class="desktop-chat-copy">
+                <b>Friends</b>
+                <em>Arkadaşlar ve istekler</em>
+              </span>
+              <small>Social</small>
+            </button>
+
+            <button class="desktop-chat-card" type="button" data-desktop-open="hub">
+              <span class="desktop-chat-avatar">🧬</span>
+              <span class="desktop-chat-copy">
+                <b>5ECROPOLIS Hub</b>
+                <em>Shards, market, envanter</em>
+              </span>
+              <small>Hub</small>
+            </button>
+          </div>
+        </div>
 
 
         <div id="mobileHubAccordion" class="mobile-hub-accordion">
@@ -263,6 +341,16 @@
           <button id="mobileGalleryButton" class="mobile-nav-item" type="button">🗂️<span>Galeri</span></button>
         </nav>
       </main>
+
+
+      <nav id="desktopPortalDock" class="desktop-portal-dock" aria-label="Desktop kısayollar">
+        <button id="desktopDockChats" class="desktop-dock-item active" type="button" title="Chats">💬</button>
+        <button id="desktopDockGroups" class="desktop-dock-item" type="button" title="Groups">👥</button>
+        <button id="desktopDockHub" class="desktop-dock-item desktop-dock-logo" type="button" title="5ECROPOLIS Hub">5</button>
+        <button id="desktopDockCalls" class="desktop-dock-item" type="button" title="Calls">☎</button>
+        <button id="desktopDockSettings" class="desktop-dock-item" type="button" title="Settings">⚙</button>
+      </nav>
+
 
       <aside class="right-panel">
         <div class="right-panel-header">
@@ -997,6 +1085,6 @@
 
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=1100"></script>
+  <script src="script.js?v=1110"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div></body>
 </html>
