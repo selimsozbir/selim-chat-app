@@ -2635,7 +2635,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1100');
+    url.searchParams.set('v', '1110');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -7555,6 +7555,112 @@ window.addEventListener('orientationchange', () => setTimeout(() => {
 }, 200));
 setTimeout(guardedMobileHubBind, 250);
 setTimeout(() => syncMobileHubPlacement?.(), 450);
+
+
+
+/* v11.1 — Desktop Telegram Neon layout behavior */
+function isDesktopPortalLayout() {
+  return window.matchMedia?.('(min-width: 961px)')?.matches;
+}
+
+function syncDesktopPortalLayout() {
+  const rail = document.querySelector('.app-rail');
+  const sidebar = document.querySelector('.sidebar');
+  const profile = document.querySelector('.profile-box');
+  const quick = document.getElementById('sidebarQuickActions');
+  const nav = document.querySelector('.nav-buttons');
+  const rightPanel = document.querySelector('.right-panel');
+  const chatMain = document.querySelector('.chat-main');
+
+  if (!rail || !sidebar || !profile || !nav) return;
+
+  if (isDesktopPortalLayout()) {
+    document.body.classList.add('desktop-portal-layout');
+
+    if (profile.parentNode !== rail) rail.appendChild(profile);
+    if (quick && quick.parentNode !== rail) rail.appendChild(quick);
+
+    if (rightPanel && chatMain && rightPanel.parentNode !== chatMain) {
+      chatMain.appendChild(rightPanel);
+    }
+  } else {
+    document.body.classList.remove('desktop-portal-layout', 'desktop-hub-open');
+
+    if (profile.parentNode !== sidebar) sidebar.insertBefore(profile, nav);
+    if (quick && quick.parentNode !== sidebar) sidebar.insertBefore(quick, nav);
+
+    const screen = document.querySelector('.chat-screen');
+    if (rightPanel && screen && rightPanel.parentNode !== screen) {
+      screen.appendChild(rightPanel);
+    }
+  }
+}
+
+function setDesktopDockActive(id) {
+  document.querySelectorAll('.desktop-dock-item').forEach(btn => btn.classList.toggle('active', btn.id === id));
+}
+
+function openDesktopHub() {
+  syncDesktopPortalLayout();
+  document.body.classList.add('desktop-hub-open');
+  loadGamify?.();
+  loadInventory?.();
+  setDesktopDockActive('desktopDockHub');
+}
+
+function closeDesktopHub() {
+  document.body.classList.remove('desktop-hub-open');
+}
+
+function bindDesktopPortalControls() {
+  document.querySelectorAll('[data-desktop-open]').forEach((button) => {
+    if (button.dataset.portalBound === '1') return;
+    button.dataset.portalBound = '1';
+    button.addEventListener('click', () => {
+      document.querySelectorAll('.desktop-chat-card').forEach(card => card.classList.remove('active'));
+      button.classList.add('active');
+
+      const action = button.dataset.desktopOpen;
+      if (action === 'room') { closeDesktopHub(); roomModeButton?.click(); setDesktopDockActive('desktopDockChats'); }
+      if (action === 'dm') { closeDesktopHub(); dmModeButton?.click(); setDesktopDockActive('desktopDockChats'); }
+      if (action === 'groups') { closeDesktopHub(); groupModeButton?.click(); setDesktopDockActive('desktopDockGroups'); }
+      if (action === 'gallery') { closeDesktopHub(); openGalleryModal?.(); }
+      if (action === 'friends') { closeDesktopHub(); openFriendsCenter?.(); }
+      if (action === 'hub') { openDesktopHub(); }
+    });
+  });
+
+  const bind = (id, fn) => {
+    const el = document.getElementById(id);
+    if (!el || el.dataset.portalBound === '1') return;
+    el.dataset.portalBound = '1';
+    el.addEventListener('click', fn);
+  };
+
+  bind('desktopDockChats', () => { closeDesktopHub(); roomModeButton?.click(); setDesktopDockActive('desktopDockChats'); });
+  bind('desktopDockGroups', () => { closeDesktopHub(); groupModeButton?.click(); setDesktopDockActive('desktopDockGroups'); });
+  bind('desktopDockHub', () => openDesktopHub());
+  bind('desktopDockCalls', () => { closeDesktopHub(); alert?.('Calls özelliği yakında.'); setDesktopDockActive('desktopDockCalls'); });
+  bind('desktopDockSettings', () => { closeDesktopHub(); settingsButton?.click(); setDesktopDockActive('desktopDockSettings'); });
+  bind('desktopSearchButton', () => { closeDesktopHub(); messageSearchInput?.focus(); });
+  bind('desktopNewChatButton', () => { closeDesktopHub(); dmModeButton?.click(); searchInput?.focus(); });
+
+  railHubButton?.addEventListener('click', openDesktopHub);
+}
+
+window.addEventListener('load', () => {
+  syncDesktopPortalLayout();
+  bindDesktopPortalControls();
+});
+window.addEventListener('resize', () => {
+  syncDesktopPortalLayout();
+  bindDesktopPortalControls();
+});
+window.addEventListener('orientationchange', () => setTimeout(syncDesktopPortalLayout, 200));
+setTimeout(() => {
+  syncDesktopPortalLayout();
+  bindDesktopPortalControls();
+}, 350);
 
 startApp();
 
