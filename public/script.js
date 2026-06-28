@@ -2635,7 +2635,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '1110');
+    url.searchParams.set('v', '1120');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -3943,6 +3943,7 @@ function updateBadge() {
 }
 
 function renderUsers(users) {
+  lastUsersCache = users || [];
   usersList.innerHTML = '';
   users.forEach((entry) => {
     let profile = typeof entry === 'string' ? { username: entry, display_name: entry, presence_status: 'online', online: true } : entry;
@@ -3956,6 +3957,7 @@ function renderUsers(users) {
     usersList.appendChild(li);
   });
 
+  renderDesktopOnlineUsers(users);
   updateHeaderMeta?.();
   loadRoomMembers();
   loadModeration();
@@ -7661,6 +7663,151 @@ setTimeout(() => {
   syncDesktopPortalLayout();
   bindDesktopPortalControls();
 }, 350);
+
+
+
+/* v11.2 — desktop chats tabs, online rail, hub toggle fix */
+function renderDesktopOnlineUsers(users = []) {
+  const list = document.getElementById('desktopOnlineList');
+  const count = document.getElementById('desktopOnlineCount');
+  if (!list) return;
+
+  const normalized = (users || []).map((entry) => {
+    let profile = typeof entry === 'string'
+      ? { username: entry, display_name: entry, presence_status: 'online', online: true }
+      : entry;
+
+    if (Number(profile.id) === Number(user?.id)) {
+      profile = {
+        ...profile,
+        presence_status: user.presence_status || profile.presence_status || 'online',
+        custom_status: user.custom_status || profile.custom_status || '',
+        online: user.presence_status !== 'invisible'
+      };
+    }
+    return profile;
+  }).filter((profile) => String(profile.presence_status || 'online').toLowerCase() !== 'invisible');
+
+  if (count) count.textContent = `${normalized.length} aktif`;
+
+  list.innerHTML = normalized.map((profile) => {
+    const name = escapeHtml(profile.display_name || profile.username || 'User');
+    const status = escapeHtml(roomPresenceLine(profile));
+    const initial = escapeHtml(String(name || '?').trim().charAt(0).toUpperCase() || '?');
+    const avatar = profile.avatar_url
+      ? `<img src="${escapeHtml(profile.avatar_url)}" alt="">`
+      : `<span>${initial}</span>`;
+    const id = profile.id ? String(profile.id) : '';
+    return `
+      <button class="desktop-online-user presence-${escapeHtml(String(profile.presence_status || 'online').toLowerCase())}" type="button" data-profile-id="${escapeHtml(id)}">
+        <span class="desktop-online-avatar">${avatar}</span>
+        <span class="desktop-online-copy">
+          <b>${name}</b>
+          <em>${status}</em>
+        </span>
+      </button>
+    `;
+  }).join('');
+
+  list.querySelectorAll('[data-profile-id]').forEach((btn) => {
+    const id = btn.dataset.profileId;
+    if (!id) return;
+    btn.addEventListener('click', () => openProfile(id));
+  });
+}
+
+function filterDesktopChats(tab = 'all') {
+  document.querySelectorAll('.desktop-chat-tabs button').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.desktopChatTab === tab);
+  });
+
+  document.querySelectorAll('.desktop-chat-card').forEach((card) => {
+    const categories = String(card.dataset.desktopChatCategory || 'all').split(/\s+/);
+    const show = tab === 'all' || categories.includes(tab);
+    card.classList.toggle('hidden', !show);
+  });
+}
+
+function toggleDesktopHub(force = null) {
+  const willOpen = force === null ? !document.body.classList.contains('desktop-hub-open') : Boolean(force);
+  syncDesktopPortalLayout?.();
+  document.body.classList.toggle('desktop-hub-open', willOpen);
+  if (willOpen) {
+    loadGamify?.();
+    loadInventory?.();
+    setDesktopDockActive?.('desktopDockHub');
+  } else {
+    setDesktopDockActive?.('desktopDockChats');
+  }
+}
+
+function closeDesktopHub() {
+  document.body.classList.remove('desktop-hub-open');
+}
+
+function openDesktopHub() {
+  toggleDesktopHub(true);
+}
+
+function bindDesktopPortalV112Controls() {
+  document.querySelectorAll('.desktop-chat-tabs button').forEach((btn) => {
+    if (btn.dataset.tabBound === '1') return;
+    btn.dataset.tabBound = '1';
+    btn.addEventListener('click', () => filterDesktopChats(btn.dataset.desktopChatTab || 'all'));
+  });
+
+  document.querySelectorAll('[data-desktop-open]').forEach((button) => {
+    if (button.dataset.v112Bound === '1') return;
+    button.dataset.v112Bound = '1';
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      document.querySelectorAll('.desktop-chat-card').forEach(card => card.classList.remove('active'));
+      button.classList.add('active');
+
+      const action = button.dataset.desktopOpen;
+      if (action === 'room') { closeDesktopHub(); roomModeButton?.click(); setDesktopDockActive?.('desktopDockChats'); }
+      if (action === 'dm') { closeDesktopHub(); dmModeButton?.click(); setDesktopDockActive?.('desktopDockChats'); }
+      if (action === 'groups') { closeDesktopHub(); groupModeButton?.click(); setDesktopDockActive?.('desktopDockGroups'); }
+      if (action === 'gallery') { closeDesktopHub(); openGalleryModal?.(); }
+      if (action === 'friends') { closeDesktopHub(); openFriendsCenter?.(); }
+      if (action === 'hub') { toggleDesktopHub(); }
+    }, true);
+  });
+
+  const bind = (id, fn) => {
+    const el = document.getElementById(id);
+    if (!el || el.dataset.v112Bound === '1') return;
+    el.dataset.v112Bound = '1';
+    el.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      fn();
+    }, true);
+  };
+
+  bind('desktopDockChats', () => { closeDesktopHub(); roomModeButton?.click(); setDesktopDockActive?.('desktopDockChats'); });
+  bind('desktopDockGroups', () => { closeDesktopHub(); groupModeButton?.click(); setDesktopDockActive?.('desktopDockGroups'); });
+  bind('desktopDockHub', () => toggleDesktopHub());
+  bind('desktopDockCalls', () => { closeDesktopHub(); alert?.('Calls özelliği yakında.'); setDesktopDockActive?.('desktopDockCalls'); });
+  bind('desktopDockSettings', () => { closeDesktopHub(); sidebarSettingsButton?.click(); setDesktopDockActive?.('desktopDockSettings'); });
+  bind('desktopSearchButton', () => { closeDesktopHub(); filterDesktopChats('all'); messageSearchInput?.focus(); });
+  bind('desktopNewChatButton', () => { closeDesktopHub(); dmModeButton?.click(); searchInput?.focus(); });
+
+  filterDesktopChats(document.querySelector('.desktop-chat-tabs button.active')?.dataset?.desktopChatTab || 'all');
+}
+
+window.addEventListener('load', () => {
+  bindDesktopPortalV112Controls();
+  if (lastUsersCache) renderDesktopOnlineUsers(lastUsersCache);
+});
+window.addEventListener('resize', () => {
+  bindDesktopPortalV112Controls();
+  if (lastUsersCache) renderDesktopOnlineUsers(lastUsersCache);
+});
+setTimeout(() => {
+  bindDesktopPortalV112Controls();
+  if (lastUsersCache) renderDesktopOnlineUsers(lastUsersCache);
+}, 500);
 
 startApp();
 
