@@ -20,6 +20,12 @@ const settingsButton = document.getElementById('settingsButton');
 const sidebarFriendsButton = document.getElementById('sidebarFriendsButton');
 const sidebarGalleryButton = document.getElementById('sidebarGalleryButton');
 const sidebarSettingsButton = document.getElementById('sidebarSettingsButton');
+const mobileHubAccordion = document.getElementById('mobileHubAccordion');
+const mobileHubToggleButton = document.getElementById('mobileHubToggleButton');
+const mobileHubContent = document.getElementById('mobileHubContent');
+const rightPanelElement = document.querySelector('.right-panel');
+const rightPanelOriginalParent = rightPanelElement?.parentNode || null;
+const rightPanelOriginalNextSibling = rightPanelElement?.nextSibling || null;
 const mobileTopBar = document.getElementById('mobileTopBar');
 const mobileMenuButton = document.getElementById('mobileMenuButton');
 const mobileSettingsButton = document.getElementById('mobileSettingsButton');
@@ -491,7 +497,10 @@ authForm.addEventListener('submit', async (event) => {
 
     localStorage.setItem('chat_token', token);
     localStorage.setItem('chat_user', JSON.stringify(user));
-    await startApp();
+    await window.addEventListener('resize', syncMobileHubPlacement);
+window.addEventListener('orientationchange', () => setTimeout(syncMobileHubPlacement, 200));
+window.addEventListener('load', syncMobileHubPlacement);
+startApp();
   } catch (error) {
     authError.textContent = error.message;
   } finally {
@@ -763,6 +772,7 @@ bindMobileTap(mobileGroupButton, () => {
 
 bindMobileTap(mobilePanelButton, openMobileRightPanel);
 bindMobileTap(mobileGalleryButton, () => { closeMobilePanels(); openGalleryModal?.(); });
+bindMobileTap(mobileHubToggleButton, () => toggleMobileHub());
 if (refreshAdminLogsButton) refreshAdminLogsButton.addEventListener('click', loadAdminLogs);
 if (settingsCloseButton) settingsCloseButton.addEventListener('click', closeSettings);
 if (settingsModal) settingsModal.addEventListener('click', (event) => {
@@ -1428,6 +1438,36 @@ function bindMobileTap(element, handler) {
   });
 }
 
+
+function syncMobileHubPlacement() {
+  if (!rightPanelElement || !mobileHubContent) return;
+  if (isMobileLayout()) {
+    if (rightPanelElement.parentNode !== mobileHubContent) {
+      mobileHubContent.appendChild(rightPanelElement);
+    }
+    document.body.classList.remove('mobile-right-panel-open');
+  } else if (rightPanelOriginalParent && rightPanelElement.parentNode !== rightPanelOriginalParent) {
+    rightPanelOriginalParent.insertBefore(rightPanelElement, rightPanelOriginalNextSibling || null);
+    mobileHubContent.classList.add('hidden');
+    mobileHubToggleButton?.setAttribute('aria-expanded', 'false');
+    mobileHubAccordion?.classList.remove('open');
+  }
+}
+
+function toggleMobileHub(forceOpen = null) {
+  if (!mobileHubContent || !mobileHubToggleButton) return;
+  syncMobileHubPlacement();
+  const shouldOpen = forceOpen === null ? mobileHubContent.classList.contains('hidden') : Boolean(forceOpen);
+  mobileHubContent.classList.toggle('hidden', !shouldOpen);
+  mobileHubToggleButton.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+  mobileHubAccordion?.classList.toggle('open', shouldOpen);
+  if (shouldOpen) {
+    loadGamify?.();
+    loadInventory?.();
+    setTimeout(() => mobileHubAccordion?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 80);
+  }
+}
+
 function openMobileSidebar() {
   if (!isMobileLayout()) return;
   closeMobileRightPanel(false);
@@ -1444,16 +1484,14 @@ function closeMobileSidebar(hideBackdrop = true) {
 }
 
 function openMobileRightPanel() {
-  if (!isMobileLayout()) return;
-  closeMobileSidebar(false);
+  if (isMobileLayout()) {
+    openMobileSidebar();
+    toggleMobileHub(true);
+    return;
+  }
   document.body.classList.add('mobile-right-panel-open');
   mobileBackdrop?.classList.remove('hidden');
   syncMobileNav();
-  setTimeout(() => {
-    const panel = document.querySelector('.right-panel');
-    const hub = document.querySelector('.gamify-box');
-    if (panel && hub) panel.scrollTo({ top: Math.max(0, hub.offsetTop - 10), behavior: 'smooth' });
-  }, 40);
 }
 
 function closeMobileRightPanel(hideBackdrop = true) {
@@ -2591,7 +2629,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '10100');
+    url.searchParams.set('v', '10101');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
