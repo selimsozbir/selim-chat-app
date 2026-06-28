@@ -497,10 +497,7 @@ authForm.addEventListener('submit', async (event) => {
 
     localStorage.setItem('chat_token', token);
     localStorage.setItem('chat_user', JSON.stringify(user));
-    await window.addEventListener('resize', syncMobileHubPlacement);
-window.addEventListener('orientationchange', () => setTimeout(syncMobileHubPlacement, 200));
-window.addEventListener('load', syncMobileHubPlacement);
-startApp();
+    await startApp();
   } catch (error) {
     authError.textContent = error.message;
   } finally {
@@ -2629,7 +2626,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '10102');
+    url.searchParams.set('v', '10103');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -7483,6 +7480,68 @@ window.addEventListener('resize', syncMobileHubPlacement);
 window.addEventListener('orientationchange', () => setTimeout(syncMobileHubPlacement, 200));
 window.addEventListener('load', syncMobileHubPlacement);
 setTimeout(syncMobileHubPlacement, 300);
+
+
+/* v10.10.3 hard mobile hub toggle fix */
+function hardToggleMobileHub(forceOpen = null) {
+  const accordion = document.getElementById('mobileHubAccordion');
+  const button = document.getElementById('mobileHubToggleButton');
+  const content = document.getElementById('mobileHubContent');
+  const panel = document.querySelector('.right-panel');
+
+  if (!accordion || !button || !content) return;
+
+  if (panel && isMobileLayout?.() && panel.parentNode !== content) {
+    content.appendChild(panel);
+  }
+
+  const shouldOpen = forceOpen === null ? content.classList.contains('hidden') : Boolean(forceOpen);
+  content.classList.toggle('hidden', !shouldOpen);
+  accordion.classList.toggle('open', shouldOpen);
+  button.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+
+  if (shouldOpen) {
+    loadGamify?.();
+    loadInventory?.();
+    setTimeout(() => accordion.scrollIntoView({ block: 'center', behavior: 'smooth' }), 80);
+  }
+}
+
+function initMobileHubHardToggle() {
+  const button = document.getElementById('mobileHubToggleButton');
+  const content = document.getElementById('mobileHubContent');
+  if (!button || !content || button.dataset.hardToggleBound === '1') return;
+
+  button.dataset.hardToggleBound = '1';
+  button.onclick = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    hardToggleMobileHub();
+  };
+
+  button.addEventListener('touchend', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    hardToggleMobileHub();
+  }, { passive: false });
+}
+
+window.addEventListener('DOMContentLoaded', initMobileHubHardToggle);
+window.addEventListener('load', () => {
+  initMobileHubHardToggle();
+  syncMobileHubPlacement?.();
+});
+window.addEventListener('resize', () => {
+  initMobileHubHardToggle();
+  syncMobileHubPlacement?.();
+});
+window.addEventListener('orientationchange', () => setTimeout(() => {
+  initMobileHubHardToggle();
+  syncMobileHubPlacement?.();
+}, 200));
+setTimeout(initMobileHubHardToggle, 300);
+setTimeout(() => syncMobileHubPlacement?.(), 500);
+
 startApp();
 
 window.addEventListener('load', () => setTimeout(clearFiveEggClasses, 120));
