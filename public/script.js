@@ -2629,7 +2629,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '10101');
+    url.searchParams.set('v', '10102');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -7477,6 +7477,12 @@ refreshStoryDecisionButton?.addEventListener('click', loadStoryDecision);
 refreshCompanionButton?.addEventListener('click', loadCompanion);
 
 refreshInventoryButton?.addEventListener('click', loadInventory);
+
+// mobile hub visible fix boot
+window.addEventListener('resize', syncMobileHubPlacement);
+window.addEventListener('orientationchange', () => setTimeout(syncMobileHubPlacement, 200));
+window.addEventListener('load', syncMobileHubPlacement);
+setTimeout(syncMobileHubPlacement, 300);
 startApp();
 
 window.addEventListener('load', () => setTimeout(clearFiveEggClasses, 120));
