@@ -1,3 +1,12 @@
+
+// v10.10.6 — APK/WebView mode marker
+try {
+  const appParams = new URLSearchParams(window.location.search || '');
+  if (appParams.get('apk') === '1' || window.navigator.userAgent.toLowerCase().includes('wv')) {
+    document.body.classList.add('apk-shell');
+  }
+} catch {}
+
 const authScreen = document.getElementById('authScreen');
 const chatScreen = document.getElementById('chatScreen');
 
@@ -2626,7 +2635,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '10105');
+    url.searchParams.set('v', '10106');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
