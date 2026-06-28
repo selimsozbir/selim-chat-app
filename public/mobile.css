@@ -2668,3 +2668,75 @@
     pointer-events: none !important;
   }
 }
+
+
+/* =========================================================
+   Selim Chat v10.9.9 — mobile online panel repair
+   Fixes room sidebar overlap: Online list was collapsing into
+   the message-search card. Force natural vertical flow on mobile.
+   ========================================================= */
+@media (max-width: 960px) {
+  #roomPanel {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+    overflow: visible !important;
+  }
+
+  .room-box,
+  .users-box,
+  .search-panel,
+  .admin-panel {
+    position: relative !important;
+    z-index: 0 !important;
+    width: 100% !important;
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    clear: both !important;
+    margin: 0 !important;
+  }
+
+  .users-box {
+    display: block !important;
+    padding-bottom: 0 !important;
+  }
+
+  #usersList {
+    display: grid !important;
+    gap: 10px !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 0 0 4px 0 !important;
+    margin: 0 !important;
+  }
+
+  #usersList li,
+  #usersList .room-user-item,
+  .room-user-item {
+    position: relative !important;
+    z-index: 0 !important;
+    min-height: 88px !important;
+    height: auto !important;
+    margin: 0 !important;
+  }
+
+  .search-panel {
+    margin-top: 2px !important;
+  }
+
+  .search-panel h3,
+  .users-box h3 {
+    margin-bottom: 12px !important;
+  }
+
+  #messageSearchResults {
+    position: relative !important;
+    z-index: 1 !important;
+    margin-top: 10px !important;
+  }
+}
