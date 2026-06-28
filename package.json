@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.9.9",
-  "description": "Selim Chat v10.9.9 mobile online panel fix",
+  "version": "10.10.0",
+  "description": "Selim Chat v10.10.0 mobile DM friends list full-height fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
