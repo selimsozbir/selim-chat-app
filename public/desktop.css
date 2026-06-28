@@ -110,3 +110,26 @@
 
 
 /* v10.5.2 desktop keeps own bubble structural fix from style.css. */
+
+
+/* v10.10.5 — desktop: hide mobile-only Hub accordion in left sidebar */
+@media (min-width: 961px) {
+  #mobileHubAccordion,
+  .mobile-hub-accordion,
+  #mobileHubToggleButton,
+  #mobileHubContent {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+  }
+
+  .sidebar #mobileHubAccordion {
+    display: none !important;
+  }
+}
