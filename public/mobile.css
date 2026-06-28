@@ -2953,3 +2953,35 @@
     margin-top: 4px !important;
   }
 }
+
+
+/* v10.10.3 — clickable mobile hub fix */
+@media (max-width: 960px) {
+  #mobileHubAccordion,
+  #mobileHubToggleButton {
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+  }
+
+  #mobileHubContent.mobile-hub-content {
+    pointer-events: auto !important;
+  }
+
+  #mobileHubContent.mobile-hub-content.hidden {
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #mobileHubContent.mobile-hub-content:not(.hidden) {
+    display: block !important;
+    height: auto !important;
+    min-height: 80px !important;
+    padding: 10px !important;
+    margin-top: 10px !important;
+    overflow: visible !important;
+  }
+}
