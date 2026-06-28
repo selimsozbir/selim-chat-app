@@ -2740,3 +2740,51 @@
     margin-top: 10px !important;
   }
 }
+
+
+/* =========================================================
+   Selim Chat v10.10.0 — mobile DM friends full-height repair
+   DM friend list was collapsing into a tiny clipped area.
+   Disable flex-fill behavior on mobile and let sidebar scroll naturally.
+   ========================================================= */
+@media (max-width: 960px) {
+  body[data-chat-mode="dm"] .sidebar #friendsPanel {
+    display: block !important;
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  body[data-chat-mode="dm"] .sidebar #friendsPanel .friends-box {
+    display: block !important;
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-bottom: 14px !important;
+  }
+
+  body[data-chat-mode="dm"] .sidebar #friendsPanel .friends-box h3 {
+    margin: 0 0 12px !important;
+  }
+
+  body[data-chat-mode="dm"] #friendsList {
+    display: grid !important;
+    align-content: start !important;
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-bottom: 6px !important;
+  }
+
+  body[data-chat-mode="dm"] #friendsList .mini-item,
+  body[data-chat-mode="dm"] #friendsList .mini-item.conversation-item {
+    min-height: 116px !important;
+    align-content: start !important;
+  }
+}
