@@ -1659,3 +1659,87 @@
     grid-template-columns: repeat(5, 78px) !important;
   }
 }
+
+@media (min-width: 961px) {
+  .desktop-room-tabs {
+    grid-template-columns: 1fr !important;
+  }
+
+  .desktop-room-tabs button {
+    width: 100% !important;
+  }
+
+  .desktop-room-list {
+    gap: 10px !important;
+  }
+
+  .desktop-room-custom {
+    margin-top: 4px !important;
+    padding: 14px !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(168,85,247,.16) !important;
+    background: rgba(255,255,255,.035) !important;
+  }
+
+  .desktop-room-custom label {
+    display: block !important;
+    margin-bottom: 9px !important;
+    color: rgba(226,232,240,.62) !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    letter-spacing: .02em !important;
+  }
+
+  .desktop-room-row {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 64px !important;
+    gap: 8px !important;
+  }
+
+  .desktop-room-row input {
+    min-width: 0 !important;
+    height: 42px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(255,255,255,.08) !important;
+    background: rgba(0,0,0,.22) !important;
+    color: #fff !important;
+    padding: 0 12px !important;
+    outline: none !important;
+  }
+
+  .desktop-room-row input:focus {
+    border-color: rgba(168,85,247,.45) !important;
+    box-shadow: 0 0 0 3px rgba(168,85,247,.12) !important;
+  }
+
+  .desktop-room-row button {
+    height: 42px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(255,255,255,.09) !important;
+    color: #fff !important;
+    font-weight: 950 !important;
+    background: linear-gradient(135deg, #7c3aed, #d946ef) !important;
+    cursor: pointer !important;
+  }
+}
+
+
+@media (min-width: 901px) {
+  .desktop-room-list-custom-only {
+    align-content: start !important;
+    padding-top: 4px !important;
+  }
+
+  .desktop-room-custom-main {
+    margin-top: 0 !important;
+    padding: 18px !important;
+    background: linear-gradient(135deg, rgba(168,85,247,.10), rgba(37,99,235,.045)) !important;
+  }
+
+  .desktop-room-help {
+    margin: -2px 0 14px !important;
+    color: rgba(226,232,240,.55) !important;
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+  }
+}
