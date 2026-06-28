@@ -96,67 +96,19 @@
             </div>
           </div>
 
-          <div class="desktop-chat-tabs">
-            <button class="active" type="button" data-desktop-chat-tab="all">All</button>
-            <button type="button" data-desktop-chat-tab="unread">Unread</button>
-            <button type="button" data-desktop-chat-tab="groups">Groups</button>
-            <button type="button" data-desktop-chat-tab="rooms">Rooms</button>
+          <div class="desktop-chat-tabs desktop-room-tabs">
+            <button class="active" type="button" data-desktop-chat-tab="rooms">Rooms</button>
           </div>
 
-          <div class="desktop-chat-list">
-            <button class="desktop-chat-card active" type="button" data-desktop-open="room" data-desktop-chat-category="rooms all unread">
-              <span class="desktop-chat-avatar">#</span>
-              <span class="desktop-chat-copy">
-                <b># selim</b>
-                <em>Aktif oda · canlı sohbet</em>
-              </span>
-              <small>Live</small>
-            </button>
-
-            <button class="desktop-chat-card" type="button" data-desktop-open="dm" data-desktop-chat-category="all unread">
-              <span class="desktop-chat-avatar">💬</span>
-              <span class="desktop-chat-copy">
-                <b>DMs</b>
-                <em>Arkadaşlarla özel mesaj</em>
-              </span>
-              <small>DM</small>
-            </button>
-
-            <button class="desktop-chat-card" type="button" data-desktop-open="groups" data-desktop-chat-category="groups all unread">
-              <span class="desktop-chat-avatar">👥</span>
-              <span class="desktop-chat-copy">
-                <b>Groups</b>
-                <em>Grup sohbetleri</em>
-              </span>
-              <small>12</small>
-            </button>
-
-            <button class="desktop-chat-card" type="button" data-desktop-open="gallery" data-desktop-chat-category="all">
-              <span class="desktop-chat-avatar">🖼</span>
-              <span class="desktop-chat-copy">
-                <b>Gallery</b>
-                <em>Fotoğraf, ses ve dosyalar</em>
-              </span>
-              <small>Media</small>
-            </button>
-
-            <button class="desktop-chat-card" type="button" data-desktop-open="friends" data-desktop-chat-category="all">
-              <span class="desktop-chat-avatar">🤝</span>
-              <span class="desktop-chat-copy">
-                <b>Friends</b>
-                <em>Arkadaşlar ve istekler</em>
-              </span>
-              <small>Social</small>
-            </button>
-
-            <button class="desktop-chat-card" type="button" data-desktop-open="hub" data-desktop-chat-category="all">
-              <span class="desktop-chat-avatar">🧬</span>
-              <span class="desktop-chat-copy">
-                <b>5ECROPOLIS Hub</b>
-                <em>Shards, market, envanter</em>
-              </span>
-              <small>Hub</small>
-            </button>
+          <div class="desktop-chat-list desktop-room-list desktop-room-list-custom-only">
+            <div class="desktop-room-custom desktop-room-custom-main">
+              <label for="desktopRoomInput">Oda adı yazıp gir</label>
+              <p class="desktop-room-help">Hazır oda yok. Hangi oda adını yazarsan direkt o odaya bağlanırsın.</p>
+              <div class="desktop-room-row">
+                <input id="desktopRoomInput" type="text" placeholder="örnek: genel, oyun, ekip" maxlength="50" />
+                <button id="desktopJoinRoomButton" type="button">Gir</button>
+              </div>
+            </div>
           </div>
         </div>
 
