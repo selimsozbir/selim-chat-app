@@ -2106,6 +2106,15 @@ function setChatMode(nextMode) {
   syncMobileHeader();
 }
 
+function syncDesktopRoomCards() {
+  const activeRoom = String(currentRoom || 'genel').toLowerCase();
+  document.querySelectorAll('[data-desktop-room]').forEach((card) => {
+    card.classList.toggle('active', String(card.dataset.desktopRoom || '').toLowerCase() === activeRoom);
+  });
+  const desktopRoomInput = document.getElementById('desktopRoomInput');
+  if (desktopRoomInput && !desktopRoomInput.value) desktopRoomInput.placeholder = activeRoom;
+}
+
 async function joinRoom(room) {
   clearReply();
   currentRoom = room.toLowerCase();
@@ -2130,6 +2139,7 @@ async function joinRoom(room) {
   if (socket && socket.connected) socket.emit('join', { room: currentRoom });
   updateMessengerUi();
   markActiveConversation();
+  syncDesktopRoomCards?.();
 }
 
 async function loadOldRoomMessages(room) {
@@ -4206,9 +4216,7 @@ function moveMediaViewer(delta) {
 
 function commandPaletteBaseItems() {
   const items = [
-    { icon: '💬', title: 'Genel odayı aç', subtitle: '#genel odasına git', keywords: 'oda genel chat room', run: () => joinRoom('genel') },
-    { icon: '🌀', title: 'Serbia odasını aç', subtitle: '#serbia odasına git', keywords: 'serbia room oda', run: () => joinRoom('serbia') },
-    { icon: '⚫', title: 'Limbo odasını aç', subtitle: '#limbo odasına git', keywords: 'limbo room oda', run: () => joinRoom('limbo') },
+    { icon: '💬', title: 'Oda adı yaz', subtitle: 'Rooms sekmesinden istediğin odaya gir', keywords: 'oda room chat genel', run: () => { closeDesktopHub?.(); roomModeButton?.click(); document.getElementById('desktopRoomInput')?.focus(); } },
     { icon: '🤝', title: 'Arkadaşlar merkezini aç', subtitle: 'Arkadaşlar / istekler / sosyal', keywords: 'friend friends arkadaş dm sosyal', run: () => openFriendsCenter?.('friends') },
     { icon: '🗂️', title: 'Galeri aç', subtitle: 'Medya ve dosyalar', keywords: 'gallery galeri medya file', run: () => openGalleryModal?.() },
     { icon: '⚙️', title: 'Ayarları aç', subtitle: 'Profil, görünüm, bildirim', keywords: 'settings ayar profil', run: () => openSettings?.() },
@@ -7765,7 +7773,14 @@ function bindDesktopPortalV112Controls() {
       button.classList.add('active');
 
       const action = button.dataset.desktopOpen;
-      if (action === 'room') { closeDesktopHub(); roomModeButton?.click(); setDesktopDockActive?.('desktopDockChats'); }
+      if (action === 'room') {
+        closeDesktopHub();
+        const targetRoom = (button.dataset.desktopRoom || currentRoom || 'genel').trim();
+        if (targetRoom) joinRoom(targetRoom);
+        else roomModeButton?.click();
+        setDesktopDockActive?.('desktopDockChats');
+        syncDesktopRoomCards?.();
+      }
       if (action === 'dm') { closeDesktopHub(); dmModeButton?.click(); setDesktopDockActive?.('desktopDockChats'); }
       if (action === 'groups') { closeDesktopHub(); groupModeButton?.click(); setDesktopDockActive?.('desktopDockGroups'); }
       if (action === 'gallery') { closeDesktopHub(); openGalleryModal?.(); }
@@ -7785,7 +7800,23 @@ function bindDesktopPortalV112Controls() {
     }, true);
   };
 
-  bind('desktopDockChats', () => { closeDesktopHub(); roomModeButton?.click(); setDesktopDockActive?.('desktopDockChats'); });
+  bind('desktopDockChats', () => { closeDesktopHub(); roomModeButton?.click(); setDesktopDockActive?.('desktopDockChats'); syncDesktopRoomCards?.(); });
+  bind('desktopJoinRoomButton', () => {
+    const input = document.getElementById('desktopRoomInput');
+    const room = String(input?.value || '').trim() || 'genel';
+    joinRoom(room);
+    if (input) input.value = '';
+    setDesktopDockActive?.('desktopDockChats');
+  });
+  const desktopRoomInput = document.getElementById('desktopRoomInput');
+  if (desktopRoomInput && desktopRoomInput.dataset.v112EnterBound !== '1') {
+    desktopRoomInput.dataset.v112EnterBound = '1';
+    desktopRoomInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      document.getElementById('desktopJoinRoomButton')?.click();
+    });
+  }
   bind('desktopDockGroups', () => { closeDesktopHub(); groupModeButton?.click(); setDesktopDockActive?.('desktopDockGroups'); });
   bind('desktopDockHub', () => toggleDesktopHub());
   bind('desktopDockCalls', () => { closeDesktopHub(); alert?.('Calls özelliği yakında.'); setDesktopDockActive?.('desktopDockCalls'); });
@@ -7793,7 +7824,8 @@ function bindDesktopPortalV112Controls() {
   bind('desktopSearchButton', () => { closeDesktopHub(); filterDesktopChats('all'); messageSearchInput?.focus(); });
   bind('desktopNewChatButton', () => { closeDesktopHub(); dmModeButton?.click(); searchInput?.focus(); });
 
-  filterDesktopChats(document.querySelector('.desktop-chat-tabs button.active')?.dataset?.desktopChatTab || 'all');
+  filterDesktopChats(document.querySelector('.desktop-chat-tabs button.active')?.dataset?.desktopChatTab || 'rooms');
+  syncDesktopRoomCards?.();
 }
 
 window.addEventListener('load', () => {
