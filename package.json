@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.9.5",
-  "description": "Selim Chat v10.9.5 mobile composer online dm list fixes",
+  "version": "10.9.6",
+  "description": "Selim Chat v10.9.6 mobile keyboard composer gap fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
