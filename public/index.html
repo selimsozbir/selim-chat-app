@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Selim Chat v11.1</title>
-  <link rel="stylesheet" href="style.css?v=1110" />
-  <link rel="stylesheet" href="desktop.css?v=1110" media="(min-width: 961px)" />
-  <link rel="stylesheet" href="mobile.css?v=1110" media="(max-width: 960px)" />
+  <title>Selim Chat v11.2</title>
+  <link rel="stylesheet" href="style.css?v=1120" />
+  <link rel="stylesheet" href="desktop.css?v=1120" media="(min-width: 961px)" />
+  <link rel="stylesheet" href="mobile.css?v=1120" media="(max-width: 960px)" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -104,7 +104,7 @@
           </div>
 
           <div class="desktop-chat-list">
-            <button class="desktop-chat-card active" type="button" data-desktop-open="room">
+            <button class="desktop-chat-card active" type="button" data-desktop-open="room" data-desktop-chat-category="rooms all unread">
               <span class="desktop-chat-avatar">#</span>
               <span class="desktop-chat-copy">
                 <b># selim</b>
@@ -113,7 +113,7 @@
               <small>Live</small>
             </button>
 
-            <button class="desktop-chat-card" type="button" data-desktop-open="dm">
+            <button class="desktop-chat-card" type="button" data-desktop-open="dm" data-desktop-chat-category="all unread">
               <span class="desktop-chat-avatar">💬</span>
               <span class="desktop-chat-copy">
                 <b>DMs</b>
@@ -122,7 +122,7 @@
               <small>DM</small>
             </button>
 
-            <button class="desktop-chat-card" type="button" data-desktop-open="groups">
+            <button class="desktop-chat-card" type="button" data-desktop-open="groups" data-desktop-chat-category="groups all unread">
               <span class="desktop-chat-avatar">👥</span>
               <span class="desktop-chat-copy">
                 <b>Groups</b>
@@ -131,7 +131,7 @@
               <small>12</small>
             </button>
 
-            <button class="desktop-chat-card" type="button" data-desktop-open="gallery">
+            <button class="desktop-chat-card" type="button" data-desktop-open="gallery" data-desktop-chat-category="all">
               <span class="desktop-chat-avatar">🖼</span>
               <span class="desktop-chat-copy">
                 <b>Gallery</b>
@@ -140,7 +140,7 @@
               <small>Media</small>
             </button>
 
-            <button class="desktop-chat-card" type="button" data-desktop-open="friends">
+            <button class="desktop-chat-card" type="button" data-desktop-open="friends" data-desktop-chat-category="all">
               <span class="desktop-chat-avatar">🤝</span>
               <span class="desktop-chat-copy">
                 <b>Friends</b>
@@ -149,7 +149,7 @@
               <small>Social</small>
             </button>
 
-            <button class="desktop-chat-card" type="button" data-desktop-open="hub">
+            <button class="desktop-chat-card" type="button" data-desktop-open="hub" data-desktop-chat-category="all">
               <span class="desktop-chat-avatar">🧬</span>
               <span class="desktop-chat-copy">
                 <b>5ECROPOLIS Hub</b>
@@ -342,6 +342,18 @@
         </nav>
       </main>
 
+
+
+      <aside id="desktopOnlinePanel" class="desktop-online-panel" aria-label="Aktif üyeler">
+        <div class="desktop-online-head">
+          <div>
+            <strong>Online</strong>
+            <span id="desktopOnlineCount">0 aktif</span>
+          </div>
+          <b>Live</b>
+        </div>
+        <div id="desktopOnlineList" class="desktop-online-list"></div>
+      </aside>
 
       <nav id="desktopPortalDock" class="desktop-portal-dock" aria-label="Desktop kısayollar">
         <button id="desktopDockChats" class="desktop-dock-item active" type="button" title="Chats">💬</button>
@@ -1085,6 +1097,6 @@
 
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js?v=1110"></script>
+  <script src="script.js?v=1120"></script>
   <div id="achievementToastContainer" class="achievement-toast-container"></div></body>
 </html>
