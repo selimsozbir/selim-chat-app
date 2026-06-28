@@ -2788,3 +2788,58 @@
     align-content: start !important;
   }
 }
+
+
+/* =========================================================
+   Selim Chat v10.10.1 — Mobile Hub accordion inside left panel
+   Hub lives in the sidebar on mobile. Its content stays hidden until
+   the user taps the Hub header.
+   ========================================================= */
+@media (max-width: 960px) {
+  .mobile-hub-accordion {
+    display: block !important;
+    width: 100% !important;
+    margin: 12px 0 !important;
+    border-radius: 22px !important;
+    border: 1px solid rgba(255,255,255,.10) !important;
+    background: linear-gradient(180deg, rgba(255,255,255,.065), rgba(255,255,255,.03)) !important;
+    overflow: hidden !important;
+  }
+
+  .mobile-hub-toggle {
+    width: 100% !important;
+    min-height: 64px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-areas: "title arrow" "sub arrow" !important;
+    gap: 2px 10px !important;
+    align-items: center !important;
+    padding: 13px 14px !important;
+    border: 0 !important;
+    background: linear-gradient(135deg, rgba(139,92,246,.22), rgba(217,70,239,.12)) !important;
+    color: #fff !important;
+    text-align: left !important;
+    cursor: pointer !important;
+  }
+  .mobile-hub-toggle span { grid-area: title !important; font-size: 15px !important; font-weight: 950 !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+  .mobile-hub-toggle b { grid-area: sub !important; color: rgba(255,255,255,.58) !important; font-size: 11px !important; font-weight: 800 !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+  .mobile-hub-toggle em { grid-area: arrow !important; width: 34px !important; height: 34px !important; display: grid !important; place-items: center !important; border-radius: 12px !important; background: rgba(255,255,255,.08) !important; font-style: normal !important; transition: transform .18s ease !important; }
+  .mobile-hub-accordion.open .mobile-hub-toggle em { transform: rotate(180deg) !important; }
+  .mobile-hub-content.hidden { display: none !important; }
+  .mobile-hub-content { display: block !important; padding: 10px !important; max-height: none !important; overflow: visible !important; }
+
+  .mobile-hub-content .right-panel {
+    position: static !important; inset: auto !important; transform: none !important;
+    width: 100% !important; max-width: 100% !important; height: auto !important;
+    min-height: 0 !important; max-height: none !important; padding: 0 !important; margin: 0 !important;
+    border: 0 !important; border-radius: 0 !important; background: transparent !important;
+    box-shadow: none !important; overflow: visible !important;
+  }
+  .mobile-hub-content .right-panel::before { display: none !important; content: none !important; }
+  .mobile-hub-content .right-panel-header { display: none !important; }
+  .mobile-hub-content .gamify-box, .mobile-hub-content .notifications-box, .mobile-hub-content #globalAdminPanel { width: 100% !important; max-width: 100% !important; margin: 0 0 10px !important; }
+  .mobile-hub-content .gamify-tabs { display: flex !important; overflow-x: auto !important; gap: 6px !important; padding-bottom: 6px !important; }
+  .mobile-hub-content .gamify-tab { flex: 0 0 auto !important; white-space: nowrap !important; }
+  body.mobile-right-panel-open .right-panel { transform: none !important; }
+}
+@media (min-width: 961px) { .mobile-hub-accordion { display: none !important; } }
