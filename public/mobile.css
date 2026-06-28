@@ -2985,3 +2985,86 @@
     overflow: visible !important;
   }
 }
+
+
+/* v10.10.4 — Hub content should look like the right screenshot when opened */
+@media (max-width: 960px) {
+  #mobileHubContent.mobile-hub-content.hidden {
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #mobileHubAccordion.open #mobileHubContent.mobile-hub-content,
+  #mobileHubContent.mobile-hub-content:not(.hidden) {
+    display: block !important;
+    height: auto !important;
+    min-height: 320px !important;
+    max-height: none !important;
+    padding: 10px !important;
+    margin-top: 10px !important;
+    overflow: visible !important;
+  }
+
+  #mobileHubContent .right-panel {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  #mobileHubContent .gamify-box {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 0 10px !important;
+    padding: 10px !important;
+    border-radius: 18px !important;
+    background: rgba(255,255,255,.045) !important;
+    border: 1px solid rgba(255,255,255,.08) !important;
+  }
+
+  #mobileHubContent .gamify-tabs {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    overflow: visible !important;
+  }
+
+  #mobileHubContent .gamify-tab {
+    flex: 1 1 calc(25% - 6px) !important;
+    min-width: 58px !important;
+    min-height: 32px !important;
+    font-size: 11px !important;
+    padding: 7px 8px !important;
+    white-space: nowrap !important;
+  }
+
+  #mobileHubContent .daily-card,
+  #mobileHubContent .quest-card,
+  #mobileHubContent .lootbox-card,
+  #mobileHubContent .market-card,
+  #mobileHubContent .casino-card,
+  #mobileHubContent .inventory-companion-box,
+  #mobileHubContent .inventory-page-section {
+    border-radius: 16px !important;
+  }
+}
