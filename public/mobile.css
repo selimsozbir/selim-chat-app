@@ -3068,3 +3068,62 @@
     border-radius: 16px !important;
   }
 }
+
+
+/* =========================================================
+   Selim Chat v10.10.6 — APK keyboard header fix
+   In Android APK/WebView, the header stays visible while typing
+   so the left menu button remains usable.
+   ========================================================= */
+@media (max-width: 960px) {
+  body.apk-shell.keyboard-open .mobile-topbar,
+  body.apk-shell.composer-focused .mobile-topbar {
+    display: grid !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+    height: var(--mobile-topbar-h, 56px) !important;
+    min-height: var(--mobile-topbar-h, 56px) !important;
+    max-height: var(--mobile-topbar-h, 56px) !important;
+    position: relative !important;
+    z-index: 650 !important;
+  }
+
+  body.apk-shell.keyboard-open .chat-screen,
+  body.apk-shell.composer-focused .chat-screen {
+    grid-template-rows: var(--mobile-topbar-h, 56px) minmax(0, 1fr) 0 !important;
+  }
+
+  body.apk-shell.keyboard-open .chat-main,
+  body.apk-shell.composer-focused .chat-main {
+    max-height: none !important;
+    padding-top: 0 !important;
+  }
+
+  body.apk-shell.keyboard-open .messages,
+  body.apk-shell.composer-focused .messages {
+    padding-top: 10px !important;
+    padding-bottom: 92px !important;
+  }
+
+  body.apk-shell.keyboard-open .mobile-menu-button,
+  body.apk-shell.composer-focused .mobile-menu-button,
+  body.apk-shell.keyboard-open #mobileMenuButton,
+  body.apk-shell.composer-focused #mobileMenuButton {
+    display: inline-grid !important;
+    pointer-events: auto !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  body.apk-shell.keyboard-open .message-form,
+  body.apk-shell.composer-focused .message-form {
+    z-index: 700 !important;
+  }
+
+  body.apk-shell.keyboard-open::before,
+  body.apk-shell.composer-focused::before {
+    z-index: 80 !important;
+    height: 38vh !important;
+  }
+}
