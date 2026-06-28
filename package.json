@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.10.6",
-  "description": "Selim Chat v10.10.6 APK header stays visible while typing",
+  "version": "11.0.0",
+  "description": "Selim Chat v11.0 Desktop Neon Portal Redesign",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
