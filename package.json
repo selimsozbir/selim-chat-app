@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "11.1.0",
-  "description": "Selim Chat v11.1 Desktop Telegram Neon Layout",
+  "version": "11.2.0",
+  "description": "Selim Chat v11.2 Desktop Chats Online Hub Fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
