@@ -769,7 +769,7 @@ bindMobileTap(mobileGroupButton, () => {
 
 bindMobileTap(mobilePanelButton, openMobileRightPanel);
 bindMobileTap(mobileGalleryButton, () => { closeMobilePanels(); openGalleryModal?.(); });
-bindMobileTap(mobileHubToggleButton, () => toggleMobileHub());
+// v10.10.4: mobile hub handled by guardedMobileHubBind()
 if (refreshAdminLogsButton) refreshAdminLogsButton.addEventListener('click', loadAdminLogs);
 if (settingsCloseButton) settingsCloseButton.addEventListener('click', closeSettings);
 if (settingsModal) settingsModal.addEventListener('click', (event) => {
@@ -2626,7 +2626,7 @@ function prefersReducedMotionPolish() {
 function forceAppRefresh(delay = 550) {
   setTimeout(() => {
     const url = new URL(window.location.href);
-    url.searchParams.set('v', '10103');
+    url.searchParams.set('v', '10104');
     url.searchParams.set('fresh', Date.now().toString());
     window.location.href = url.toString();
   }, delay);
@@ -7482,8 +7482,10 @@ window.addEventListener('load', syncMobileHubPlacement);
 setTimeout(syncMobileHubPlacement, 300);
 
 
-/* v10.10.3 hard mobile hub toggle fix */
-function hardToggleMobileHub(forceOpen = null) {
+
+
+/* v10.10.4 — guarded mobile hub accordion open */
+function guardedMobileHubOpen(forceOpen = null) {
   const accordion = document.getElementById('mobileHubAccordion');
   const button = document.getElementById('mobileHubToggleButton');
   const content = document.getElementById('mobileHubContent');
@@ -7503,44 +7505,47 @@ function hardToggleMobileHub(forceOpen = null) {
   if (shouldOpen) {
     loadGamify?.();
     loadInventory?.();
+    bindGamifyControls?.();
     setTimeout(() => accordion.scrollIntoView({ block: 'center', behavior: 'smooth' }), 80);
   }
 }
 
-function initMobileHubHardToggle() {
+function guardedMobileHubBind() {
   const button = document.getElementById('mobileHubToggleButton');
-  const content = document.getElementById('mobileHubContent');
-  if (!button || !content || button.dataset.hardToggleBound === '1') return;
+  if (!button || button.dataset.guardHubBound === '1') return;
 
-  button.dataset.hardToggleBound = '1';
-  button.onclick = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    hardToggleMobileHub();
+  button.dataset.guardHubBound = '1';
+  let lastToggleAt = 0;
+
+  const run = (event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    const now = Date.now();
+    if (now - lastToggleAt < 450) return;
+    lastToggleAt = now;
+    guardedMobileHubOpen();
   };
 
-  button.addEventListener('touchend', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    hardToggleMobileHub();
-  }, { passive: false });
+  button.addEventListener('pointerup', run, { passive: false });
+  button.addEventListener('click', run, { passive: false });
+  button.addEventListener('touchend', run, { passive: false });
 }
 
-window.addEventListener('DOMContentLoaded', initMobileHubHardToggle);
+window.addEventListener('DOMContentLoaded', guardedMobileHubBind);
 window.addEventListener('load', () => {
-  initMobileHubHardToggle();
+  guardedMobileHubBind();
   syncMobileHubPlacement?.();
 });
 window.addEventListener('resize', () => {
-  initMobileHubHardToggle();
+  guardedMobileHubBind();
   syncMobileHubPlacement?.();
 });
 window.addEventListener('orientationchange', () => setTimeout(() => {
-  initMobileHubHardToggle();
+  guardedMobileHubBind();
   syncMobileHubPlacement?.();
 }, 200));
-setTimeout(initMobileHubHardToggle, 300);
-setTimeout(() => syncMobileHubPlacement?.(), 500);
+setTimeout(guardedMobileHubBind, 250);
+setTimeout(() => syncMobileHubPlacement?.(), 450);
 
 startApp();
 
