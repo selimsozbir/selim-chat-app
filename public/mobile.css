@@ -2843,3 +2843,113 @@
   body.mobile-right-panel-open .right-panel { transform: none !important; }
 }
 @media (min-width: 961px) { .mobile-hub-accordion { display: none !important; } }
+
+
+/* =========================================================
+   Selim Chat v10.10.2 — make Mobile Hub visible
+   Previous Hub existed but was visually collapsing into a thin line.
+   This forces a large orange/purple visible accordion header.
+   ========================================================= */
+@media (max-width: 960px) {
+  #mobileHubAccordion.mobile-hub-accordion {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 20 !important;
+    width: 100% !important;
+    min-height: 72px !important;
+    height: auto !important;
+    margin: 16px 0 18px !important;
+    border-radius: 24px !important;
+    border: 1px solid rgba(255,255,255,.16) !important;
+    background: linear-gradient(135deg, rgba(250,146,12,.18), rgba(168,85,247,.14)) !important;
+    overflow: visible !important;
+    box-shadow: 0 12px 34px rgba(168,85,247,.12), inset 0 1px 0 rgba(255,255,255,.10) !important;
+  }
+
+  #mobileHubToggleButton.mobile-hub-toggle {
+    all: unset !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-height: 72px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 38px !important;
+    grid-template-areas:
+      "title arrow"
+      "sub arrow" !important;
+    gap: 3px 12px !important;
+    align-items: center !important;
+    padding: 14px 15px !important;
+    border-radius: 24px !important;
+    background: linear-gradient(135deg, #f59e0b, #d946ef) !important;
+    color: #fff !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    box-shadow: 0 12px 28px rgba(217,70,239,.18) !important;
+  }
+
+  #mobileHubToggleButton .mobile-hub-title,
+  #mobileHubToggleButton span {
+    grid-area: title !important;
+    display: block !important;
+    color: #fff !important;
+    font-size: 16px !important;
+    line-height: 1.1 !important;
+    font-weight: 1000 !important;
+    letter-spacing: .02em !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  #mobileHubToggleButton .mobile-hub-subtitle,
+  #mobileHubToggleButton b {
+    grid-area: sub !important;
+    display: block !important;
+    color: rgba(255,255,255,.82) !important;
+    font-size: 11px !important;
+    line-height: 1.1 !important;
+    font-weight: 850 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  #mobileHubToggleButton em {
+    grid-area: arrow !important;
+    display: grid !important;
+    place-items: center !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 14px !important;
+    background: rgba(255,255,255,.18) !important;
+    color: #fff !important;
+    font-style: normal !important;
+    font-size: 18px !important;
+    font-weight: 950 !important;
+  }
+
+  #mobileHubAccordion.open #mobileHubToggleButton em {
+    transform: rotate(180deg) !important;
+  }
+
+  #mobileHubContent.mobile-hub-content.hidden {
+    display: none !important;
+  }
+
+  #mobileHubContent.mobile-hub-content:not(.hidden) {
+    display: block !important;
+    margin-top: 10px !important;
+    padding: 10px !important;
+    border-radius: 20px !important;
+    background: rgba(0,0,0,.18) !important;
+    border: 1px solid rgba(255,255,255,.08) !important;
+    overflow: visible !important;
+  }
+
+  .sidebar #mobileHubAccordion + .nav-buttons {
+    margin-top: 4px !important;
+  }
+}
