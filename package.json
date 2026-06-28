@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.10.3",
-  "description": "Selim Chat v10.10.3 mobile hub toggle fix",
+  "version": "10.10.4",
+  "description": "Selim Chat v10.10.4 mobile hub open content fix",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
