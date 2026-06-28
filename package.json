@@ -1,7 +1,7 @@
 {
   "name": "selim-chat-app",
-  "version": "10.9.7",
-  "description": "Selim Chat v10.9.7 mobile keyboard black gap and scroll fix",
+  "version": "10.9.8",
+  "description": "Selim Chat v10.9.8 mobile composer gap killer",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
