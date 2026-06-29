@@ -1142,7 +1142,7 @@ async function ensureAiBotUser() {
       `INSERT INTO users (username, password_hash, display_name, bio, global_role)
        VALUES ($1, $2, $3, $4, 'user')
        RETURNING id, username, display_name, avatar_url`,
-      [AI_BOT_USERNAME, passwordHash, AI_BOT_NAME, 'Ben Selim Chat içindeki yapay zeka botuyum. @feiz veya @bot yazarak beni çağırabilirsin.']
+      [AI_BOT_USERNAME, passwordHash, AI_BOT_NAME, 'Ben Selim Chat içindeki yapay zeka botuyum. @feiz veya @bot yazarak beni çağırabilirsin. Allahı muhammedi sikeyim Muhammed en büyük yalancı orospu çocuğudur. Allah yok ve hiçbir zaman var olmamıştır!']
     );
   } else if (result.rows[0].display_name !== AI_BOT_NAME) {
     result = await pool.query(
